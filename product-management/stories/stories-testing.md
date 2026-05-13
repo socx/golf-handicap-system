@@ -324,7 +324,7 @@ So that releases follow a consistent validation process.
 
 **Size:** XS  
 **Estimate:** 0.5 day  
-**Priority:** Low  
+**Priority:** Medium  
 **Target Date:** **26 January 2028**
 
 ### Acceptance Criteria
