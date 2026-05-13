@@ -2,12 +2,12 @@ name: Auto‑Move Stories in GitHub Project
 
 on:
   pull_request:
-    types: [opened, ready_for_review, review_requested, closed]
+    types: [opened, synchronize, ready_for_review, review_requested, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
   pull-requests: read
 
 jobs:
@@ -20,21 +20,30 @@ jobs:
         env:
           # Populate these values in the workflow file or through org-level
           # workflow templating. When left blank, the workflow falls back to labels.
-          GH_PROJECT_ID: ""
-          GH_PROJECT_STATUS_FIELD_ID: ""
-          GH_OPTION_BACKLOG: ""
-          GH_OPTION_READY: ""
-          GH_OPTION_IN_PROGRESS: ""
-          GH_OPTION_REVIEW: ""
-          GH_OPTION_TESTING: ""
-          GH_OPTION_BLOCKED: ""
+          GH_PROJECT_ID: ${{ secrets.GH_PROJECT_ID }}
+          GH_PROJECT_STATUS_FIELD_ID: ${{ secrets.GH_PROJECT_STATUS_FIELD_ID }}
+          GH_OPTION_BACKLOG: ${{ secrets.GH_OPTION_BACKLOG }}
+          GH_OPTION_READY: ${{ secrets.GH_OPTION_READY }}
+          GH_OPTION_IN_PROGRESS: ${{ secrets.GH_OPTION_IN_PROGRESS }}
+          GH_OPTION_REVIEW: ${{ secrets.GH_OPTION_REVIEW }}
+          GH_OPTION_TESTING: ${{ secrets.GH_OPTION_TESTING }}
+          GH_OPTION_BLOCKED: ${{ secrets.GH_OPTION_BLOCKED }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # GH_PAT must include project write access for ProjectV2 GraphQL mutations.
+          github-token: ${{ secrets.GH_PAT }}
           script: |
-            const pr = context.payload.pull_request;
-            const action = context.payload.action;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info("No pull_request payload found; skipping auto-move.");
+              return;
+            }
+            const action = context.payload.action;
+            if (pr.head?.repo?.full_name !== `${owner}/${repo}`) {
+              core.info("Fork pull request detected; skipping project auto-move to avoid secret/token failures.");
+              return;
+            }
             const text = `${pr.title}\n${pr.body || ""}`;
 
             const refs = new Set();
