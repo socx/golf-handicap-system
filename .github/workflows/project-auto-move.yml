@@ -2,7 +2,7 @@ name: Auto‑Move Stories in GitHub Project
 
 on:
   pull_request:
-    types: [opened, ready_for_review, review_requested, closed]
+    types: [opened, synchronize, ready_for_review, review_requested, closed]
   workflow_dispatch:
 
 permissions:
