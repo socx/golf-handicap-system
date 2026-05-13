@@ -1,0 +1,149 @@
+name: Auto‑Move Stories in GitHub Project
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, review_requested, closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  move-story:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Auto move linked stories in project
+        uses: actions/github-script@v7
+        env:
+          # Populate these values in the workflow file or through org-level
+          # workflow templating. When left blank, the workflow falls back to labels.
+          GH_PROJECT_ID: ""
+          GH_PROJECT_STATUS_FIELD_ID: ""
+          GH_OPTION_BACKLOG: ""
+          GH_OPTION_READY: ""
+          GH_OPTION_IN_PROGRESS: ""
+          GH_OPTION_REVIEW: ""
+          GH_OPTION_TESTING: ""
+          GH_OPTION_BLOCKED: ""
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const action = context.payload.action;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const text = `${pr.title}\n${pr.body || ""}`;
+
+            const refs = new Set();
+            const keywordRegex = /(close[sd]?|fix(?:e[sd])?|resolve[sd]?|story)\s*:?\s*#(\d+)/ig;
+            for (const m of text.matchAll(keywordRegex)) refs.add(Number(m[2]));
+            if (refs.size === 0) {
+              for (const m of text.matchAll(/#(\d+)/g)) refs.add(Number(m[1]));
+            }
+            if (refs.size === 0) {
+              core.info("No referenced issues found.");
+              return;
+            }
+
+            const projectId = process.env.GH_PROJECT_ID;
+            const statusFieldId = process.env.GH_PROJECT_STATUS_FIELD_ID;
+            const labelFallback =
+              action === "ready_for_review"
+                ? "needs-review"
+                : action === "closed"
+                  ? (pr.merged ? "needs-testing" : "blocked")
+                  : "in-progress";
+
+            const optionByState = {
+              backlog: process.env.GH_OPTION_BACKLOG,
+              ready: process.env.GH_OPTION_READY,
+              in_progress: process.env.GH_OPTION_IN_PROGRESS,
+              review: process.env.GH_OPTION_REVIEW,
+              testing: process.env.GH_OPTION_TESTING,
+              blocked: process.env.GH_OPTION_BLOCKED,
+            };
+
+            const desiredState = action === "ready_for_review"
+              ? "review"
+              : action === "closed"
+                ? (pr.merged ? "testing" : "blocked")
+                : "in_progress";
+
+            for (const issueNumber of refs) {
+              let issue;
+              try {
+                issue = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+              } catch {
+                core.info(`Issue #${issueNumber} not found, skipping.`);
+                continue;
+              }
+              if (issue.data.pull_request) continue;
+
+              if (!projectId || !statusFieldId || !optionByState[desiredState]) {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels: [labelFallback],
+                });
+                core.info(`Project IDs not configured; applied fallback label '${labelFallback}' to #${issueNumber}.`);
+                continue;
+              }
+
+              const issueNodeId = issue.data.node_id;
+              const itemQuery = await github.graphql(
+                `query($id: ID!) {
+                  node(id: $id) {
+                    ... on Issue {
+                      projectItems(first: 20) {
+                        nodes {
+                          id
+                          project { id }
+                        }
+                      }
+                    }
+                  }
+                }`,
+                { id: issueNodeId }
+              );
+
+              let item = itemQuery.node.projectItems.nodes.find((n) => n.project.id === projectId);
+
+              if (!item) {
+                const added = await github.graphql(
+                  `mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                      item { id }
+                    }
+                  }`,
+                  { projectId, contentId: issueNodeId }
+                );
+                item = { id: added.addProjectV2ItemById.item.id };
+              }
+
+              await github.graphql(
+                `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $optionId }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+                }`,
+                {
+                  projectId,
+                  itemId: item.id,
+                  fieldId: statusFieldId,
+                  optionId: optionByState[desiredState],
+                }
+              );
+
+              core.info(`Updated project status for issue #${issueNumber} to ${desiredState}.`);
+            }

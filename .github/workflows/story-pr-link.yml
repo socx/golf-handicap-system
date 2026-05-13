@@ -1,0 +1,95 @@
+name: Link PRs to Stories
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, ready_for_review, reopened, closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  link-story:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Link PR to referenced story issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const body = `${pr.title}\n${pr.body || ""}`;
+            const action = context.payload.action;
+
+            const refs = new Set();
+            const keywordRegex = /(close[sd]?|fix(?:e[sd])?|resolve[sd]?|story)\s*:?\s*#(\d+)/ig;
+            for (const m of body.matchAll(keywordRegex)) refs.add(Number(m[2]));
+            if (refs.size === 0) {
+              for (const m of body.matchAll(/#(\d+)/g)) refs.add(Number(m[1]));
+            }
+
+            if (refs.size === 0) {
+              core.info("No referenced issues found in PR title/body.");
+              return;
+            }
+
+            const statusLabel = action === "closed"
+              ? (pr.merged ? "needs-testing" : "ready")
+              : (action === "ready_for_review" ? "needs-review" : "in-progress");
+
+            for (const issueNumber of refs) {
+              let issue;
+              try {
+                issue = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+              } catch {
+                core.info(`Issue #${issueNumber} not found, skipping.`);
+                continue;
+              }
+
+              if (issue.data.pull_request) {
+                core.info(`#${issueNumber} is a pull request, skipping.`);
+                continue;
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                labels: [statusLabel],
+              });
+
+              const marker = `<!-- story-pr-link:${pr.number}:${issueNumber} -->`;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+              if (!comments.some((c) => (c.body || "").includes(marker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `${marker}\nLinked PR: #${pr.number}`,
+                });
+              }
+
+              const prComments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pr.number,
+                per_page: 100,
+              });
+              if (!prComments.some((c) => (c.body || "").includes(marker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: `${marker}\nLinked story issue: #${issueNumber}`,
+                });
+              }
+            }

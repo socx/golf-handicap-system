@@ -1,0 +1,35 @@
+name: Sync Story Files Into GitHub Issues
+
+on:
+  push:
+    paths:
+      - "product-management/stories/stories*.md"
+      - "product-management/stories/stories.*.md"
+      - ".github/scripts/sync_stories_to_issues.py"
+      - ".github/workflows/sync-stories.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync-stories:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Sync stories to issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/sync_stories_to_issues.py
