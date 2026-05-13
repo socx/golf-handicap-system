@@ -18,6 +18,7 @@ Each entry links to the corresponding file using Guided Links.
 - **[stories-pdf.md](stories-pdf.md)** — PDF generation, scorecards, reports  
 - **[stories-leaderboard.md](stories-leaderboard.md)** — Rankings, scoring averages, club leaderboards  
 - **[stories-competitions.md](stories-competitions.md)** — Competition setup, scoring formats, results  
+- **[stories-integrations.md](stories-integrations.md)** — Tee-time booking, external integrations  
 
 ---
 
@@ -50,6 +51,7 @@ Each entry links to the corresponding file using Guided Links.
 - **[PDF & Exports](stories-pdf.md)**  
 - **[Leaderboards](stories-leaderboard.md)**  
 - **[Competitions](stories-competitions.md)**  
+- **[Integrations & Tee-Time Booking](stories-integrations.md)**  
 
 ### By Platform Layer
 - **[Frontend](stories-dashboard.md)**  

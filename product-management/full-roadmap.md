@@ -64,6 +64,9 @@
 - **Billing Epic**  
   **09 August → 06 September 2027**
 
+- **Integrations Epic**  
+  **10 September → 25 October 2027**
+
 - **AI Epic**  
   **06 September → 30 October 2027**
 
@@ -118,6 +121,7 @@
 | **PWA** | 06 Jun 2027 | 04 Jul 2027 |
 | **Multitenancy** | 04 Jul 2027 | 09 Aug 2027 |
 | **Billing** | 09 Aug 2027 | 06 Sep 2027 |
+| **Integrations** | 10 Sep 2027 | 25 Oct 2027 |
 | **AI** | 06 Sep 2027 | 30 Oct 2027 |
 | **Mobile** | 30 Oct 2027 | 07 Dec 2027 |
 | **Testing** | 07 Dec 2027 | 26 Jan 2028 |

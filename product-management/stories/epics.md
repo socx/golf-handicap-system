@@ -144,6 +144,18 @@ Provide a competition module that supports event setup, handicap-adjusted scorin
 
 ---
 
+## Epic: Integrations & Tee-Time Booking
+
+Provide tee-time booking functionality and integration hooks for external booking systems at partner clubs.
+
+**Goals:**
+- Lightweight tee-time request feature for players to book at partner clubs.
+- Pluggable integration framework for connecting external booking systems.
+- Admin tools for managing tee-time inventory and requests.
+- Notifications and rate limiting for booking endpoints.
+
+---
+
 ## Epic: Infrastructure & DevOps
 
 Provide robust infrastructure, deployment, and observability for the system.

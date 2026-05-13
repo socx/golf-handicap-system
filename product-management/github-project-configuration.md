@@ -64,6 +64,7 @@ epic:security
 epic:pwa
 epic:multitenancy
 epic:billing
+epic:integrations
 epic:ai
 epic:mobile
 epic:testing
@@ -103,6 +104,7 @@ Each milestone corresponds to a story file.
 | **PWA** | Jun–Jul 2027 | **Open** |
 | **Multitenancy** | Jul–Aug 2027 | **Open** |
 | **Billing** | Aug–Sep 2027 | **Open** |
+| **Integrations** | Sep–Oct 2027 | **Open** |
 | **AI** | Sep–Oct 2027 | **Open** |
 | **Mobile** | Oct–Dec 2027 | **Open** |
 | **Testing** | Dec 2027–Jan 2028 | **Open** |

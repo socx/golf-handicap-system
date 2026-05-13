@@ -116,6 +116,7 @@ Authentication
                     └── PWA
                         └── Multitenancy
                             └── Billing
+                                ├── Integrations
                                 └── AI
                                     └── Mobile
                                         └── Testing
@@ -144,6 +145,7 @@ This is the **true dependency chain** of your entire platform.
 | **Leaderboard** | Rounds | Competitions |
 | **Competitions** | Leaderboard, Handicap | DevOps |
 | **DevOps** | Competitions | Security |
+| **Integrations** | Billing, Multitenancy | — |
 | **Security** | DevOps | PWA |
 | **PWA** | Security | Multitenancy |
 | **Multitenancy** | PWA | Billing |
