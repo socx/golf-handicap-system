@@ -20,14 +20,14 @@ jobs:
         env:
           # Populate these values in the workflow file or through org-level
           # workflow templating. When left blank, the workflow falls back to labels.
-          GH_PROJECT_ID: ""
-          GH_PROJECT_STATUS_FIELD_ID: ""
-          GH_OPTION_BACKLOG: ""
-          GH_OPTION_READY: ""
-          GH_OPTION_IN_PROGRESS: ""
-          GH_OPTION_REVIEW: ""
-          GH_OPTION_TESTING: ""
-          GH_OPTION_BLOCKED: ""
+          GH_PROJECT_ID: ${{ secrets.GH_PROJECT_ID }}
+          GH_PROJECT_STATUS_FIELD_ID: ${{ secrets.GH_PROJECT_STATUS_FIELD_ID }}
+          GH_OPTION_BACKLOG: ${{ secrets.GH_OPTION_BACKLOG }}
+          GH_OPTION_READY: ${{ secrets.GH_OPTION_READY }}
+          GH_OPTION_IN_PROGRESS: ${{ secrets.GH_OPTION_IN_PROGRESS }}
+          GH_OPTION_REVIEW: ${{ secrets.GH_OPTION_REVIEW }}
+          GH_OPTION_TESTING: ${{ secrets.GH_OPTION_TESTING }}
+          GH_OPTION_BLOCKED: ${{ secrets.GH_OPTION_BLOCKED }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
