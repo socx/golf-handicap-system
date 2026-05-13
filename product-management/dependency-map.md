@@ -30,6 +30,7 @@ Rounds
 │       └── Notifications
 │           └── PDF
 │               └── Leaderboard
+│                   └── Competitions
 ```
 
 **Explanation:**  
@@ -37,14 +38,15 @@ Handicap requires rounds.
 Dashboard requires handicap + rounds.  
 Notifications require dashboard + events.  
 PDF requires rounds + players + courses.  
-Leaderboard requires rounds + handicap.
+Leaderboard requires rounds + handicap.  
+Competitions requires rounds + handicap + leaderboard scaffolding.
 
 ---
 
 # **3. Infrastructure Layer**
 
 ```
-Leaderboard
+Competitions
 └── DevOps
     ├── Security
     │   └── PWA
@@ -53,7 +55,7 @@ Leaderboard
 ```
 
 **Explanation:**  
-DevOps is required before security hardening.  
+DevOps is required after core gameplay and ranking flows are stable.  
 Security is required before PWA (service workers, offline auth).  
 PWA is required before multitenancy (offline tenant‑scoped data).  
 Multitenancy is required before billing (tenant subscriptions).
@@ -108,6 +110,7 @@ Authentication
             │       └── Notifications
             │           └── PDF
             │               └── Leaderboard
+            │                   └── Competitions
             └── DevOps
                 └── Security
                     └── PWA
@@ -138,8 +141,9 @@ This is the **true dependency chain** of your entire platform.
 | **Dashboard** | Handicap | Notifications |
 | **Notifications** | Dashboard | PDF |
 | **PDF** | Rounds | Leaderboard |
-| **Leaderboard** | Rounds | DevOps |
-| **DevOps** | Leaderboard | Security |
+| **Leaderboard** | Rounds | Competitions |
+| **Competitions** | Leaderboard, Handicap | DevOps |
+| **DevOps** | Competitions | Security |
 | **Security** | DevOps | PWA |
 | **PWA** | Security | Multitenancy |
 | **Multitenancy** | PWA | Billing |

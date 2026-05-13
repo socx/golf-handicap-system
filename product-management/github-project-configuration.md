@@ -2,7 +2,7 @@
 
 ## **1. Project Name**
 ```
-Platform Roadmap & Delivery Plan
+Golf Handicap System Platform Roadmap & Delivery Plan
 ```
 
 ---
@@ -27,7 +27,7 @@ Statuses map directly to GitHub Project fields.
 
 ## **3. Custom Fields**
 
-These fields allow you to track the rich metadata already defined in your story files.
+These fields allow tracking of the rich metadata already defined in the story files.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -46,7 +46,7 @@ These fields allow you to track the rich metadata already defined in your story 
 
 ## **4. Labels**
 
-These labels match your epics and allow filtering across repos.
+These labels match the epics and allow filtering across repos.
 
 ```
 epic:auth
@@ -58,6 +58,7 @@ epic:dashboard
 epic:notifications
 epic:pdf
 epic:leaderboard
+epic:competitions
 epic:devops
 epic:security
 epic:pwa
@@ -96,6 +97,7 @@ Each milestone corresponds to a story file.
 | **Frontend** | Sep 2026–2027 | **Open** |
 | **PDF** | Early 2027 | **Open** |
 | **Leaderboard** | Feb–Mar 2027 | **Open** |
+| **Competitions** | Mar 2027 | **Open** |
 | **DevOps** | Mar–May 2027 | **Open** |
 | **Security** | May–Jun 2027 | **Open** |
 | **PWA** | Jun–Jul 2027 | **Open** |
@@ -113,7 +115,7 @@ Each milestone corresponds to a story file.
 
 ## **6. Automation Rules**
 
-These are GitHub Projects automations you can configure directly.
+These are GitHub Projects automations that can be configured directly.
 
 ### **Move to “In Progress” when PR is opened**
 ```
@@ -121,6 +123,22 @@ Trigger: Pull request opened
 Condition: Issue linked to PR
 Action: Set Status = In Progress
 ```
+
+### **Workflow Configuration IDs (for API updates)**
+To enable direct project status updates in `.github/workflows/project-auto-move.yml`, set:
+
+```
+GH_PROJECT_ID=<ProjectV2 node ID>
+GH_PROJECT_STATUS_FIELD_ID=<Status field node ID>
+GH_OPTION_BACKLOG=<single-select option ID>
+GH_OPTION_READY=<single-select option ID>
+GH_OPTION_IN_PROGRESS=<single-select option ID>
+GH_OPTION_REVIEW=<single-select option ID>
+GH_OPTION_TESTING=<single-select option ID>
+GH_OPTION_BLOCKED=<single-select option ID>
+```
+
+If these are left blank, the workflow still applies fallback labels (`in-progress`, `needs-review`, `needs-testing`, `blocked`).
 
 ### **Move to “In Review” when PR is ready for review**
 ```
@@ -156,7 +174,7 @@ Action: Remove "blocked" from dependent issues
 
 ## **7. Saved Views**
 
-These are the views you’ll use daily.
+These are the views that'll be used daily.
 
 ### **1. Roadmap View (Timeline)**
 - Group by: **Epic**
@@ -189,7 +207,7 @@ These are the views you’ll use daily.
 
 ## **8. Issue Template (Optional)**
 
-You can add this to `.github/ISSUE_TEMPLATE/story.md`:
+This can be added to `.github/ISSUE_TEMPLATE/story.md`:
 
 ```
 ### Story
@@ -230,13 +248,13 @@ Low / Medium / High
 
 ---
 
-## **10. Integration With Your Story Files**
+## **10. Integration With Story Files**
 
 Each epic in GitHub Projects links directly to its story file:
 
 - **Master Index**  
 - **All Story Files**  
 
-This ensures your GitHub Project is **fully aligned** with your story architecture.
+This ensures the GitHub Project is **fully aligned** with the story architecture.
 
 ---

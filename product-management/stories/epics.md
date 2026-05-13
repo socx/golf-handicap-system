@@ -132,6 +132,18 @@ Provide leaderboards and rankings at club or course level based on handicap and 
 
 ---
 
+## Epic: Competitions & Tournaments
+
+Provide a competition module that supports event setup, handicap-adjusted scoring, and results publishing.
+
+**Goals:**
+- Create and manage competitions by format (Stableford, Stroke Play, Match Play).
+- Attach rounds and participating players to a competition.
+- Apply playing handicaps and calculate net results.
+- Publish leaderboards and result summaries for each event.
+
+---
+
 ## Epic: Infrastructure & DevOps
 
 Provide robust infrastructure, deployment, and observability for the system.

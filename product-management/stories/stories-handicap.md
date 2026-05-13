@@ -15,7 +15,7 @@ This file contains all user stories for the Handicap Calculation epic, including
 - Priority  
 - Target date (sequential, 6‑hour days, weekdays only)
 
-Start date for this epic (after Rounds epic ends): **20 August 2026**
+Start date for this epic (after Rounds epic ends): **14 September 2026**
 
 ---
 
@@ -28,7 +28,7 @@ So that each round has a differential used for handicap index.
 **Size:** M  
 **Estimate:** 3–5 days  
 **Priority:** High  
-**Target Date:** **20 August 2026**
+**Target Date:** **17 September 2026**
 
 ### Acceptance Criteria
 - [ ] Differential formula implemented:  
@@ -53,7 +53,7 @@ So that differentials reflect abnormal playing conditions.
 **Size:** M  
 **Estimate:** 3–5 days  
 **Priority:** Medium  
-**Target Date:** **27 August 2026**
+**Target Date:** **24 September 2026**
 
 ### Acceptance Criteria
 - [ ] PCC calculated daily per course/tee configuration.  
@@ -78,7 +78,7 @@ So that the correct number of lowest differentials are used.
 **Size:** L  
 **Estimate:** 6–10 days  
 **Priority:** High  
-**Target Date:** **06 September 2026**
+**Target Date:** **04 October 2026**
 
 ### Acceptance Criteria
 - [ ] Uses WHS table for number of differentials based on rounds available.  
@@ -104,7 +104,7 @@ So that players without enough holes are clearly informed.
 **Size:** S  
 **Estimate:** 1–2 days  
 **Priority:** Medium  
-**Target Date:** **08 September 2026**
+**Target Date:** **06 October 2026**
 
 ### Acceptance Criteria
 - [ ] Endpoint `/handicap/eligibility/:playerId` returns total eligible holes.  
@@ -127,7 +127,7 @@ So that handicap increases are controlled according to WHS rules.
 **Size:** M  
 **Estimate:** 3–5 days  
 **Priority:** Medium  
-**Target Date:** **13 September 2026**
+**Target Date:** **11 October 2026**
 
 ### Acceptance Criteria
 - [ ] Soft cap: limits upward movement beyond 3 strokes.  
@@ -150,7 +150,7 @@ So that the frontend can display up‑to‑date handicap information.
 **Size:** S  
 **Estimate:** 1–2 days  
 **Priority:** High  
-**Target Date:** **15 September 2026**
+**Target Date:** **13 October 2026**
 
 ### Acceptance Criteria
 - [ ] POST `/handicap/calculate/:playerId` triggers full WHS calculation.  
@@ -179,7 +179,7 @@ So that players can see how their index has changed over time.
 **Size:** S  
 **Estimate:** 1–2 days  
 **Priority:** Medium  
-**Target Date:** **17 September 2026**
+**Target Date:** **15 October 2026**
 
 ### Acceptance Criteria
 - [ ] `handicap_records` includes: id, player_id, index_value, date, differentials_used, pcc_values, cap_adjustments.  
@@ -201,7 +201,7 @@ So that the frontend can display trends.
 **Size:** S  
 **Estimate:** 1–2 days  
 **Priority:** Medium  
-**Target Date:** **19 September 2026**
+**Target Date:** **18 October 2026**
 
 ### Acceptance Criteria
 - [ ] GET `/handicap/history/:playerId` returns list of handicap_records.  
@@ -222,7 +222,7 @@ So that players can quickly see their current index.
 **Size:** S  
 **Estimate:** 1–2 days  
 **Priority:** Medium  
-**Target Date:** **22 September 2026**
+**Target Date:** **20 October 2026**
 
 ### Acceptance Criteria
 - [ ] Shows current index + last update date.  
@@ -244,7 +244,7 @@ So that players can visualise their handicap trend over time.
 **Size:** M  
 **Estimate:** 3–5 days  
 **Priority:** Medium  
-**Target Date:** **27 September 2026**
+**Target Date:** **25 October 2026**
 
 ### Acceptance Criteria
 - [ ] Line chart showing index over time.  
@@ -267,7 +267,7 @@ So that exceptional scoring adjustments can be applied.
 **Size:** M  
 **Estimate:** 3–5 days  
 **Priority:** Low  
-**Target Date:** **02 October 2026**
+**Target Date:** **30 October 2026**
 
 ### Acceptance Criteria
 - [ ] POST `/handicap/override/:playerId` sets manual index.  
@@ -290,7 +290,7 @@ So that all players’ handicaps can be updated after rule changes or data impor
 **Size:** L  
 **Estimate:** 6–10 days  
 **Priority:** Low  
-**Target Date:** **12 October 2026**
+**Target Date:** **10 November 2026**
 
 ### Acceptance Criteria
 - [ ] Background job recalculates all players.  

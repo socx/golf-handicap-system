@@ -17,13 +17,14 @@ Each entry links to the corresponding file using Guided Links.
 - **[stories-notifications.md](stories-notifications.md)** — Email notifications, preferences, history  
 - **[stories-pdf.md](stories-pdf.md)** — PDF generation, scorecards, reports  
 - **[stories-leaderboard.md](stories-leaderboard.md)** — Rankings, scoring averages, club leaderboards  
+- **[stories-competitions.md](stories-competitions.md)** — Competition setup, scoring formats, results  
 
 ---
 
 ## Platform Infrastructure & Operations
 
 - **[stories-devops.md](stories-devops.md)** — CI/CD, IaC, monitoring, logging  
-- **[stories-security.md](stories-security.md)** — Security, JWT, rate limiting, audit logs  
+- **[stories.security.md](stories.security.md)** — Security, JWT, rate limiting, audit logs  
 - **[stories-pwa.md](stories-pwa.md)** — PWA, offline mode, caching, background sync  
 - **[stories-multitenancy.md](stories-multitenancy.md)** — Tenants, clubs, isolation, branding  
 - **[stories-billing.md](stories-billing.md)** — Stripe billing, subscriptions, invoices  
@@ -48,6 +49,7 @@ Each entry links to the corresponding file using Guided Links.
 - **[Notifications](stories-notifications.md)**  
 - **[PDF & Exports](stories-pdf.md)**  
 - **[Leaderboards](stories-leaderboard.md)**  
+- **[Competitions](stories-competitions.md)**  
 
 ### By Platform Layer
 - **[Frontend](stories-dashboard.md)**  
@@ -59,7 +61,7 @@ Each entry links to the corresponding file using Guided Links.
 
 ### By Operational Domain
 - **[DevOps](stories-devops.md)**  
-- **[Security](stories-security.md)**  
+- **[Security](stories.security.md)**  
 - **[Architecture](stories-architecture.md)**  
 - **[Testing](stories-testing.md)**  
 - **[Billing](stories-billing.md)**  

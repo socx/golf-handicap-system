@@ -38,8 +38,11 @@
 - **Leaderboard Epic**  
   **14 Feb → 11 March 2027**
 
+- **Competitions Epic**  
+  **11 March → 25 March 2027**
+
 - **DevOps Epic**  
-  **11 March → 02 May 2027**
+  **25 March → 02 May 2027**
 
 ---
 
@@ -109,7 +112,8 @@
 | **Frontend** | 22 Sep 2026 | Early 2027 |
 | **PDF** | Early 2027 | 14 Feb 2027 |
 | **Leaderboard** | 14 Feb 2027 | 11 Mar 2027 |
-| **DevOps** | 11 Mar 2027 | 02 May 2027 |
+| **Competitions** | 11 Mar 2027 | 25 Mar 2027 |
+| **DevOps** | 25 Mar 2027 | 02 May 2027 |
 | **Security** | 02 May 2027 | 06 Jun 2027 |
 | **PWA** | 06 Jun 2027 | 04 Jul 2027 |
 | **Multitenancy** | 04 Jul 2027 | 09 Aug 2027 |
