@@ -98,27 +98,81 @@ def parse_story_blocks(content: str) -> List[Tuple[str, str]]:
     return blocks
 
 
-def find_issue_by_sync_key(
-    repo: str, token: str, sync_key: str
-) -> Optional[Dict[str, Any]]:
-    query = f'repo:{repo} is:issue in:body "STORY_SYNC_KEY:{sync_key}"'
-    resp = gh_request(
-        "GET",
-        f"{API_BASE}/search/issues",
-        token,
-        params={"q": query, "per_page": 1},
-    ).json()
-    items = resp.get("items", [])
-    return items[0] if items else None
+def extract_sync_key(body: str) -> Optional[str]:
+    match = re.search(r"<!--\s*STORY_SYNC_KEY:(.*?)\s*-->", body or "")
+    return match.group(1).strip() if match else None
 
 
-def ensure_label(repo: str, token: str, label: str, color: str, description: str = "") -> None:
-    try:
-        gh_request("GET", f"{API_BASE}/repos/{repo}/labels/{label}", token)
+def load_existing_story_issues(repo: str, token: str) -> Dict[str, Dict[str, Any]]:
+    existing: Dict[str, Dict[str, Any]] = {}
+    page = 1
+
+    while True:
+        response = gh_request(
+            "GET",
+            f"{API_BASE}/repos/{repo}/issues",
+            token,
+            params={
+                "state": "all",
+                "labels": "story",
+                "per_page": 100,
+                "page": page,
+            },
+        ).json()
+
+        if not response:
+            break
+
+        for issue in response:
+            if issue.get("pull_request"):
+                continue
+            sync_key = extract_sync_key(issue.get("body", ""))
+            if sync_key:
+                existing[sync_key] = issue
+
+        if len(response) < 100:
+            break
+
+        page += 1
+
+    return existing
+
+
+def load_existing_labels(repo: str, token: str) -> set[str]:
+    labels: set[str] = set()
+    page = 1
+
+    while True:
+        response = gh_request(
+            "GET",
+            f"{API_BASE}/repos/{repo}/labels",
+            token,
+            params={"per_page": 100, "page": page},
+        ).json()
+
+        if not response:
+            break
+
+        labels.update(label["name"] for label in response)
+
+        if len(response) < 100:
+            break
+
+        page += 1
+
+    return labels
+
+
+def ensure_label(
+    repo: str,
+    token: str,
+    existing_labels: set[str],
+    label: str,
+    color: str,
+    description: str = "",
+) -> None:
+    if label in existing_labels:
         return
-    except RuntimeError as err:
-        if "404" not in str(err):
-            raise
 
     gh_request(
         "POST",
@@ -126,6 +180,7 @@ def ensure_label(repo: str, token: str, label: str, color: str, description: str
         token,
         json={"name": label, "color": color, "description": description[:100]},
     )
+    existing_labels.add(label)
 
 
 def story_issue_body(
@@ -191,6 +246,8 @@ def main() -> None:
 
     created = 0
     updated = 0
+    existing_issues = load_existing_story_issues(repo, token)
+    existing_labels = load_existing_labels(repo, token)
 
     for path in sorted(STORIES_ROOT.glob("*.md")):
         if path.name in SKIP_FILES:
@@ -208,9 +265,23 @@ def main() -> None:
             continue
 
         # Ensure baseline labels are present before creating/updating issues.
-        ensure_label(repo, token, "story", LABEL_COLORS["story"], "Story work item")
+        ensure_label(
+            repo,
+            token,
+            existing_labels,
+            "story",
+            LABEL_COLORS["story"],
+            "Story work item",
+        )
         epic_label = f"epic:{epic_slug}"
-        ensure_label(repo, token, epic_label, "5319E7", f"Stories for epic {epic_slug}")
+        ensure_label(
+            repo,
+            token,
+            existing_labels,
+            epic_label,
+            "5319E7",
+            f"Stories for epic {epic_slug}",
+        )
 
         for heading, block in blocks:
             story_title = normalize_story_title(heading)
@@ -224,17 +295,31 @@ def main() -> None:
             size_match = re.search(r"\*\*Size:\*\*\s*(XS|S|M|L|XL)\b", block, re.I)
             if size_match:
                 size_label = f"size:{size_match.group(1).lower()}"
-                ensure_label(repo, token, size_label, SIZE_COLORS[size_match.group(1).lower()], "Story size")
+                ensure_label(
+                    repo,
+                    token,
+                    existing_labels,
+                    size_label,
+                    SIZE_COLORS[size_match.group(1).lower()],
+                    "Story size",
+                )
                 labels.append(size_label)
 
             priority_match = re.search(r"\*\*Priority:\*\*\s*(High|Medium|Low)\b", block, re.I)
             if priority_match:
                 pri = priority_match.group(1).lower()
                 pri_label = f"priority:{pri}"
-                ensure_label(repo, token, pri_label, PRIORITY_COLORS[pri], "Story priority")
+                ensure_label(
+                    repo,
+                    token,
+                    existing_labels,
+                    pri_label,
+                    PRIORITY_COLORS[pri],
+                    "Story priority",
+                )
                 labels.append(pri_label)
 
-            existing = find_issue_by_sync_key(repo, token, sync_key)
+            existing = existing_issues.get(sync_key)
             if existing:
                 issue_number = existing["number"]
                 gh_request(
@@ -252,6 +337,7 @@ def main() -> None:
                     token,
                     json={"title": issue_title, "body": body, "labels": labels},
                 ).json()
+                existing_issues[sync_key] = issue
                 created += 1
                 print(f"Created issue #{issue['number']}: {issue_title}")
 
