@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, cast
 
@@ -17,6 +18,9 @@ from requests import Response
 
 API_BASE = "https://api.github.com"
 STORIES_ROOT = Path("product-management/stories")
+MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
+MUTATION_DELAY_SECONDS = 2.0
+MAX_RETRIES = 6
 
 STORY_FILE_PATTERN = re.compile(r"^stories[-.].+\.md$")
 SKIP_FILES = {"stories-index.md", "epics.md", "README.md"}
@@ -43,10 +47,48 @@ SIZE_COLORS = {
     "xl": "F4B2B2",
 }
 
+last_mutation_at = 0.0
+
 
 def fail(message: str) -> NoReturn:
     print(f"ERROR: {message}", file=sys.stderr)
     sys.exit(1)
+
+
+def is_secondary_rate_limit(resp: Response) -> bool:
+    if resp.status_code not in {403, 429}:
+        return False
+    payload = resp.text.lower()
+    return (
+        "secondary rate limit" in payload
+        or "temporarily blocked from content creation" in payload
+        or "retry your request again later" in payload
+    )
+
+
+def throttle_mutation(method: str) -> None:
+    global last_mutation_at
+
+    if method.upper() not in MUTATING_METHODS:
+        return
+
+    now = time.monotonic()
+    elapsed = now - last_mutation_at
+    if elapsed < MUTATION_DELAY_SECONDS:
+        time.sleep(MUTATION_DELAY_SECONDS - elapsed)
+
+
+def retry_delay_seconds(resp: Response, attempt: int) -> float:
+    retry_after = resp.headers.get("Retry-After")
+    if retry_after:
+        try:
+            return max(float(retry_after), MUTATION_DELAY_SECONDS)
+        except ValueError:
+            pass
+
+    # Exponential backoff capped at 60 seconds keeps the workflow moving
+    # while respecting GitHub's secondary rate limits.
+    return min(60.0, max(MUTATION_DELAY_SECONDS, 5.0 * (2 ** attempt)))
 
 
 def gh_request(method: str, url: str, token: str, **kwargs: Any) -> Response:
@@ -58,12 +100,31 @@ def gh_request(method: str, url: str, token: str, **kwargs: Any) -> Response:
             "X-GitHub-Api-Version": "2022-11-28",
         }
     )
-    resp = requests.request(method, url, headers=headers, timeout=30, **kwargs)
-    if resp.status_code >= 400:
+
+    for attempt in range(MAX_RETRIES + 1):
+        throttle_mutation(method)
+        resp = requests.request(method, url, headers=headers, timeout=30, **kwargs)
+
+        if resp.status_code < 400:
+            if method.upper() in MUTATING_METHODS:
+                global last_mutation_at
+                last_mutation_at = time.monotonic()
+            return resp
+
+        if is_secondary_rate_limit(resp) and attempt < MAX_RETRIES:
+            delay = retry_delay_seconds(resp, attempt)
+            print(
+                f"Secondary rate limit hit for {method} {url}. Retrying in {delay:.1f}s...",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            continue
+
         raise RuntimeError(
             f"GitHub API error {resp.status_code} on {method} {url}: {resp.text}"
         )
-    return resp
+
+    raise RuntimeError(f"Exceeded retry budget for {method} {url}")
 
 
 def slug_from_filename(name: str) -> str:
