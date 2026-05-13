@@ -290,6 +290,32 @@ def normalize_story_title(heading: str) -> str:
     return cleaned
 
 
+def selected_story_paths() -> List[Path]:
+    changed_files_env = os.environ.get("CHANGED_STORY_FILES", "").strip()
+
+    if not changed_files_env:
+        return sorted(STORIES_ROOT.glob("*.md"))
+
+    selected: List[Path] = []
+    for raw_path in changed_files_env.splitlines():
+        normalized = raw_path.strip()
+        if not normalized:
+            continue
+
+        path = Path(normalized)
+        if path.name in SKIP_FILES:
+            continue
+        if not STORY_FILE_PATTERN.match(path.name):
+            continue
+        if not path.exists():
+            print(f"Skipping missing changed story file: {normalized}")
+            continue
+
+        selected.append(path)
+
+    return sorted(selected)
+
+
 def main() -> None:
     repo_env = os.environ.get("GITHUB_REPOSITORY")
     token_env = os.environ.get("GITHUB_TOKEN")
@@ -309,8 +335,13 @@ def main() -> None:
     updated = 0
     existing_issues = load_existing_story_issues(repo, token)
     existing_labels = load_existing_labels(repo, token)
+    story_paths = selected_story_paths()
 
-    for path in sorted(STORIES_ROOT.glob("*.md")):
+    if not story_paths:
+        print("No changed story files to process.")
+        return
+
+    for path in story_paths:
         if path.name in SKIP_FILES:
             continue
         if not STORY_FILE_PATTERN.match(path.name):

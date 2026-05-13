@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -29,7 +31,36 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Collect changed story files
+        id: changed-files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            {
+              echo 'changed_story_files<<EOF'
+              echo ''
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          before_sha="${{ github.event.before }}"
+          if [[ -z "$before_sha" || "$before_sha" == "0000000000000000000000000000000000000000" ]]; then
+            diff_target="HEAD^"
+          else
+            diff_target="$before_sha"
+          fi
+
+          changed_files=$(git diff --name-only "$diff_target" HEAD -- 'product-management/stories/*.md' 'product-management/stories/stories.*.md' | grep -E '/stories[^/]*\.md$' || true)
+
+          {
+            echo 'changed_story_files<<EOF'
+            printf '%s\n' "$changed_files"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Sync stories to issues
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED_STORY_FILES: ${{ steps.changed-files.outputs.changed_story_files }}
         run: python3 .github/scripts/sync_stories_to_issues.py
