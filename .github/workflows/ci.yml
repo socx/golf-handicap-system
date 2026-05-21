@@ -1,39 +1,161 @@
-name: CI
+name: CI/CD
 
 on:
+  # Run quality checks for all PRs.
   pull_request:
+
+  # Run quality checks + deploy for main branch updates.
   push:
     branches: [main]
 
+  # Allow manual reruns from the Actions tab.
+  workflow_dispatch:
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: cicd-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  ci:
+  quality:
+    name: Quality checks (install/lint/test/build)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
 
+      # Install all workspace dependencies from lockfile.
       - name: Install dependencies
         run: npm ci
 
+      # Lint all workspaces (if scripts exist).
       - name: Lint
         run: npm run lint
 
+      # Run tests across workspaces.
       - name: Test
         run: npm run test
 
+      # Build artifacts across workspaces.
       - name: Build
         run: npm run build
+
+  deploy:
+    name: Deploy to production droplet
+    needs: quality
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Package current repo snapshot for remote deployment.
+      - name: Package release artifact
+        run: |
+          tar --exclude='.git' --exclude='**/node_modules' -czf "$RUNNER_TEMP/release.tgz" .
+          cp "$RUNNER_TEMP/release.tgz" release.tgz
+
+      # Copy artifact to droplet temporary directory.
+      - name: Upload artifact to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "release.tgz"
+          target: "/tmp"
+
+      # Extract, install production deps, and restart systemd services.
+      - name: Deploy and restart services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            DEPLOY_USER="$(id -un)"
+            APP_DIR="/opt/apps/ghs"
+
+            sudo mkdir -p "$APP_DIR"
+            sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+
+            if [ -s "$HOME/.nvm/nvm.sh" ]; then
+              . "$HOME/.nvm/nvm.sh"
+              nvm use node >/dev/null 2>&1 || true
+            fi
+            export PATH="$HOME/.nvm/versions/node/*/bin:$HOME/node_modules/.bin:/usr/local/bin:/usr/bin:$PATH"
+
+            NPM_BIN="$(command -v npm || true)"
+            if [ -z "$NPM_BIN" ]; then
+              echo "npm not found on remote host. Install Node.js for deploy user or system-wide." >&2
+              exit 1
+            fi
+
+            tar -xzf /tmp/release.tgz -C "$APP_DIR"
+            rm -f /tmp/release.tgz
+
+            cd "$APP_DIR/apps/web" && "$NPM_BIN" ci --omit=dev
+            cd "$APP_DIR/apps/api" && "$NPM_BIN" ci --omit=dev
+            if [ -d "$APP_DIR/apps/worker" ]; then
+              cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev
+            fi
+
+            sudo systemctl daemon-reload
+
+            # Required services.
+            for svc in ghs-web ghs-api; do
+              if ! sudo systemctl cat "${svc}.service" >/dev/null 2>&1; then
+                echo "Missing required unit: ${svc}.service — install systemd files from do-nginx-infra on the droplet" >&2
+                exit 1
+              fi
+              sudo systemctl enable "$svc"
+              sudo systemctl restart "$svc"
+              sudo systemctl status "$svc" --no-pager || true
+            done
+
+            # Optional worker service.
+            if sudo systemctl cat ghs-worker.service >/dev/null 2>&1; then
+              sudo systemctl enable ghs-worker
+              sudo systemctl restart ghs-worker
+              sudo systemctl status ghs-worker --no-pager || true
+            else
+              echo "Skipping optional unit: ghs-worker.service (not yet installed)"
+            fi
+
+      # Confirm public endpoints are healthy after restart.
+      - name: Post-deploy smoke checks
+        run: |
+          set -euo pipefail
+
+          for i in 1 2 3 4 5; do
+            if curl -fsS https://ghs.socx.org.uk/ >/dev/null; then
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "Web smoke check failed: https://ghs.socx.org.uk/" >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+          for i in 1 2 3 4 5; do
+            if curl -fsS https://ghs.socx.org.uk/api/health >/dev/null; then
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "API smoke check failed: https://ghs.socx.org.uk/api/health" >&2
+              exit 1
+            fi
+            sleep 3
+          done
