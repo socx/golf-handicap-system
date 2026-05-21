@@ -103,13 +103,15 @@ So that code quality is enforced automatically.
   - run linting  
   - build project  
 - [ ] Status checks required before merge.  
-- [ ] Fails fast on errors.
+- [x] Fails fast on errors.
 
 ### Dependencies
 - **[Test suite](ca://s?q=Explain_test_suite)**  
 - **[Linting config](ca://s?q=Explain_linting_config)**
 
 ---
+
+
 
 ## 2. Set up CD pipeline for backend
 
