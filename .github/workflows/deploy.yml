@@ -82,17 +82,26 @@ jobs:
 
             cd "$APP_DIR/apps/web"    && "$NPM_BIN" ci --omit=dev
             cd "$APP_DIR/apps/api"    && "$NPM_BIN" ci --omit=dev
-            cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev
+              if [ -d "$APP_DIR/apps/worker" ]; then
+                cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev
+              fi
 
             sudo systemctl daemon-reload
 
-            for svc in ghs-web ghs-api ghs-worker; do
-              if ! systemctl list-unit-files --type=service | grep -q "^${svc}\.service"; then
-                echo "Missing required unit: ${svc}.service" >&2
-                exit 1
-              fi
+              for svc in ghs-web ghs-api; do
+                if ! systemctl list-unit-files --type=service | grep -q "^${svc}\.service"; then
+                  echo "Missing required unit: ${svc}.service — install systemd files from do-nginx-infra on the droplet" >&2
+                  exit 1
+                fi
+                sudo systemctl enable "$svc"
+                sudo systemctl restart "$svc"
+                sudo systemctl status "$svc" --no-pager || true
+              done
 
-              sudo systemctl enable "$svc"
-              sudo systemctl restart "$svc"
-              sudo systemctl status "$svc" --no-pager || true
-            done
+              if systemctl list-unit-files --type=service | grep -q "^ghs-worker\.service"; then
+                sudo systemctl enable ghs-worker
+                sudo systemctl restart ghs-worker
+                sudo systemctl status ghs-worker --no-pager || true
+              else
+                echo "Skipping optional unit: ghs-worker.service (not yet installed)"
+              fi

@@ -18,6 +18,6 @@
     "db:setup": "npm run db:create && npm run db:migrate && npm run db:seed"
   },
   "engines": {
-    "node": ">=20 <21"
+     "node": ">=20"
   }
 }
