@@ -34,17 +34,17 @@ So that feature development can begin immediately with consistent tooling.
 **Target Date:** **10 March 2027**
 
 ### Acceptance Criteria
-- [ ] Node.js 20 LTS, PostgreSQL 16, and Redis 7 verified locally.
-- [ ] Monorepo structure follows the template:
+- [x] Node.js 20 LTS, PostgreSQL 16, and Redis 7/8 verified locally.
+- [x] Monorepo structure follows the template:
   - `apps/api`
   - `apps/web`
   - `packages/db`
   - `packages/types`
   - `packages/config`
-- [ ] `.env` files created and validated for API and web apps.
-- [ ] DB creation, migration, and seed workflow works end-to-end.
-- [ ] `npm run dev` (or equivalent monorepo command) starts API and web successfully.
-- [ ] Health and smoke checks pass:
+- [x] `.env` files created and validated for API and web apps.
+- [x] DB creation, migration, and seed workflow works end-to-end.
+- [x] `npm run dev` (or equivalent monorepo command) starts API and web successfully.
+- [x] Health and smoke checks pass:
   - API health endpoint returns 200.
   - Web app loads and can reach `/api` routes.
 

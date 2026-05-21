@@ -43,7 +43,7 @@ const checks = [
   {
     name: 'Redis server',
     command: 'redis-server --version',
-    expected: 7,
+    expected: [7, 8],
     parse: majorFromRedis,
   },
 ];
@@ -60,9 +60,14 @@ for (const check of checks) {
   }
 
   const major = check.parse(result.out);
-  const ok = major === check.expected;
+  const ok = Array.isArray(check.expected)
+    ? check.expected.includes(major)
+    : major === check.expected;
   if (!ok) failed = true;
-  console.log(`- ${check.name}: ${result.out} ${ok ? '[OK]' : `[EXPECTED ${check.expected}.x]`}`);
+  const expectedLabel = Array.isArray(check.expected)
+    ? `${check.expected.join(' or ')}.x`
+    : `${check.expected}.x`;
+  console.log(`- ${check.name}: ${result.out} ${ok ? '[OK]' : `[EXPECTED ${expectedLabel}]`}`);
 }
 
 console.log('\nRuntime checks:');
