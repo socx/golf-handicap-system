@@ -48,10 +48,10 @@ So that the system’s components and interactions are clearly understood.
 
 ---
 
-## 2. Implement modular service boundaries
+## 2. Implement modular API domain boundaries
 
 **As a developer**  
-I want clear service boundaries  
+I want clear domain boundaries inside the API  
 So that the codebase is maintainable and scalable.
 
 **Size:** M  
@@ -60,7 +60,7 @@ So that the codebase is maintainable and scalable.
 **Target Date:** **22 March 2028**
 
 ### Acceptance Criteria
-- [ ] **[Service modules](ca://s?q=Explain_service_module_structure)** created for:
+- [ ] **[API domain modules](ca://s?q=Explain_API_domain_module_structure)** created for:
   - auth  
   - rounds  
   - handicap  
@@ -96,7 +96,7 @@ So that the codebase reflects business domains.
 - [ ] Repositories abstracted.
 
 ### Dependencies
-- **[Service boundaries](ca://s?q=Explain_service_module_structure)**
+- **[API domain boundaries](ca://s?q=Explain_API_domain_module_structure)**
 
 ---
 
@@ -119,7 +119,7 @@ So that breaking changes can be introduced safely.
 - [ ] Documentation updated.
 
 ### Dependencies
-- **[API gateway](ca://s?q=Explain_API_gateway_design)**
+- **[API routing layer](ca://s?q=Explain_API_routing_layer_design)**
 
 ---
 
@@ -151,7 +151,7 @@ So that environment variables are consistent and secure.
 
 **As a developer**  
 I want an event-driven foundation  
-So that services can communicate asynchronously.
+So that API modules can process asynchronous workflows reliably.
 
 **Size:** L  
 **Estimate:** 6–10 days  
@@ -172,10 +172,10 @@ So that services can communicate asynchronously.
 
 ---
 
-## 7. Implement API gateway (optional)
+## 7. Implement API routing layer hardening
 
 **As a developer**  
-I want an API gateway  
+I want a hardened API routing layer  
 So that routing, auth, and rate limiting are centralised.
 
 **Size:** M  
@@ -184,13 +184,13 @@ So that routing, auth, and rate limiting are centralised.
 **Target Date:** **15 April 2028**
 
 ### Acceptance Criteria
-- [ ] **[API gateway](ca://s?q=Explain_API_gateway_design)** handles:
+- [ ] **[API routing layer](ca://s?q=Explain_API_routing_layer_design)** handles:
   - routing  
   - auth  
   - rate limiting  
   - logging  
 - [ ] Supports versioning.  
-- [ ] Optional feature (config flag).
+- [ ] Enabled by default in all environments.
 
 ### Dependencies
 - **[Rate limiting](ca://s?q=Explain_rate_limiting)**  
