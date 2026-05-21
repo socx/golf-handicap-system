@@ -1,5 +1,5 @@
 # stories-testing.md
-Parent Epic: #TESTING_EPIC_PLACEHOLDER  
+Parent Epic: #316  
 (Replace with actual epic issue number after creation)
 
 ---

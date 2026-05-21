@@ -1,5 +1,5 @@
 # stories-rounds.md
-Parent Epic: #ROUNDS_EPIC_PLACEHOLDER  
+Parent Epic: #299  
 (Replace with actual epic issue number after creation)
 
 ---

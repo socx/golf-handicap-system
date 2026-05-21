@@ -1,5 +1,5 @@
 # stories-ai.md
-Parent Epic: #AI_EPIC_PLACEHOLDER  
+Parent Epic: #314  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -20,10 +20,10 @@ Start date for this epic (after Billing epic ends): **06 September 2027**
 
 ---
 
-## 1. Implement AI insights service (backend)
+## 1. Implement AI insights module (backend)
 
 **As a developer**  
-I want an AI insights service  
+I want an AI insights module  
 So that the system can generate personalised performance insights for players.
 
 **Size:** L  
@@ -42,7 +42,7 @@ So that the system can generate personalised performance insights for players.
 - [ ] Unit tests for all insight types.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**  
+- **[Analytics module](ca://s?q=Explain_analytics_module)**  
 - **[Rounds table](ca://s?q=Explain_rounds_table)**  
 - **[Handicap history](ca://s?q=Explain_handicap_history_API)**
 
@@ -71,7 +71,7 @@ So that players know which areas to focus on.
 
 ### Dependencies
 - **[AI insights engine](ca://s?q=Explain_AI_insights_engine)**  
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -96,7 +96,7 @@ So that the system can flag unusual scoring patterns.
 
 ### Dependencies
 - **[Rounds table](ca://s?q=Explain_rounds_table)**  
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -150,7 +150,7 @@ So that players can see where their index is trending.
 
 ### Dependencies
 - **[Handicap history](ca://s?q=Explain_handicap_history_API)**  
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -179,7 +179,7 @@ So that players can prepare for specific courses.
 
 ### Dependencies
 - **[Course data](ca://s?q=Explain_course_detail_API)**  
-- **[Player analytics](ca://s?q=Explain_analytics_service)**
+- **[Player analytics](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -204,7 +204,7 @@ So that tournaments can show projected standings.
 
 ### Dependencies
 - **[Leaderboard data](ca://s?q=Explain_leaderboard_by_club)**  
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -229,7 +229,7 @@ So that players can estimate round duration.
 
 ### Dependencies
 - **[Course data](ca://s?q=Explain_course_detail_API)**  
-- **[Player analytics](ca://s?q=Explain_analytics_service)**
+- **[Player analytics](ca://s?q=Explain_analytics_module)**
 
 ---
 

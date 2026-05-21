@@ -1,5 +1,5 @@
 # stories-misc.md
-Parent Epic: #MISC_EPIC_PLACEHOLDER  
+Parent Epic: #320  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -358,7 +358,7 @@ So that issues can be diagnosed quickly.
 
 **As a developer**  
 I want a system health page  
-So that admins can see the status of core services.
+So that admins can see the status of core platform modules.
 
 **Size:** S  
 **Estimate:** 1–2 days  

@@ -1,5 +1,5 @@
 # stories-billing.md
-Parent Epic: #BILLING_EPIC_PLACEHOLDER  
+Parent Epic: #313  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -233,7 +233,7 @@ So that tenants receive billing updates.
 - [ ] Respects notification preferences.
 
 ### Dependencies
-- **[Email service](ca://s?q=Explain_email_service_design)**  
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**  
 - **[Webhook handler](ca://s?q=Explain_Stripe_webhook_handler)**
 
 ---
@@ -257,7 +257,7 @@ So that tenants can end their subscription cleanly.
 
 ### Dependencies
 - **[Stripe integration](ca://s?q=Explain_Stripe_integration)**  
-- **[Email service](ca://s?q=Explain_email_service_design)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
 
 ---
 
@@ -302,7 +302,7 @@ So that super-admins can monitor revenue and churn.
 - [ ] Super-admin only.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**  
+- **[Analytics module](ca://s?q=Explain_analytics_module)**  
 - **[Subscription data](ca://s?q=Explain_subscription_status_fields)**
 
 ---

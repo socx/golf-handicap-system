@@ -1,5 +1,5 @@
 # stories-integrations.md
-Parent Epic: #INTEGRATIONS_EPIC_PLACEHOLDER
+Parent Epic: #308
 (Replace with actual epic issue number after creation)
 
 ---
@@ -171,7 +171,7 @@ So that players and admins stay informed.
 ### Acceptance Criteria
 - [ ] Email sent when request submitted, approved, rejected, or cancelled.
 - [ ] Template parameterizes course, player, date, time.
-- [ ] Integrates with existing email service.
+- [ ] Integrates with existing email delivery module.
 - [ ] Notification preferences respected.
 
 ### Dependencies

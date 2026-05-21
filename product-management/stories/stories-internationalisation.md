@@ -1,5 +1,5 @@
 # stories-internationalisation.md
-Parent Epic: #INTERNATIONALISATION_EPIC_PLACEHOLDER  
+Parent Epic: #319  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -62,7 +62,7 @@ So that system messages and emails can be localised.
 - [ ] Fallback logic implemented.
 
 ### Dependencies
-- **[Email service](ca://s?q=Explain_email_service_design)**  
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**  
 - **[Notification system](ca://s?q=Explain_notification_system)**
 
 ---
@@ -238,7 +238,7 @@ So that users receive emails in their preferred language.
 
 ### Dependencies
 - **[Backend i18n](ca://s?q=Explain_backend_i18n_framework)**  
-- **[Email service](ca://s?q=Explain_email_service_design)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
 
 ---
 
@@ -262,7 +262,7 @@ So that scorecards and reports can be exported in any language.
 - [ ] Fonts updated for multilingual support.
 
 ### Dependencies
-- **[PDF service](ca://s?q=Explain_PDF_generation_service)**  
+- **[PDF generation module](ca://s?q=Explain_PDF_generation_module)**  
 - **[Backend i18n](ca://s?q=Explain_backend_i18n_framework)**
 
 ---

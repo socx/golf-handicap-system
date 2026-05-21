@@ -1,0 +1,22 @@
+{
+  "name": "golf-handicap-system",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:api & npm run dev:web",
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "check:versions": "node scripts/check-versions.js",
+    "db:create": "node scripts/db/create-db.js",
+    "db:migrate": "node scripts/db/migrate.js",
+    "db:seed": "node scripts/db/seed.js",
+    "db:setup": "npm run db:create && npm run db:migrate && npm run db:seed"
+  },
+  "engines": {
+    "node": ">=20 <21"
+  }
+}

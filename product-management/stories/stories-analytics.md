@@ -1,5 +1,5 @@
 # stories-analytics.md
-Parent Epic: #ANALYTICS_EPIC_PLACEHOLDER  
+Parent Epic: #317  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -170,7 +170,7 @@ So that the frontend can display detailed stats.
 - [ ] Tenant-scoped.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**  
+- **[Analytics module](ca://s?q=Explain_analytics_module)**  
 - **[DW schema](ca://s?q=Explain_data_warehouse_schema)**
 
 ---
@@ -321,7 +321,7 @@ So that admins are notified of unusual patterns.
 - [ ] Logged in notification history.
 
 ### Dependencies
-- **[Email service](ca://s?q=Explain_email_service_design)**  
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**  
 - **[Anomaly detection](ca://s?q=Explain_anomaly_detection_model)**
 
 ---

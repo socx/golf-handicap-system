@@ -2,7 +2,7 @@
 
 > **Version:** 1.0  
 > **Date:** May 2026  
-> **Stack:** Node.js Microservices · PostgreSQL · React · Tailwind CSS
+> **Stack:** Node.js REST API · PostgreSQL · React · Tailwind CSS
 
 ---
 
@@ -11,7 +11,7 @@
 1. [Recommended Additional Features](#1-recommended-additional-features)
 2. [System Overview](#2-system-overview)
 3. [System Architecture](#3-system-architecture)
-4. [Microservices Breakdown](#4-microservices-breakdown)
+4. [REST API Modules & Endpoint Groups](#4-rest-api-modules--endpoint-groups)
 5. [Database Schema (PostgreSQL)](#5-database-schema-postgresql)
 6. [API Contract Documentation](#6-api-contract-documentation)
 7. [World Handicap System (WHS) Logic](#7-world-handicap-system-whs-logic)
@@ -90,21 +90,16 @@ This application is a full-featured golf club management system that:
 └────────────────────────┼────────────────────────────────────────┘
                          │  HTTPS / REST + JSON
 ┌────────────────────────▼────────────────────────────────────────┐
-│                       API GATEWAY TIER                          │
+│                        API TIER                                 │
 │                                                                 │
 │   ┌──────────────────────────────────────────────────────┐      │
-│   │    API Gateway (Express / nginx reverse proxy)       │      │
-│   │  Rate limiting · Auth (JWT) · Request routing        │      │
-│   └──┬──────────┬──────────┬──────────┬──────────┬───────┘      │
-└──────┼──────────┼──────────┼──────────┼──────────┼─────────────┘
-       │          │          │          │          │
-┌──────▼──┐ ┌────▼────┐ ┌───▼────┐ ┌───▼────┐ ┌───▼────────┐
-│ Player  │ │ Course  │ │ Round  │ │Handicap│ │   Auth     │
-│ Service │ │ Service │ │Service │ │Service │ │  Service   │
-│ :3001   │ │  :3002  │ │ :3003  │ │ :3004  │ │   :3005    │
-└────┬────┘ └────┬────┘ └───┬────┘ └───┬────┘ └───┬────────┘
-     │           │          │          │           │
-┌────▼───────────▼──────────▼──────────▼───────────▼────────────┐
+│   │  REST API (Express)                                  │      │
+│   │  Modules: auth, players, courses, rounds, handicap   │      │
+│   │  Shared middleware: auth, validation, rate limiting  │      │
+│   └──────────────────────────────┬───────────────────────┘      │
+└──────────────────────────────────┼───────────────────────────────┘
+              │
+┌──────────────────────────────────▼───────────────────────────────┐
 │                     DATA TIER                                   │
 │                                                                 │
 │   ┌────────────────────────────────┐   ┌─────────────────┐     │
@@ -128,30 +123,29 @@ This application is a full-featured golf club management system that:
 
 | Communication | Protocol |
 |---|---|
-| Client → API Gateway | HTTPS REST/JSON |
-| API Gateway → Services | HTTP/JSON (internal network) |
-| Services → PostgreSQL | TCP (pg driver / connection pool) |
-| Services → Redis | TCP (ioredis) |
+| Client → REST API | HTTPS REST/JSON |
+| REST API → PostgreSQL | TCP (pg driver / connection pool) |
+| REST API → Redis | TCP (ioredis) |
 | Async events (e.g. handicap recalc) | Internal event emitter or lightweight message queue (e.g. BullMQ) |
 
 ---
 
-## 4. Microservices Breakdown
+## 4. REST API Modules & Endpoint Groups
 
-### 4.1 Auth Service (:3005)
+### 4.1 Auth Module (`/auth`)
 Handles user registration, login, JWT issuance and refresh. Users are linked to player profiles (a player is the golf entity; a user is the login identity).
 
-### 4.2 Player Service (:3001)
-CRUD for player profiles. Validates uniqueness of email. Exposes search/filter endpoints. Returns current handicap index (fetched from Handicap Service or cached).
+### 4.2 Player Module (`/players`)
+CRUD for player profiles. Validates uniqueness of email. Exposes search/filter endpoints. Returns current handicap index (fetched from handicap records or cached).
 
-### 4.3 Course Service (:3002)
+### 4.3 Course Module (`/courses`)
 CRUD for golf courses and their tee/round configurations. Each configuration holds per-hole data (distance, par, HCP stroke index). Validates that hole count is exactly 9 or 18.
 
-### 4.4 Round Service (:3003)
+### 4.4 Round Module (`/rounds`)
 Records completed rounds. Accepts per-hole scores and stat flags. Validates hole count against the linked course configuration. Computes per-round statistics (GIR%, FIR%, putts, etc.) on write. Triggers handicap recalculation event.
 
-### 4.5 Handicap Service (:3004)
-The most complex service. Implements WHS Score Differential calculation and Handicap Index derivation. Exposes endpoints to calculate, retrieve and list handicap history for a player. Listens for round-posted events.
+### 4.5 Handicap Module (`/handicap`)
+Implements WHS Score Differential calculation and Handicap Index derivation. Exposes endpoints to calculate, retrieve and list handicap history for a player. Consumes round data within the same API application.
 
 ---
 
@@ -340,7 +334,7 @@ CREATE INDEX idx_audit_log_entity ON audit_log(entity, entity_id);
 
 All endpoints return `application/json`. All timestamps are ISO 8601 UTC. Authentication uses Bearer JWT in the `Authorization` header unless noted.
 
-**Base URL:** `https://api.yourdomain.com/v1`
+**Base URL:** `https://api.yourdomain.com/api/v1`
 
 **Standard error envelope:**
 ```json
@@ -355,7 +349,7 @@ All endpoints return `application/json`. All timestamps are ISO 8601 UTC. Authen
 
 ---
 
-### 6.1 Auth Service (`/auth`)
+### 6.1 Auth Endpoints (`/auth`)
 
 #### POST /auth/register
 Create a user account.
@@ -396,7 +390,7 @@ Invalidates the refresh token. Response 204.
 
 ---
 
-### 6.2 Player Service (`/players`)
+### 6.2 Player Endpoints (`/players`)
 
 #### GET /players
 Query params: `page`, `limit`, `search` (name/email), `club`, `country`
@@ -470,7 +464,7 @@ Soft delete. Response 204.
 
 ---
 
-### 6.3 Course Service (`/courses`)
+### 6.3 Course Endpoints (`/courses`)
 
 #### GET /courses
 Query params: `page`, `limit`, `search`
@@ -551,7 +545,7 @@ Soft delete. Response 204.
 
 ---
 
-### 6.4 Round Service (`/rounds`)
+### 6.4 Round Endpoints (`/rounds`)
 
 #### POST /rounds
 Create a new round.
@@ -620,7 +614,7 @@ Returns a scorecard-formatted view of the round, including:
 
 ---
 
-### 6.5 Handicap Service (`/handicap`)
+### 6.5 Handicap Endpoints (`/handicap`)
 
 #### POST /handicap/calculate
 Calculate (and store) a new handicap index for a player.
@@ -811,65 +805,101 @@ After calculating the raw new index:
 
 ## 9. Infrastructure & DevOps
 
-### 9.1 Docker Compose (Development)
+### 9.1 Local Development Setup (No Docker)
 
-```yaml
-version: "3.9"
-services:
-  api-gateway:
-    build: ./services/api-gateway
-    ports: ["3000:3000"]
-    environment:
-      - PLAYER_SERVICE_URL=http://player-service:3001
-      - COURSE_SERVICE_URL=http://course-service:3002
-      - ROUND_SERVICE_URL=http://round-service:3003
-      - HANDICAP_SERVICE_URL=http://handicap-service:3004
-      - AUTH_SERVICE_URL=http://auth-service:3005
-    depends_on: [player-service, course-service, round-service, handicap-service, auth-service]
+Run services directly on the host machine using package scripts and local dependencies.
 
-  player-service:
-    build: ./services/player
-    environment: [DATABASE_URL, REDIS_URL, JWT_SECRET]
+Recommended local service ports:
 
-  course-service:
-    build: ./services/course
-    environment: [DATABASE_URL, REDIS_URL, JWT_SECRET]
+| Component | Port | Notes |
+|---|---|---|
+| REST API | `3005` | Public API entry point |
+| Frontend (Vite) | `5175` | Web UI |
+| PostgreSQL | `5432` | Local install |
+| Redis | `6379` | Local install |
 
-  round-service:
-    build: ./services/round
-    environment: [DATABASE_URL, REDIS_URL, JWT_SECRET, HANDICAP_SERVICE_URL]
+Start local dependencies first (PostgreSQL and Redis), then run backend services and frontend using workspace scripts.
 
-  handicap-service:
-    build: ./services/handicap
-    environment: [DATABASE_URL, REDIS_URL, JWT_SECRET]
+#### 9.1.1 Local Setup Checklist (Concrete)
 
-  auth-service:
-    build: ./services/auth
-    environment: [DATABASE_URL, REDIS_URL, JWT_SECRET, JWT_REFRESH_SECRET]
+1. Install prerequisites:
+  - Node.js 20 LTS
+  - npm 10+ (or pnpm 9+ if the repo standardises on pnpm)
+  - PostgreSQL 16
+  - Redis 7
 
-  frontend:
-    build: ./frontend
-    ports: ["5173:5173"]
-    environment: [VITE_API_BASE_URL=http://localhost:3000/v1]
+2. Install dependencies from repository root:
 
-  postgres:
-    image: postgres:16
-    volumes: [pgdata:/var/lib/postgresql/data]
-    environment: [POSTGRES_DB=golf_db, POSTGRES_USER, POSTGRES_PASSWORD]
-
-  redis:
-    image: redis:7-alpine
-
-volumes:
-  pgdata:
+```bash
+npm install
 ```
 
-### 9.2 Environment Variables (per service)
+3. Create local environment files (one per service and frontend). Minimum values:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/golf_db
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=replace-with-long-random-secret
+JWT_REFRESH_SECRET=replace-with-second-long-random-secret
+JWT_EXPIRES_IN=1h
+PORT=3005
+```
+
+4. Create local database and run migrations:
+
+```bash
+createdb golf_db
+npm run db:migrate
+```
+
+5. Seed development data (optional but recommended):
+
+```bash
+npm run db:seed
+```
+
+6. Start all services and frontend:
+
+```bash
+npm run dev
+```
+
+7. Verify health checks and UI:
+  - Gateway: `http://localhost:3005/health`
+  - Frontend: `http://localhost:5175`
+
+If a monorepo task runner is used, equivalent commands (for example `pnpm -r dev` or `turbo run dev`) are acceptable as long as the API and frontend start with the ports defined above.
+
+#### 9.1.2 Quick Runbook (Local + Remote)
+
+Local development runbook:
+1. Start PostgreSQL and Redis.
+2. Run migrations and optional seed data.
+3. Start API and web apps.
+4. Verify:
+  - `GET /health` on `http://localhost:3005/health`
+  - frontend on `http://localhost:5175`
+
+Remote runtime runbook (DigitalOcean droplet with Nginx):
+1. Deploy app processes so ports match the Nginx host config for `ghs.socx.org.uk`:
+  - `ghs_web` -> `127.0.0.1:5175`
+  - `ghs_api` -> `127.0.0.1:3005`
+  - `ghs_worker` -> background worker process for async jobs
+2. Ensure TLS certs are valid for `ghs.socx.org.uk`.
+3. Confirm Nginx routing behavior:
+  - `/` proxies to `ghs_web`
+  - `/api/*` rewrites and proxies to `ghs_api`
+4. Smoke test over HTTPS:
+  - `https://ghs.socx.org.uk`
+  - `https://ghs.socx.org.uk/api/health`
+5. If health checks fail, rollback to the previous process release and reload Nginx.
+
+### 9.2 Environment Variables (API application)
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | `postgresql://user:pass@postgres:5432/golf_db` |
-| `REDIS_URL` | `redis://redis:6379` |
+| `DATABASE_URL` | `postgresql://user:pass@localhost:5432/golf_db` |
+| `REDIS_URL` | `redis://localhost:6379` |
 | `JWT_SECRET` | Access token signing secret |
 | `JWT_REFRESH_SECRET` | Refresh token signing secret |
 | `JWT_EXPIRES_IN` | e.g. `1h` |
@@ -891,15 +921,15 @@ V003__add_soft_delete_indexes.sql
 ### 10.1 Authentication & Authorisation
 - JWT access tokens (short-lived: 1h) + refresh tokens (7d), stored in HTTP-only cookies or memory (not localStorage)
 - Role-based access: `admin` can manage all data; `player` can only read/write their own rounds and read courses/players
-- All services validate JWT independently (shared secret); never trust service-to-service without the token
+- The API validates JWT at middleware level and enforces route-level authorisation checks
 
 ### 10.2 Input Validation
-- Validate all request bodies with **Joi** or **Zod** at the API Gateway and each service
+- Validate all request bodies with **Joi** or **Zod** in the REST API request pipeline
 - Slope rating: enforce 55–155; hole count: enforce 9 or 18; stroke index: unique per config, 1–N
 - SQL injection: use parameterised queries always (pg `$1, $2` placeholders); never string-interpolate user input
 
 ### 10.3 Rate Limiting
-- API Gateway: 100 req/min per IP for unauthenticated; 1000 req/min for authenticated users
+- REST API: 100 req/min per IP for unauthenticated; 1000 req/min for authenticated users
 - Login endpoint: 5 attempts / 15 min per IP (use Redis counter)
 
 ### 10.4 Data Privacy
@@ -916,72 +946,39 @@ V003__add_soft_delete_indexes.sql
 ## 11. Project Directory Structure
 
 ```
-golf-app/
-├── services/
-│   ├── api-gateway/
+golf-handicap-system/
+├── apps/
+│   ├── api/                         # Single REST API (Express + TypeScript)
 │   │   ├── src/
-│   │   │   ├── index.js
-│   │   │   ├── middleware/          # auth.js, rateLimiter.js, errorHandler.js
-│   │   │   └── routes/              # proxy routes to each service
-│   │   ├── Dockerfile
+│   │   │   ├── app.ts
+│   │   │   ├── routes/              # auth, players, courses, rounds, handicap
+│   │   │   ├── middleware/          # auth, validation, rate-limiter, error-handler
+│   │   │   ├── controllers/
+│   │   │   ├── services/            # domain logic inside one API process
+│   │   │   ├── lib/                 # logger, whs calculation helpers
+│   │   │   └── env.ts
+│   │   ├── tests/
 │   │   └── package.json
-│   ├── auth/
-│   │   └── src/
-│   │       ├── routes/auth.routes.js
-│   │       ├── controllers/auth.controller.js
-│   │       ├── services/auth.service.js
-│   │       └── models/user.model.js
-│   ├── player/
-│   │   └── src/
-│   │       ├── routes/player.routes.js
-│   │       ├── controllers/player.controller.js
-│   │       └── services/player.service.js
-│   ├── course/
-│   │   └── src/
-│   │       ├── routes/
-│   │       │   ├── course.routes.js
-│   │       │   └── configuration.routes.js
-│   │       └── controllers/
-│   ├── round/
-│   │   └── src/
-│   │       ├── routes/round.routes.js
-│   │       ├── controllers/round.controller.js
-│   │       ├── services/
-│   │       │   ├── round.service.js
-│   │       │   └── scoreCalculator.service.js   # GIR, FIR, putts, NDB adjustment
-│   │       └── validators/round.validator.js
-│   └── handicap/
-│       └── src/
-│           ├── routes/handicap.routes.js
-│           ├── controllers/handicap.controller.js
-│           └── services/
-│               ├── handicap.service.js          # WHS algorithm
-│               ├── differential.service.js
-│               └── capAdjustment.service.js     # soft/hard cap logic
-├── db/
-│   ├── migrations/
-│   │   ├── V001__initial_schema.sql
-│   │   └── V002__indexes.sql
-│   └── seeds/
-│       ├── sample_courses.sql
-│       └── sample_players.sql
-├── frontend/
-│   ├── src/
-│   │   ├── api/                     # axios instances per service domain
-│   │   ├── components/
-│   │   │   ├── ui/                  # Button, Input, Badge, Modal, etc.
-│   │   │   ├── scorecard/           # ScorecardView, HoleRow, TotalsRow
-│   │   │   ├── handicap/            # HandicapBadge, DifferentialTable, TrendChart
-│   │   │   └── forms/               # ScoreEntryForm, CourseConfigForm, PlayerForm
-│   │   ├── pages/                   # one file per route
-│   │   ├── hooks/                   # useHandicap, useRounds, useCourses, etc.
-│   │   ├── store/                   # auth context / zustand
-│   │   └── utils/                   # whs.js (client-side preview calc), formatters
-│   ├── index.html
-│   ├── vite.config.js
-│   └── tailwind.config.js
-├── docker-compose.yml
-├── docker-compose.prod.yml
+│   └── web/                         # React + Vite frontend
+│       ├── src/
+│       │   ├── api/
+│       │   ├── components/
+│       │   ├── pages/
+│       │   ├── hooks/
+│       │   ├── store/
+│       │   └── utils/
+│       └── package.json
+├── packages/
+│   ├── db/                          # Prisma schema, migrations, seeds
+│   ├── types/                       # shared TS types and Zod schemas
+│   └── config/                      # shared lint/tsconfig/env helpers
+├── infra/
+│   ├── nginx/
+│   └── pm2/
+├── dev/
+│   └── stop.sh
+├── .github/
+│   └── workflows/
 └── README.md
 ```
 
@@ -990,16 +987,16 @@ golf-app/
 ## 12. Implementation Roadmap
 
 ### Phase 1 — Core Foundation (Weeks 1–4)
-- [ ] Docker Compose environment: PostgreSQL, Redis, all services scaffolded
+- [ ] Local development environment: PostgreSQL and Redis installed, API + frontend scaffolded with run scripts
 - [ ] Database schema applied via migrations
-- [ ] Auth Service: register, login, JWT
-- [ ] Player Service: full CRUD
-- [ ] Course Service: full CRUD including tee configurations with holes
+- [ ] Auth module: register, login, JWT
+- [ ] Player module: full CRUD
+- [ ] Course module: full CRUD including tee configurations with holes
 - [ ] Frontend: auth flow, player management, course management
 
 ### Phase 2 — Round Entry & Calculation (Weeks 5–8)
-- [ ] Round Service: create round, per-hole scores, NDB adjustment, stat aggregation
-- [ ] Handicap Service: WHS differential calculation, handicap index derivation (including soft/hard cap)
+- [ ] Round module: create round, per-hole scores, NDB adjustment, stat aggregation
+- [ ] Handicap module: WHS differential calculation, handicap index derivation (including soft/hard cap)
 - [ ] Frontend: multi-step score entry form, scorecard view, handicap calculator
 
 ### Phase 3 — Analytics & Polish (Weeks 9–12)
@@ -1013,7 +1010,7 @@ golf-app/
 ### Phase 4 — Production Hardening (Weeks 13–16)
 - [ ] End-to-end and integration tests (Vitest + Playwright)
 - [ ] HTTPS, strict CORS, security headers (Helmet.js)
-- [ ] Kubernetes or Docker Swarm deployment manifests
+- [ ] Deployment manifests/runbooks for the chosen platform (for example Kubernetes, VM, or PaaS)
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Monitoring: Prometheus metrics endpoint per service, Grafana dashboard
 - [ ] Logging: structured JSON logs (Pino), centralised with Loki or Datadog

@@ -1,5 +1,5 @@
 # stories-players.md
-Parent Epic: #PLAYERS_EPIC_PLACEHOLDER  
+Parent Epic: #297  
 (Replace with actual epic issue number after creation)
 
 ---

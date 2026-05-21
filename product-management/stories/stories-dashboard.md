@@ -1,5 +1,5 @@
 # stories-dashboard.md
-Parent Epic: #DASHBOARD_EPIC_PLACEHOLDER  
+Parent Epic: #302  
 (Replace with actual epic issue number after creation)
 
 ---
@@ -74,10 +74,10 @@ So that admins can see system‑wide metrics.
 
 ---
 
-## 3. Implement analytics service (backend)
+## 3. Implement analytics module (backend)
 
 **As a developer**  
-I want a backend analytics service  
+I want a backend analytics module  
 So that complex metrics can be computed efficiently and reused across endpoints.
 
 **Size:** M  
@@ -86,7 +86,7 @@ So that complex metrics can be computed efficiently and reused across endpoints.
 **Target Date:** **02 November 2026**
 
 ### Acceptance Criteria
-- [ ] **[Analytics service](ca://s?q=Explain_analytics_service)** computes:
+- [ ] **[Analytics module](ca://s?q=Explain_analytics_module)** computes:
   - GIR %, FIR %, average putts, penalties
   - scoring averages (front/back/overall)
   - handicap trend data
@@ -194,11 +194,11 @@ So that players can see their key performance metrics.
   - FIR %
   - average putts
   - average penalties
-- [ ] Uses analytics service.
+- [ ] Uses analytics module.
 - [ ] Responsive layout.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -220,11 +220,11 @@ So that players can see how they perform on different courses.
   - penalties
   - best/worst holes
 - [ ] Supports 9‑hole and 18‑hole courses.
-- [ ] Uses backend analytics service.
+- [ ] Uses backend analytics module.
 
 ### Dependencies
 - **[Course detail API](ca://s?q=Explain_course_detail_API)**  
-- **[Analytics service](ca://s?q=Explain_analytics_service)**
+- **[Analytics module](ca://s?q=Explain_analytics_module)**
 
 ---
 

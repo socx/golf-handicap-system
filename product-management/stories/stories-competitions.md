@@ -1,5 +1,5 @@
 # stories-competitions.md
-Parent Epic: #COMPETITIONS_EPIC_PLACEHOLDER
+Parent Epic: #307
 (Replace with actual epic issue number after creation)
 
 ---
@@ -100,7 +100,7 @@ So that net results and standings are WHS-compliant.
 - [ ] Unit tests cover tie and edge scenarios.
 
 ### Dependencies
-- Handicap service
+- Handicap module
 - Rounds data
 - Competition participants
 
