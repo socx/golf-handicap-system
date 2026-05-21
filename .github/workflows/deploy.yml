@@ -1,0 +1,95 @@
+name: Deploy golf-handicap-system
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ghs
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Test API
+        working-directory: apps/api
+        run: |
+          npm ci
+          npm test --if-present
+
+      - name: Package repo
+        run: tar --exclude='.git' --exclude='**/node_modules' -czf release.tgz .
+
+      - name: Upload to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "release.tgz"
+          target: "/tmp"
+
+      - name: Deploy and restart services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            DEPLOY_USER="$(id -un)"
+            APP_DIR="/opt/apps/ghs"
+
+            sudo mkdir -p "$APP_DIR"
+            sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+
+            if [ -s "$HOME/.nvm/nvm.sh" ]; then
+              . "$HOME/.nvm/nvm.sh"
+              nvm use node >/dev/null 2>&1 || true
+            fi
+            export PATH="$HOME/.nvm/versions/node/*/bin:$HOME/node_modules/.bin:/usr/local/bin:/usr/bin:$PATH"
+
+            NPM_BIN="$(command -v npm || true)"
+            if [ -z "$NPM_BIN" ]; then
+              echo "npm not found on remote host. Install Node.js for deploy user or system-wide." >&2
+              exit 1
+            fi
+
+            tar -xzf /tmp/release.tgz -C "$APP_DIR"
+            rm -f /tmp/release.tgz
+
+            cd "$APP_DIR/apps/web"    && "$NPM_BIN" ci --omit=dev || true
+            cd "$APP_DIR/apps/api"    && "$NPM_BIN" ci --omit=dev || true
+            cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev || true
+
+            sudo systemctl daemon-reload
+
+            for svc in ghs-web ghs-api ghs-worker; do
+              if systemctl list-unit-files --type=service | grep -q "^${svc}\.service"; then
+                sudo systemctl enable "$svc"
+                sudo systemctl restart "$svc"
+                sudo systemctl status "$svc" --no-pager || true
+              else
+                echo "Skipping missing unit: ${svc}.service"
+              fi
+            done

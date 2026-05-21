@@ -68,7 +68,7 @@ So that the app is reachable at `ghs.socx.org.uk` with stable API and worker pro
 ### Acceptance Criteria
 - [ ] Deployment target is the existing DigitalOcean droplet with Nginx already configured.
 - [ ] Domain and TLS are active for `ghs.socx.org.uk`.
-- [ ] Runtime processes are configured to match Nginx upstream expectations:
+- [x] Runtime processes are configured to match Nginx upstream expectations:
   - `ghs_web` -> `127.0.0.1:5175`
   - `ghs_api` -> `127.0.0.1:3005`
   - `ghs_worker` process enabled for async jobs
@@ -76,7 +76,7 @@ So that the app is reachable at `ghs.socx.org.uk` with stable API and worker pro
   - `/` proxies to `ghs_web`
   - `/api/*` rewrites and proxies to `ghs_api`
 - [ ] API docs/health checks pass over HTTPS on `ghs.socx.org.uk`.
-- [ ] Deploy/rollback runbook documented in repo docs.
+- [x] Deploy/rollback runbook documented in repo docs.
 
 ### Dependencies
 - **[DigitalOcean runtime setup](ca://s?q=Explain_digitalocean_runtime_setup)**
