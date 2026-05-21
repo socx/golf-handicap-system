@@ -870,6 +870,30 @@ npm run dev
 
 If a monorepo task runner is used, equivalent commands (for example `pnpm -r dev` or `turbo run dev`) are acceptable as long as the API and frontend start with the ports defined above.
 
+#### 9.1.2 Quick Runbook (Local + Remote)
+
+Local development runbook:
+1. Start PostgreSQL and Redis.
+2. Run migrations and optional seed data.
+3. Start API and web apps.
+4. Verify:
+  - `GET /health` on `http://localhost:3000/health`
+  - frontend on `http://localhost:5173`
+
+Remote runtime runbook (DigitalOcean droplet with Nginx):
+1. Deploy app processes so ports match the Nginx host config for `ghs.socx.org.uk`:
+  - `ghs_web` -> `127.0.0.1:5175`
+  - `ghs_api` -> `127.0.0.1:3005`
+  - `ghs_worker` -> background worker process for async jobs
+2. Ensure TLS certs are valid for `ghs.socx.org.uk`.
+3. Confirm Nginx routing behavior:
+  - `/` proxies to `ghs_web`
+  - `/api/*` rewrites and proxies to `ghs_api`
+4. Smoke test over HTTPS:
+  - `https://ghs.socx.org.uk`
+  - `https://ghs.socx.org.uk/api/health`
+5. If health checks fail, rollback to the previous process release and reload Nginx.
+
 ### 9.2 Environment Variables (API application)
 
 | Variable | Description |
