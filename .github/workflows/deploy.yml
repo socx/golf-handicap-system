@@ -89,7 +89,7 @@ jobs:
             sudo systemctl daemon-reload
 
               for svc in ghs-web ghs-api; do
-                if ! systemctl list-unit-files --type=service | grep -q "^${svc}\.service"; then
+                if ! sudo systemctl cat "${svc}.service" >/dev/null 2>&1; then
                   echo "Missing required unit: ${svc}.service — install systemd files from do-nginx-infra on the droplet" >&2
                   exit 1
                 fi
@@ -98,7 +98,7 @@ jobs:
                 sudo systemctl status "$svc" --no-pager || true
               done
 
-              if systemctl list-unit-files --type=service | grep -q "^ghs-worker\.service"; then
+              if sudo systemctl cat ghs-worker.service >/dev/null 2>&1; then
                 sudo systemctl enable ghs-worker
                 sudo systemctl restart ghs-worker
                 sudo systemctl status ghs-worker --no-pager || true
