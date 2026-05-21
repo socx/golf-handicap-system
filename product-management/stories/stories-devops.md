@@ -125,9 +125,9 @@ So that deployments are automated and reliable.
 **Target Date:** **16 March 2027**
 
 ### Acceptance Criteria
-- [ ] **[CD workflow](ca://s?q=Explain_CD_workflow)** deploys backend to staging + production.  
+- [x] **[CD workflow](ca://s?q=Explain_CD_workflow)** deploys backend to staging + production.  
 - [ ] Zero‑downtime deployment.  
-- [ ] Environment variables injected securely.  
+- [x] Environment variables injected securely.  
 - [ ] Rollback supported.
 
 ### Dependencies
@@ -135,6 +135,8 @@ So that deployments are automated and reliable.
 - Hosting provider credentials
 
 ---
+
+
 
 ## 3. Set up CD pipeline for frontend
 
