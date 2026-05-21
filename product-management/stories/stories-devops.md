@@ -20,6 +20,70 @@ Start date for this epic (after Leaderboard epic ends): **11 March 2027**
 
 ---
 
+## Pre-Development Bootstrap Stories (Do First)
+
+## 0. Local development bootstrap (API + Web)
+
+**As a developer**
+I want a reliable local setup for API, Web, PostgreSQL, and Redis
+So that feature development can begin immediately with consistent tooling.
+
+**Size:** S
+**Estimate:** 1-2 days
+**Priority:** High
+**Target Date:** **10 March 2027**
+
+### Acceptance Criteria
+- [ ] Node.js 20 LTS, PostgreSQL 16, and Redis 7 verified locally.
+- [ ] Monorepo structure follows the template:
+  - `apps/api`
+  - `apps/web`
+  - `packages/db`
+  - `packages/types`
+  - `packages/config`
+- [ ] `.env` files created and validated for API and web apps.
+- [ ] DB creation, migration, and seed workflow works end-to-end.
+- [ ] `npm run dev` (or equivalent monorepo command) starts API and web successfully.
+- [ ] Health and smoke checks pass:
+  - API health endpoint returns 200.
+  - Web app loads and can reach `/api` routes.
+
+### Dependencies
+- **[Local setup checklist](ca://s?q=Explain_local_setup_checklist)**
+- **[Database migrations](ca://s?q=Explain_DB_migration_workflow)**
+
+---
+
+## 0.1 Remote runtime bootstrap (DigitalOcean + Nginx)
+
+**As a developer**
+I want a production runtime on a DigitalOcean droplet behind Nginx
+So that the app is reachable at `ghs.socx.org.uk` with stable API and worker processes.
+
+**Size:** M
+**Estimate:** 2-3 days
+**Priority:** High
+**Target Date:** **11 March 2027**
+
+### Acceptance Criteria
+- [ ] Deployment target is the existing DigitalOcean droplet with Nginx already configured.
+- [ ] Domain and TLS are active for `ghs.socx.org.uk`.
+- [ ] Runtime processes are configured to match Nginx upstream expectations:
+  - `ghs_web` -> `127.0.0.1:5175`
+  - `ghs_api` -> `127.0.0.1:3005`
+  - `ghs_worker` process enabled for async jobs
+- [ ] Nginx routing works as configured:
+  - `/` proxies to `ghs_web`
+  - `/api/*` rewrites and proxies to `ghs_api`
+- [ ] API docs/health checks pass over HTTPS on `ghs.socx.org.uk`.
+- [ ] Deploy/rollback runbook documented in repo docs.
+
+### Dependencies
+- **[DigitalOcean runtime setup](ca://s?q=Explain_digitalocean_runtime_setup)**
+- **[Nginx host routing](ca://s?q=Explain_nginx_host_based_routing_for_ghs)**
+
+---
+
 ## 1. Set up GitHub Actions CI pipeline
 
 **As a developer**  
