@@ -179,7 +179,7 @@ So that players can prepare for specific courses.
 
 ### Dependencies
 - **[Course data](ca://s?q=Explain_course_detail_API)**  
-- **[Player analytics](ca://s?q=Explain_analytics_service)**
+- **[Player analytics](ca://s?q=Explain_analytics_module)**
 
 ---
 
@@ -229,7 +229,7 @@ So that players can estimate round duration.
 
 ### Dependencies
 - **[Course data](ca://s?q=Explain_course_detail_API)**  
-- **[Player analytics](ca://s?q=Explain_analytics_service)**
+- **[Player analytics](ca://s?q=Explain_analytics_module)**
 
 ---
 
