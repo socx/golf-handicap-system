@@ -38,7 +38,9 @@ jobs:
           npm test --if-present
 
       - name: Package repo
-        run: tar --exclude='.git' --exclude='**/node_modules' -czf "$RUNNER_TEMP/release.tgz" .
+        run: |
+          tar --exclude='.git' --exclude='**/node_modules' -czf "$RUNNER_TEMP/release.tgz" .
+          cp "$RUNNER_TEMP/release.tgz" release.tgz
 
       - name: Upload to droplet
         uses: appleboy/scp-action@v0.1.7
@@ -46,7 +48,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          source: "${{ runner.temp }}/release.tgz"
+          source: "release.tgz"
           target: "/tmp"
 
       - name: Deploy and restart services
