@@ -1,5 +1,5 @@
 # stories-auth.md
-Parent Epic: #AUTH_EPIC_PLACEHOLDER  
+Parent Epic: #296  
 (Replace with actual epic issue number after creation)
 
 ---

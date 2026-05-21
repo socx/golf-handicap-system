@@ -1,5 +1,5 @@
 # stories-admin.md
-Parent Epic: #ADMIN_EPIC_PLACEHOLDER  
+Parent Epic: #303  
 (Replace with actual epic issue number after creation)
 
 ---

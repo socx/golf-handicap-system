@@ -1,5 +1,5 @@
 # stories-courses.md
-Parent Epic: #COURSES_EPIC_PLACEHOLDER  
+Parent Epic: #298  
 (Replace with actual epic issue number after creation)
 
 ---

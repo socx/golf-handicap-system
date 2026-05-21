@@ -813,8 +813,8 @@ Recommended local service ports:
 
 | Component | Port | Notes |
 |---|---|---|
-| REST API | `3000` | Public API entry point |
-| Frontend (Vite) | `5173` | Web UI |
+| REST API | `3005` | Public API entry point |
+| Frontend (Vite) | `5175` | Web UI |
 | PostgreSQL | `5432` | Local install |
 | Redis | `6379` | Local install |
 
@@ -842,7 +842,7 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=replace-with-long-random-secret
 JWT_REFRESH_SECRET=replace-with-second-long-random-secret
 JWT_EXPIRES_IN=1h
-PORT=3000
+PORT=3005
 ```
 
 4. Create local database and run migrations:
@@ -865,8 +865,8 @@ npm run dev
 ```
 
 7. Verify health checks and UI:
-  - Gateway: `http://localhost:3000/health`
-  - Frontend: `http://localhost:5173`
+  - Gateway: `http://localhost:3005/health`
+  - Frontend: `http://localhost:5175`
 
 If a monorepo task runner is used, equivalent commands (for example `pnpm -r dev` or `turbo run dev`) are acceptable as long as the API and frontend start with the ports defined above.
 
@@ -877,8 +877,8 @@ Local development runbook:
 2. Run migrations and optional seed data.
 3. Start API and web apps.
 4. Verify:
-  - `GET /health` on `http://localhost:3000/health`
-  - frontend on `http://localhost:5173`
+  - `GET /health` on `http://localhost:3005/health`
+  - frontend on `http://localhost:5175`
 
 Remote runtime runbook (DigitalOcean droplet with Nginx):
 1. Deploy app processes so ports match the Nginx host config for `ghs.socx.org.uk`:

@@ -1,5 +1,5 @@
 # stories-architecture.md
-Parent Epic: #ARCHITECTURE_EPIC_PLACEHOLDER  
+Parent Epic: #318  
 (Replace with actual epic issue number after creation)
 
 ---

@@ -1,5 +1,5 @@
 # stories-misc.md
-Parent Epic: #MISC_EPIC_PLACEHOLDER  
+Parent Epic: #320  
 (Replace with actual epic issue number after creation)
 
 ---

@@ -1,5 +1,5 @@
 # stories-security.md
-Parent Epic: #SECURITY_EPIC_PLACEHOLDER  
+Parent Epic: #310  
 (Replace with actual epic issue number after creation)
 
 ---

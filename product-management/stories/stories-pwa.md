@@ -1,5 +1,5 @@
 # stories-pwa.md
-Parent Epic: #PWA_EPIC_PLACEHOLDER  
+Parent Epic: #311  
 (Replace with actual epic issue number after creation)
 
 ---

@@ -1,5 +1,5 @@
 # stories-billing.md
-Parent Epic: #BILLING_EPIC_PLACEHOLDER  
+Parent Epic: #313  
 (Replace with actual epic issue number after creation)
 
 ---

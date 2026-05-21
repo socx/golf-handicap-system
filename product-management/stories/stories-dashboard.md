@@ -1,5 +1,5 @@
 # stories-dashboard.md
-Parent Epic: #DASHBOARD_EPIC_PLACEHOLDER  
+Parent Epic: #302  
 (Replace with actual epic issue number after creation)
 
 ---

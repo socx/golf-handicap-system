@@ -1,5 +1,5 @@
 # stories-internationalisation.md
-Parent Epic: #INTERNATIONALISATION_EPIC_PLACEHOLDER  
+Parent Epic: #319  
 (Replace with actual epic issue number after creation)
 
 ---

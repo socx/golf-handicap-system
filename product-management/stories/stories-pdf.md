@@ -1,5 +1,5 @@
 # stories-pdf.md
-Parent Epic: #PDF_EPIC_PLACEHOLDER  
+Parent Epic: #305  
 (Replace with actual epic issue number after creation)
 
 ---

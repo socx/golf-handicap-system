@@ -1,5 +1,5 @@
 # stories-multitenancy.md
-Parent Epic: #MULTITENANCY_EPIC_PLACEHOLDER  
+Parent Epic: #312  
 (Replace with actual epic issue number after creation)
 
 ---

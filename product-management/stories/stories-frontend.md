@@ -1,5 +1,5 @@
 # stories-frontend.md
-Parent Epic: #FRONTEND_EPIC_PLACEHOLDER  
+Parent Epic: #301  
 (Replace with actual epic issue number after creation)
 
 ---

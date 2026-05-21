@@ -1,5 +1,5 @@
 # stories-leaderboard.md
-Parent Epic: #LEADERBOARD_EPIC_PLACEHOLDER  
+Parent Epic: #306  
 (Replace with actual epic issue number after creation)
 
 ---

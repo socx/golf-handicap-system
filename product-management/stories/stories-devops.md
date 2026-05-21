@@ -1,5 +1,5 @@
 # stories-devops.md
-Parent Epic: #DEVOPS_EPIC_PLACEHOLDER  
+Parent Epic: #309  
 (Replace with actual epic issue number after creation)
 
 ---

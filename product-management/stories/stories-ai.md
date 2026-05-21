@@ -1,5 +1,5 @@
 # stories-ai.md
-Parent Epic: #AI_EPIC_PLACEHOLDER  
+Parent Epic: #314  
 (Replace with actual epic issue number after creation)
 
 ---

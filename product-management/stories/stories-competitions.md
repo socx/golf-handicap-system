@@ -1,5 +1,5 @@
 # stories-competitions.md
-Parent Epic: #COMPETITIONS_EPIC_PLACEHOLDER
+Parent Epic: #307
 (Replace with actual epic issue number after creation)
 
 ---

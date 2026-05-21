@@ -1,5 +1,5 @@
 # stories-integrations.md
-Parent Epic: #INTEGRATIONS_EPIC_PLACEHOLDER
+Parent Epic: #308
 (Replace with actual epic issue number after creation)
 
 ---

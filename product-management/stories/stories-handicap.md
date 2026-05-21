@@ -1,5 +1,5 @@
 # stories-handicap.md
-Parent Epic: #HANDICAP_EPIC_PLACEHOLDER  
+Parent Epic: #300  
 (Replace with actual epic issue number after creation)
 
 ---

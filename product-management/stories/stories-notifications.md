@@ -1,5 +1,5 @@
 # stories-notifications.md
-Parent Epic: #NOTIFICATIONS_EPIC_PLACEHOLDER  
+Parent Epic: #304  
 (Replace with actual epic issue number after creation)
 
 ---

@@ -1,5 +1,5 @@
 # stories-mobile.md
-Parent Epic: #MOBILE_EPIC_PLACEHOLDER  
+Parent Epic: #315  
 (Replace with actual epic issue number after creation)
 
 ---

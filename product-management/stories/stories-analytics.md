@@ -1,5 +1,5 @@
 # stories-analytics.md
-Parent Epic: #ANALYTICS_EPIC_PLACEHOLDER  
+Parent Epic: #317  
 (Replace with actual epic issue number after creation)
 
 ---
