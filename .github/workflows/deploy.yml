@@ -105,3 +105,30 @@ jobs:
               else
                 echo "Skipping optional unit: ghs-worker.service (not yet installed)"
               fi
+
+      - name: Post-deploy smoke checks
+        run: |
+          set -euo pipefail
+
+          # Retry a few times to allow nginx/systemd restart stabilization.
+          for i in 1 2 3 4 5; do
+            if curl -fsS https://ghs.socx.org.uk/ >/dev/null; then
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "Web smoke check failed: https://ghs.socx.org.uk/" >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+          for i in 1 2 3 4 5; do
+            if curl -fsS https://ghs.socx.org.uk/api/health >/dev/null; then
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "API smoke check failed: https://ghs.socx.org.uk/api/health" >&2
+              exit 1
+            fi
+            sleep 3
+          done
