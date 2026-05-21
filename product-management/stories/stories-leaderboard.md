@@ -142,7 +142,7 @@ So that performance can be ranked independently of handicap.
 - [ ] Sorted ascending.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**  
+- **[Analytics module](ca://s?q=Explain_analytics_module)**  
 - **[Rounds table](ca://s?q=Explain_rounds_table)**
 
 ---

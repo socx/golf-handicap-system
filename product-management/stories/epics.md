@@ -161,7 +161,7 @@ Provide tee-time booking functionality and integration hooks for external bookin
 Provide robust infrastructure, deployment, and observability for the system.
 
 **Goals:**
-- Local service orchestration without containers for development.
+- Local process orchestration without containers for development.
 - CI/CD pipeline for automated build, test, and deploy.
 - Monitoring (metrics, health checks) and alerting.
 - Centralised logging and log retention strategy.

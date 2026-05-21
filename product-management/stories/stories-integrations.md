@@ -171,7 +171,7 @@ So that players and admins stay informed.
 ### Acceptance Criteria
 - [ ] Email sent when request submitted, approved, rejected, or cancelled.
 - [ ] Template parameterizes course, player, date, time.
-- [ ] Integrates with existing email service.
+- [ ] Integrates with existing email delivery module.
 - [ ] Notification preferences respected.
 
 ### Dependencies

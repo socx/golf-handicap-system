@@ -251,7 +251,7 @@ So that users can recover access securely.
 - [ ] No user enumeration (same response for valid/invalid email).
 
 ### Dependencies
-- Email service  
+- Email delivery module  
 - Token generation  
 - Users table
 

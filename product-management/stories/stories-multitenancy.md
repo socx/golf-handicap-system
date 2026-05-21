@@ -236,7 +236,7 @@ So that clubs can view their own performance metrics.
 - [ ] Tenant‑scoped queries enforced.
 
 ### Dependencies
-- **[Analytics service](ca://s?q=Explain_analytics_service)**  
+- **[Analytics module](ca://s?q=Explain_analytics_module)**  
 - **[Tenant middleware](ca://s?q=Explain_tenant_scoping_middleware)**
 
 ---
@@ -262,4 +262,4 @@ So that clubs can download their own data.
 
 ### Dependencies
 - **[Tenant scoping](ca://s?q=Explain_tenant_scoping_middleware)**  
-- **[Export services](ca://s?q=Explain_export_services)**
+- **[Export pipeline](ca://s?q=Explain_export_pipeline)**

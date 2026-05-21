@@ -100,7 +100,7 @@ So that net results and standings are WHS-compliant.
 - [ ] Unit tests cover tie and edge scenarios.
 
 ### Dependencies
-- Handicap service
+- Handicap module
 - Rounds data
 - Competition participants
 

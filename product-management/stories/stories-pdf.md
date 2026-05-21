@@ -20,10 +20,10 @@ Start date for this epic (after Notifications epic ends): **16 January 2027**
 
 ---
 
-## 1. Implement PDF generation service
+## 1. Implement PDF generation module
 
 **As a developer**  
-I want a backend PDF generation service  
+I want a backend PDF generation module  
 So that scorecards and documents can be exported consistently.
 
 **Size:** M  
@@ -32,11 +32,11 @@ So that scorecards and documents can be exported consistently.
 **Target Date:** **16 January 2027**
 
 ### Acceptance Criteria
-- [ ] **[PDF service](ca://s?q=Explain_PDF_generation_service)** supports:
+- [ ] **[PDF generation module](ca://s?q=Explain_PDF_generation_module)** supports:
   - HTML → PDF rendering  
   - custom fonts  
   - page headers/footers  
-- [ ] Service is reusable for all PDF types.  
+- [ ] Module is reusable for all PDF types.  
 - [ ] Errors logged with context.
 
 ### Dependencies
@@ -66,7 +66,7 @@ So that PDFs have a consistent, professional layout.
 - [ ] Supports 9‑hole and 18‑hole layouts.
 
 ### Dependencies
-- **[PDF service](ca://s?q=Explain_PDF_generation_service)**  
+- **[PDF generation module](ca://s?q=Explain_PDF_generation_module)**  
 - **[Round detail API](ca://s?q=Explain_round_detail_API)**
 
 ---
@@ -90,7 +90,7 @@ So that users can download or share their scorecards.
 
 ### Dependencies
 - **[Scorecard template](ca://s?q=Explain_scorecard_template)**  
-- **[PDF service](ca://s?q=Explain_PDF_generation_service)**
+- **[PDF generation module](ca://s?q=Explain_PDF_generation_module)**
 
 ---
 
@@ -117,7 +117,7 @@ So that players can share their handicap history.
 
 ### Dependencies
 - **[Handicap history API](ca://s?q=Explain_handicap_history_API)**  
-- **[PDF service](ca://s?q=Explain_PDF_generation_service)**
+- **[PDF generation module](ca://s?q=Explain_PDF_generation_module)**
 
 ---
 
@@ -142,7 +142,7 @@ So that users can re-download without regenerating.
 
 ### Dependencies
 - Object storage provider  
-- **[PDF generation service](ca://s?q=Explain_PDF_generation_service)**
+- **[PDF generation module](ca://s?q=Explain_PDF_generation_module)**
 
 ---
 

@@ -46,10 +46,10 @@ So that users can control which notifications they receive.
 
 ---
 
-## 2. Implement email service wrapper
+## 2. Implement email delivery module wrapper
 
 **As a developer**  
-I want an email service wrapper  
+I want an email delivery module wrapper  
 So that the system can send emails through a unified interface.
 
 **Size:** S  
@@ -58,7 +58,7 @@ So that the system can send emails through a unified interface.
 **Target Date:** **30 December 2026**
 
 ### Acceptance Criteria
-- [ ] **[Email service](ca://s?q=Explain_email_service_design)** supports:
+- [ ] **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)** supports:
   - sendEmail(to, subject, body)
   - templating
   - error handling  
@@ -93,7 +93,7 @@ So that players are informed of updates.
 
 ### Dependencies
 - **[Handicap calculation](ca://s?q=Explain_handicap_calculation)**  
-- **[Email service](ca://s?q=Explain_email_service_design)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
 
 ---
 
@@ -139,7 +139,7 @@ So that they know it now affects their handicap.
 
 ### Dependencies
 - **[Round approval workflow](ca://s?q=Explain_round_approval_workflow)**  
-- **[Email service](ca://s?q=Explain_email_service_design)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
 
 ---
 
@@ -165,7 +165,7 @@ So that users and admins can audit what was sent.
 - [ ] Queryable by user and date range.
 
 ### Dependencies
-- **[Email service](ca://s?q=Explain_email_service_design)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
 
 ---
 
@@ -256,7 +256,7 @@ So that push notifications can be added later.
 - [ ] Documentation for adding new channels.
 
 ### Dependencies
-- **[Email service](ca://s?q=Explain_email_service_design)**  
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**  
 - **[Notification preferences](ca://s?q=Explain_notification_preferences_table)**
 
 ---

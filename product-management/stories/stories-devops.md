@@ -227,7 +227,7 @@ So that issues are detected early.
 
 **As a developer**  
 I want centralised logging  
-So that logs from all services are searchable.
+So that logs from all API modules and background processes are searchable.
 
 **Size:** M  
 **Estimate:** 3–5 days  

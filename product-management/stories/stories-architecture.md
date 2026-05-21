@@ -34,7 +34,7 @@ So that the system’s components and interactions are clearly understood.
 ### Acceptance Criteria
 - [ ] **[Architecture diagram](ca://s?q=Explain_high_level_architecture_diagram)** created.  
 - [ ] Includes:
-  - backend services  
+  - backend API modules  
   - frontend  
   - mobile  
   - database  
