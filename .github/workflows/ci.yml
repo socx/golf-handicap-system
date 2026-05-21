@@ -78,16 +78,22 @@ jobs:
       # Extract, install production deps, and restart systemd services.
       - name: Deploy and restart services
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          FRONTEND_ENV_FILE: ${{ secrets.FRONTEND_ENV_FILE }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: FRONTEND_ENV_FILE,GITHUB_SHA
           script: |
             set -euo pipefail
             DEPLOY_USER="$(id -un)"
             APP_DIR="/opt/apps/ghs"
+            TMP_DIR="/tmp/ghs-release-${GITHUB_SHA:0:7}"
+            BACKUP_DIR="$APP_DIR/rollback/${GITHUB_SHA:0:7}-$(date +%Y%m%d%H%M%S)"
+            BUILD_ID="${GITHUB_SHA:0:12}"
 
-            sudo mkdir -p "$APP_DIR"
+            sudo mkdir -p "$APP_DIR" "$APP_DIR/rollback"
             sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
 
             if [ -s "$HOME/.nvm/nvm.sh" ]; then
@@ -102,10 +108,30 @@ jobs:
               exit 1
             fi
 
-            tar -xzf /tmp/release.tgz -C "$APP_DIR"
+            rm -rf "$TMP_DIR"
+            mkdir -p "$TMP_DIR"
+            tar -xzf /tmp/release.tgz -C "$TMP_DIR"
             rm -f /tmp/release.tgz
 
+            mkdir -p "$BACKUP_DIR/apps"
+            if [ -d "$APP_DIR/apps/web" ]; then cp -a "$APP_DIR/apps/web" "$BACKUP_DIR/apps/web"; fi
+
+            rm -rf "$APP_DIR/apps/web"
+            cp -a "$TMP_DIR/apps/web" "$APP_DIR/apps/web"
+            rm -rf "$APP_DIR/apps/api"
+            cp -a "$TMP_DIR/apps/api" "$APP_DIR/apps/api"
+            if [ -d "$TMP_DIR/apps/worker" ]; then
+              rm -rf "$APP_DIR/apps/worker"
+              cp -a "$TMP_DIR/apps/worker" "$APP_DIR/apps/worker"
+            fi
+
+            if [ -n "${FRONTEND_ENV_FILE:-}" ]; then
+              umask 077
+              printf '%s\n' "$FRONTEND_ENV_FILE" > "$APP_DIR/apps/web/.env.production"
+            fi
+
             cd "$APP_DIR/apps/web" && "$NPM_BIN" ci --omit=dev
+            BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
             cd "$APP_DIR/apps/api" && "$NPM_BIN" ci --omit=dev
             if [ -d "$APP_DIR/apps/worker" ]; then
               cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev
@@ -132,6 +158,28 @@ jobs:
             else
               echo "Skipping optional unit: ghs-worker.service (not yet installed)"
             fi
+
+            web_healthy=0
+            for i in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:5175/health >/dev/null; then
+                web_healthy=1
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$web_healthy" -ne 1 ]; then
+              echo "Web health check failed on droplet; rolling back web release." >&2
+              if [ -d "$BACKUP_DIR/apps/web" ]; then
+                rm -rf "$APP_DIR/apps/web"
+                cp -a "$BACKUP_DIR/apps/web" "$APP_DIR/apps/web"
+                sudo systemctl restart ghs-web || true
+              fi
+              exit 1
+            fi
+
+            ls -1dt "$APP_DIR"/rollback/* 2>/dev/null | tail -n +6 | xargs -r rm -rf
+            rm -rf "$TMP_DIR"
 
       # Confirm public endpoints are healthy after restart.
       - name: Post-deploy smoke checks

@@ -150,10 +150,16 @@ So that the React app is deployed automatically.
 **Target Date:** **18 March 2027**
 
 ### Acceptance Criteria
-- [ ] **[Frontend CD workflow](ca://s?q=Explain_frontend_CD_workflow)** builds + deploys to hosting provider.  
-- [ ] Cache busting enabled.  
-- [ ] Environment variables injected at build time.  
-- [ ] Rollback supported.
+- [x] **[Frontend CD workflow](ca://s?q=Explain_frontend_CD_workflow)** builds + deploys to hosting provider.  
+- [x] Cache busting enabled.  
+- [x] Environment variables injected at build time.  
+- [x] Rollback supported.
+
+### Notes
+- Frontend CD is implemented in the unified `.github/workflows/ci.yml` workflow.
+- Build-time env injection uses `FRONTEND_ENV_FILE` secret written to `apps/web/.env.production` on deploy.
+- Cache busting is supported by per-deploy `BUILD_ID` derived from commit SHA.
+- Automatic rollback restores previous `apps/web` release if droplet web health check fails.
 
 ### Dependencies
 - **[Frontend build](ca://s?q=Explain_frontend_build_process)**  
