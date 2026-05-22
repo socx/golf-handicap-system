@@ -411,6 +411,60 @@ async function findUserById(id: string): Promise<User | null> {
   return (result.rows[0] as User | undefined) || null;
 }
 
+async function setUserActivationStatus(id: string, isActive: boolean): Promise<User | null> {
+  const query = `
+    UPDATE users
+    SET is_active = $2, updated_at = NOW()
+    WHERE id = $1 AND deleted_at IS NULL
+    RETURNING id, email::text AS email, role, is_active, created_at, updated_at
+  `;
+
+  const result = await dbPool.query(query, [id, isActive]);
+  return (result.rows[0] as User | undefined) || null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
+  const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
+  if (!match) {
+    return null;
+  }
+
+  const userId = String(match[1] || '');
+  const action = String(match[2] || '') as 'activate' | 'deactivate';
+  return { userId, action };
+}
+
+function logAuthAuditEvent({
+  requestId,
+  event,
+  actorUserId,
+  targetUserId,
+  metadata,
+}: {
+  requestId: string;
+  event: string;
+  actorUserId: string;
+  targetUserId: string;
+  metadata?: Record<string, unknown>;
+}): void {
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      event,
+      service: 'ghs-api',
+      requestId,
+      actorUserId,
+      targetUserId,
+      metadata: metadata || {},
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
 function validateRefreshInput(payload: Record<string, unknown>): ValidationResult<{ refreshToken: string }> {
   const errors: ValidationError[] = [];
   const refreshToken = typeof payload.refreshToken === 'string' ? payload.refreshToken.trim() : '';
@@ -898,6 +952,57 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       } catch (error) {
         console.error('[auth.logout] unexpected error:', error);
         sendError(res, 500, 'logout_failed', 'Unable to logout at this time');
+      }
+      return;
+    }
+
+    const userActivationRoute = parseUserActivationRoute(pathname);
+    if (method === 'PATCH' && userActivationRoute) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+
+      if (!authResult.success || !authResult.auth) {
+        sendError(
+          res,
+          authResult.statusCode || 401,
+          authResult.errorCode || 'unauthorized',
+          authResult.errorMessage || 'Unauthorized',
+        );
+        return;
+      }
+
+      const { userId, action } = userActivationRoute;
+      if (!isUuid(userId)) {
+        sendError(res, 400, 'validation_error', 'User id must be a valid UUID');
+        return;
+      }
+
+      const nextStatus = action === 'activate';
+
+      try {
+        const updatedUser = await setUserActivationStatus(userId, nextStatus);
+        if (!updatedUser) {
+          sendError(res, 404, 'not_found', 'User not found');
+          return;
+        }
+
+        logAuthAuditEvent({
+          requestId,
+          event: nextStatus ? 'auth_user_activated' : 'auth_user_deactivated',
+          actorUserId: authResult.auth.userId,
+          targetUserId: userId,
+          metadata: {
+            is_active: updatedUser.is_active,
+            role: updatedUser.role,
+          },
+        });
+
+        sendJson(res, 200, {
+          user: updatedUser,
+          message: nextStatus ? 'User activated successfully' : 'User deactivated successfully',
+        });
+      } catch (error) {
+        console.error('[users.activation] unexpected error:', error);
+        sendError(res, 500, 'activation_update_failed', 'Unable to update user activation status');
       }
       return;
     }

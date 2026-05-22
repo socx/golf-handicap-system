@@ -211,14 +211,21 @@ So that admins can control access without deleting data.
 **Target Date:** **03 June 2026**
 
 ### Acceptance Criteria
-- [ ] PATCH `/users/:id/activate` and `/deactivate`.  
-- [ ] Deactivated users cannot log in.  
-- [ ] Deactivation logged in audit trail.  
-- [ ] Admin‑only access enforced.
+- [x] PATCH `/users/:id/activate` and `/deactivate`.  
+- [x] Deactivated users cannot log in.  
+- [x] Deactivation logged in audit trail.  
+- [x] Admin‑only access enforced.
 
 ### Dependencies
 - RBAC  
 - Users table
+
+### Implementation Notes
+- Added admin-only `PATCH /users/:id/activate` and `PATCH /users/:id/deactivate` routes.
+- Added equivalent `/api/users/:id/activate` and `/api/users/:id/deactivate` support for API namespace parity.
+- User activation status updates `is_active` and `updated_at` on `users`.
+- Deactivated users are denied at login by existing `is_active` login check.
+- Deactivation and activation emit structured audit trail events: `auth_user_deactivated` and `auth_user_activated`.
 
 ---
 
