@@ -79,11 +79,11 @@ So that authenticated users can securely access protected APIs.
 **Target Date:** **21 May 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/auth/login` validates credentials.  
-- [ ] Returns access token + refresh token + expiry.  
-- [ ] Invalid credentials return 401 with generic error.  
-- [ ] JWT secret + expiry configurable via environment variables.  
-- [ ] Refresh token stored/managed according to strategy.
+- [x] POST `/auth/login` validates credentials.  
+- [x] Returns access token + refresh token + expiry.  
+- [x] Invalid credentials return 401 with generic error.  
+- [x] JWT secret + expiry configurable via environment variables.  
+- [x] Refresh token stored/managed according to strategy.
 
 ### Dependencies
 - Registration API  

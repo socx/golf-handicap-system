@@ -260,6 +260,7 @@ function validateRegistrationInput(payload) {
 }
 
 function buildAuthTokens(user) {
+  // Refresh tokens are managed as stateless JWTs for now; rotation/blacklisting follows in story #51.
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role, tokenType: 'access' },
     jwtSecret,
@@ -289,6 +290,39 @@ async function registerUser(payload) {
 
   const result = await dbPool.query(query, [payload.email, passwordHash, payload.role]);
   return result.rows[0];
+}
+
+function validateLoginInput(payload) {
+  const errors = [];
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+  const password = typeof payload.password === 'string' ? payload.password : '';
+
+  if (!email) {
+    errors.push({ field: 'email', message: 'Email is required' });
+  }
+
+  if (!password) {
+    errors.push({ field: 'password', message: 'Password is required' });
+  }
+
+  return {
+    errors,
+    value: {
+      email,
+      password,
+    },
+  };
+}
+
+async function findUserByEmail(email) {
+  const query = `
+    SELECT id, email::text AS email, password_hash, role, is_active, created_at, updated_at
+    FROM users
+    WHERE email = $1 AND deleted_at IS NULL
+    LIMIT 1
+  `;
+  const result = await dbPool.query(query, [email]);
+  return result.rows[0] || null;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -416,6 +450,59 @@ const server = http.createServer(async (req, res) => {
 
         console.error('[auth.register] unexpected error:', error);
         sendError(res, 500, 'registration_failed', 'Unable to register user at this time');
+      }
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/login' || pathname === '/api/auth/login')) {
+      let payload;
+
+      try {
+        payload = await readJsonBody(req);
+      } catch (error) {
+        sendError(res, 400, 'invalid_json', error.message);
+        return;
+      }
+
+      const validation = validateLoginInput(payload);
+      if (validation.errors.length > 0) {
+        sendError(
+          res,
+          400,
+          'validation_error',
+          'Request validation failed',
+          validation.errors,
+        );
+        return;
+      }
+
+      try {
+        const user = await findUserByEmail(validation.value.email);
+        const isValidPassword = user
+          ? await bcrypt.compare(validation.value.password, user.password_hash)
+          : false;
+
+        if (!user || !user.is_active || !isValidPassword) {
+          sendError(res, 401, 'invalid_credentials', 'Invalid email or password');
+          return;
+        }
+
+        const responseUser = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          is_active: user.is_active,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+        };
+
+        sendJson(res, 200, {
+          user: responseUser,
+          tokens: buildAuthTokens(responseUser),
+        });
+      } catch (error) {
+        console.error('[auth.login] unexpected error:', error);
+        sendError(res, 500, 'login_failed', 'Unable to login at this time');
       }
       return;
     }
