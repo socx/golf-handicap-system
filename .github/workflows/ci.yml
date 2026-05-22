@@ -1,8 +1,9 @@
 name: CI/CD
 
 on:
-  # Run quality checks for all PRs.
+  # Run quality checks for PRs targeting main.
   pull_request:
+    branches: [main]
 
   # Run quality checks + deploy for main branch updates.
   push:
@@ -52,7 +53,7 @@ jobs:
   deploy:
     name: Deploy to production droplet
     needs: quality
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
 
     steps:
