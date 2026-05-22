@@ -1,0 +1,16 @@
+{
+  "name": "@ghs/types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript types for golf-handicap-system",
+  "types": "src/index.ts",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

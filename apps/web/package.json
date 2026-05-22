@@ -2,10 +2,18 @@
   "name": "@ghs/web",
   "private": true,
   "version": "0.1.0",
+  "dependencies": {
+    "@ghs/types": "0.1.0"
+  },
   "scripts": {
-    "dev": "node server.js",
-    "build": "echo 'bootstrap web: no build artifacts yet'",
-    "preview": "node server.js",
-    "start": "node server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "preview": "node dist/server.js",
+    "start": "node dist/server.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.14",
+    "tsx": "^4.20.6",
+    "typescript": "^5.5.4"
   }
 }

@@ -2,8 +2,17 @@
   "name": "@ghs/worker",
   "version": "0.1.0",
   "private": true,
+  "dependencies": {
+    "@ghs/types": "0.1.0"
+  },
   "scripts": {
-    "worker": "node src/worker.js",
-    "start": "node src/worker.js"
+    "worker": "tsx watch src/worker.ts",
+    "build": "tsc",
+    "start": "node dist/worker.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.14",
+    "tsx": "^4.20.6",
+    "typescript": "^5.5.4"
   }
 }

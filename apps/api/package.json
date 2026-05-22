@@ -3,13 +3,22 @@
   "private": true,
   "version": "0.1.0",
   "dependencies": {
+    "@ghs/types": "0.1.0",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.21.0",
     "redis": "^4.7.0"
   },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/node": "^20.14.14",
+    "typescript": "^5.5.4"
+  },
   "scripts": {
-    "dev": "node src/server.js",
-    "start": "node src/index.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint src/**/*.ts"
   }
 }
