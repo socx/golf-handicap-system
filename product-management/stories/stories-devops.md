@@ -206,13 +206,14 @@ So that the system has reliable, scalable data storage.
 **Target Date:** **02 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[PostgreSQL cluster](ca://s?q=Explain_PostgreSQL_cluster)** with:
-  - automated backups  
-  - point-in-time recovery  
-  - monitoring  
-  - SSL enforced  
-- [ ] Connection pooling enabled.  
-- [ ] Read replicas optional.
+- [x] **PostgreSQL cluster** with:
+  - [x] automated backups — daily pg_dump via `infra/scripts/pg-backup.sh` + `infra/systemd/ghs-db-backup.timer`
+  - point-in-time recovery — WAL archiving (manual droplet config, not in repo)
+  - monitoring — via `pg_stat_statements` (manual droplet config)
+  - SSL enforced — local socket connections exempt; SSL required for remote access (pg_hba.conf)
+- [x] Connection pooling enabled — PgBouncer setup script at `infra/scripts/pgbouncer-setup.sh` (transaction mode, port 6432)
+- [x] `APP_ENV_FILE` repository secret injected to `apps/web/.env.production` and `apps/api/.env.production` on every deploy
+- Read replicas optional — not implemented (single droplet)
 
 ### Dependencies
 - **[IaC templates](ca://s?q=Explain_IaC_templates)**

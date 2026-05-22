@@ -79,12 +79,12 @@ jobs:
       - name: Deploy and restart services
         uses: appleboy/ssh-action@v1.0.3
         env:
-          FRONTEND_ENV_FILE: ${{ secrets.FRONTEND_ENV_FILE }}
+          APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          envs: FRONTEND_ENV_FILE,GITHUB_SHA
+          envs: APP_ENV_FILE,GITHUB_SHA
           script: |
             set -euo pipefail
             DEPLOY_USER="$(id -un)"
@@ -125,9 +125,10 @@ jobs:
               cp -a "$TMP_DIR/apps/worker" "$APP_DIR/apps/worker"
             fi
 
-            if [ -n "${FRONTEND_ENV_FILE:-}" ]; then
+            if [ -n "${APP_ENV_FILE:-}" ]; then
               umask 077
-              printf '%s\n' "$FRONTEND_ENV_FILE" > "$APP_DIR/apps/web/.env.production"
+              printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/apps/web/.env.production"
+              printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/apps/api/.env.production"
             fi
 
             cd "$APP_DIR/apps/web" && "$NPM_BIN" ci --omit=dev
