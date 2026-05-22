@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
-import { Logo } from '../components/Logo';
-import { authApi, handleApiError, setStoredUser, setTokens } from '../lib/api';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AuthSplitLayout } from '../components/auth/AuthSplitLayout';
+import { authApi, handleApiError } from '../api/auth';
+import { setStoredUser, setTokens } from '../lib/authStorage';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -14,8 +15,10 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export const LoginPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
   const {
     register,
     handleSubmit,
@@ -29,7 +32,7 @@ export const LoginPage: React.FC = () => {
       const { data: response } = await authApi.login(data.email, data.password);
       setTokens(response.tokens.accessToken, response.tokens.refreshToken);
       setStoredUser(response.user);
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     } catch (error) {
       setError('root', { message: handleApiError(error) });
     } finally {
@@ -38,60 +41,75 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-xl bg-white border border-gray-200 p-6 shadow-sm">
-        <div className="mb-6 flex justify-center">
-          <Logo size="md" showText={true} />
-        </div>
-
-        <h1 className="text-2xl font-semibold text-gray-900">Sign in</h1>
-        <p className="mt-1 text-sm text-gray-500">Use your account credentials to continue.</p>
-
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              {...register('email')}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-teal-500 focus:ring"
-            />
-            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              {...register('password')}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-teal-500 focus:ring"
-            />
-            {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-          </div>
-
-          {errors.root?.message && <p className="text-sm text-red-600">{errors.root.message}</p>}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-teal-600 px-3 py-2 font-medium text-white hover:bg-teal-700 disabled:opacity-60"
-          >
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
-
-        <p className="mt-5 text-sm text-gray-600">
+    <AuthSplitLayout
+      intro="Competition administration and player handicap management"
+      introDetail=""
+      title="Sign in to continue"
+      description="Access player records, round processing, and administrative tools from one place."
+      asideBadge="Live handicap updates"
+      asideEyebrow="Operations cockpit"
+      asideTitle="Run competitions, manage members, and publish results without leaving the same workspace."
+      asideDescription="Built for club admins who need reliable access to handicap history, player account management, and round validation."
+      asideStats={[
+        { value: '24/7', label: 'Round-entry and auth availability' },
+        { value: 'Role-based', label: 'Admin registration and protected access' },
+        { value: 'Single source', label: 'Player and competition data in one system' },
+      ]}
+      footer={(
+        <>
           Need to create a user?{' '}
-          <Link className="font-medium text-teal-700 hover:underline" to="/auth/register">
-            Admin registration page
+          <Link className="font-semibold text-teal-700 transition hover:text-teal-800" to="/auth/register">
+            Open the admin registration page
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      )}
+    >
+      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email')}
+                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+              />
+              {errors.email && <p className="mt-2 text-sm font-medium text-rose-600">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <span className="text-sm font-medium text-teal-700">Secure access</span>
+              </div>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password')}
+                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+              />
+              {errors.password && <p className="mt-2 text-sm font-medium text-rose-600">{errors.password.message}</p>}
+            </div>
+
+            {errors.root?.message && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {errors.root.message}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+    </AuthSplitLayout>
   );
 };
