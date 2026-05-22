@@ -18,9 +18,10 @@ function parseEnvLine(line) {
   return { key, value };
 }
 
-function loadEnvFromRoot() {
-  const envPath = path.resolve(__dirname, '..', '..', '.env');
-  if (!fs.existsSync(envPath)) return;
+function loadEnvFile(envPath, options = {}) {
+  if (!fs.existsSync(envPath)) return false;
+
+  const override = options.override === true;
 
   const raw = fs.readFileSync(envPath, 'utf8');
   const lines = raw.split(/\r?\n/);
@@ -32,9 +33,25 @@ function loadEnvFromRoot() {
     const parsed = parseEnvLine(trimmed);
     if (!parsed) continue;
 
-    if (process.env[parsed.key] === undefined) {
+    if (override || process.env[parsed.key] === undefined) {
       process.env[parsed.key] = parsed.value;
     }
+  }
+
+  return true;
+}
+
+function loadEnvFromRoot() {
+  const rootDir = path.resolve(__dirname, '..', '..');
+  const nodeEnv = String(process.env.NODE_ENV || '').toLowerCase();
+  const baseLoaded = loadEnvFile(path.join(rootDir, '.env'));
+
+  if (nodeEnv) {
+    loadEnvFile(path.join(rootDir, `.env.${nodeEnv}`), { override: true });
+  }
+
+  if (!baseLoaded && !nodeEnv) {
+    loadEnvFile(path.join(rootDir, '.env.production'));
   }
 }
 

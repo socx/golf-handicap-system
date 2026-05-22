@@ -132,11 +132,13 @@ jobs:
 
             if [ -n "${APP_ENV_FILE:-}" ]; then
               umask 077
-              printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/apps/web/.env.production"
-              printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/apps/api/.env.production"
+              printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/.env.production"
             fi
 
             cd "$APP_DIR" && "$NPM_BIN" ci --workspace packages/types --workspace apps/api --workspace apps/web --no-audit --no-fund
+            cd "$APP_DIR/apps/api"
+            "$NPM_BIN" run build --if-present
+            cp -a dist/. src/
             cd "$APP_DIR/apps/web"
             BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
 
@@ -144,15 +146,15 @@ jobs:
             # Only prune API workspace development dependencies after the web build completes.
             cd "$APP_DIR" && "$NPM_BIN" prune --omit=dev --workspace packages/types --workspace apps/api --no-audit --no-fund
 
-            # Extract DATABASE_URL from the .env.production file for migrations.
-            if [ -f "$APP_DIR/apps/api/.env.production" ]; then
-              MIGRATION_DB_URL=$(grep '^DATABASE_URL=' "$APP_DIR/apps/api/.env.production" | cut -d'=' -f2-)
+            # Extract DATABASE_URL from the root .env.production file for migrations.
+            if [ -f "$APP_DIR/.env.production" ]; then
+              MIGRATION_DB_URL=$(grep '^DATABASE_URL=' "$APP_DIR/.env.production" | cut -d'=' -f2-)
             fi
 
             # Run database migrations.
             if [ -d "$APP_DIR/db/migrations" ] && [ "$(find "$APP_DIR/db/migrations" -name "*.sql" 2>/dev/null | wc -l)" -gt 0 ]; then
               if [ -z "${MIGRATION_DB_URL:-}" ]; then
-                echo "WARNING: DATABASE_URL not found in .env.production; skipping migrations." >&2
+                echo "WARNING: DATABASE_URL not found in root .env.production; skipping migrations." >&2
               else
                 echo "Running database migrations (dry-run)..."
                 DRY_RUN=1 DATABASE_URL="$MIGRATION_DB_URL" bash "$APP_DIR/infra/scripts/run-migrations.sh" || {
