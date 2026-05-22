@@ -260,15 +260,15 @@ function validateRegistrationInput(payload) {
 }
 
 function buildAuthTokens(user) {
-  // Refresh tokens are managed as stateless JWTs for now; rotation/blacklisting follows in story #51.
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role, tokenType: 'access' },
     jwtSecret,
     { expiresIn: jwtAccessExpiresIn },
   );
 
+  const refreshJti = crypto.randomUUID();
   const refreshToken = jwt.sign(
-    { sub: user.id, role: user.role, tokenType: 'refresh' },
+    { sub: user.id, role: user.role, tokenType: 'refresh', jti: refreshJti },
     jwtSecret,
     { expiresIn: jwtRefreshExpiresIn },
   );
@@ -323,6 +323,64 @@ async function findUserByEmail(email) {
   `;
   const result = await dbPool.query(query, [email]);
   return result.rows[0] || null;
+}
+
+async function findUserById(id) {
+  const query = `
+    SELECT id, email::text AS email, role, is_active, created_at, updated_at
+    FROM users
+    WHERE id = $1 AND deleted_at IS NULL
+    LIMIT 1
+  `;
+  const result = await dbPool.query(query, [id]);
+  return result.rows[0] || null;
+}
+
+function validateRefreshInput(payload) {
+  const errors = [];
+  const refreshToken = typeof payload.refreshToken === 'string' ? payload.refreshToken.trim() : '';
+
+  if (!refreshToken) {
+    errors.push({ field: 'refreshToken', message: 'refreshToken is required' });
+  }
+
+  return {
+    errors,
+    value: {
+      refreshToken,
+    },
+  };
+}
+
+function hashToken(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function secondsUntilEpoch(epochSeconds) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return Math.max(1, Number(epochSeconds || 0) - nowSeconds);
+}
+
+async function ensureRefreshTokenUsable(refreshToken, decodedToken) {
+  if (!redisReady) {
+    return true;
+  }
+
+  const digest = hashToken(refreshToken);
+  const rotatedKey = `ghs:auth:refresh:rotated:${digest}`;
+  const blacklistedKey = `ghs:auth:refresh:blacklist:${digest}`;
+  const [rotated, blacklisted] = await Promise.all([
+    redisClient.exists(rotatedKey),
+    redisClient.exists(blacklistedKey),
+  ]);
+
+  if (rotated || blacklisted) {
+    return false;
+  }
+
+  const ttl = secondsUntilEpoch(decodedToken.exp);
+  await redisClient.set(rotatedKey, '1', { EX: ttl });
+  return true;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -503,6 +561,65 @@ const server = http.createServer(async (req, res) => {
       } catch (error) {
         console.error('[auth.login] unexpected error:', error);
         sendError(res, 500, 'login_failed', 'Unable to login at this time');
+      }
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/refresh' || pathname === '/api/auth/refresh')) {
+      let payload;
+
+      try {
+        payload = await readJsonBody(req);
+      } catch (error) {
+        sendError(res, 400, 'invalid_json', error.message);
+        return;
+      }
+
+      const validation = validateRefreshInput(payload);
+      if (validation.errors.length > 0) {
+        sendError(
+          res,
+          400,
+          'validation_error',
+          'Request validation failed',
+          validation.errors,
+        );
+        return;
+      }
+
+      let decodedToken;
+      try {
+        decodedToken = jwt.verify(validation.value.refreshToken, jwtSecret);
+      } catch (error) {
+        sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+        return;
+      }
+
+      if (!decodedToken || decodedToken.tokenType !== 'refresh' || !decodedToken.sub) {
+        sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+        return;
+      }
+
+      try {
+        const isUsable = await ensureRefreshTokenUsable(validation.value.refreshToken, decodedToken);
+        if (!isUsable) {
+          sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+          return;
+        }
+
+        const user = await findUserById(decodedToken.sub);
+        if (!user || !user.is_active) {
+          sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+          return;
+        }
+
+        sendJson(res, 200, {
+          user,
+          tokens: buildAuthTokens(user),
+        });
+      } catch (error) {
+        console.error('[auth.refresh] unexpected error:', error);
+        sendError(res, 500, 'refresh_failed', 'Unable to refresh token at this time');
       }
       return;
     }

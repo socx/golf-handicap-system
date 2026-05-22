@@ -104,15 +104,22 @@ So that users can obtain new access tokens without re‑entering credentials.
 **Target Date:** **25 May 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/auth/refresh` accepts refresh token.  
-- [ ] Validates token and issues new access token.  
-- [ ] Invalid/expired tokens return 401.  
-- [ ] Supports refresh token rotation (optional).  
-- [ ] Security considerations documented.
+- [x] POST `/auth/refresh` accepts refresh token.  
+- [x] Validates token and issues new access token.  
+- [x] Invalid/expired tokens return 401.  
+- [x] Supports refresh token rotation (optional).  
+- [x] Security considerations documented.
 
 ### Dependencies
 - Login & JWT issuance  
 - Token storage/blacklist strategy
+
+### Security Notes
+- Refresh tokens are JWTs with `tokenType=refresh` and unique `jti` claims.
+- Expired/invalid/non-refresh tokens return generic 401 responses without leaking token details.
+- Token rotation is enforced by issuing a new refresh token on each refresh.
+- Used refresh tokens are marked in Redis (`ghs:auth:refresh:rotated:<sha256>`) until token expiry to prevent replay.
+- If Redis is unavailable, refresh still functions but replay protection degrades to stateless JWT validation only.
 
 ---
 
