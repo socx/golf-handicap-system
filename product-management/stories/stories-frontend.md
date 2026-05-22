@@ -88,6 +88,8 @@ So that users can authenticate and access the system.
 
 ---
 
+
+
 ## 4. Implement authentication state management
 
 **As a developer**  
