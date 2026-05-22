@@ -6,6 +6,7 @@ import { Pool } from 'pg';
 import { createClient } from 'redis';
 import type { AuthTokens, JWTClaims, User, ValidationError, ValidationResult } from '@ghs/types';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { loadEnvFromRoot } = require('../../../scripts/db/load-env');
 
 loadEnvFromRoot();
@@ -45,6 +46,27 @@ interface LogRequest {
   req: http.IncomingMessage;
   statusCode: number;
   durationMs: number;
+}
+
+// RBAC Types
+type UserRole = 'admin' | 'player' | 'viewer';
+
+interface AuthenticatedRequest {
+  userId: string;
+  role: UserRole;
+  claims: JWTClaims;
+}
+
+interface RBACMiddlewareResult {
+  success: boolean;
+  auth?: AuthenticatedRequest;
+  statusCode?: number;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+interface RequireRoleOptions {
+  requiredRoles: UserRole[];
 }
 
 const ttlByResource: CacheTTL = {
@@ -508,6 +530,76 @@ async function ensureRefreshTokenUsable(refreshToken: string, decodedToken: JWTC
   return true;
 }
 
+// RBAC Middleware
+function verifyAndAuthorize(
+  req: http.IncomingMessage,
+  options: RequireRoleOptions,
+): RBACMiddlewareResult {
+  const token = getBearerToken(req);
+
+  if (!token) {
+    return {
+      success: false,
+      statusCode: 401,
+      errorCode: 'unauthorized',
+      errorMessage: 'Missing or invalid authorization token',
+    };
+  }
+
+  let claims: JWTClaims;
+  try {
+    claims = jwt.verify(token, jwtSecret) as JWTClaims;
+  } catch {
+    return {
+      success: false,
+      statusCode: 401,
+      errorCode: 'unauthorized',
+      errorMessage: 'Invalid or expired authorization token',
+    };
+  }
+
+  if (!claims || claims.tokenType !== 'access' || !claims.sub) {
+    return {
+      success: false,
+      statusCode: 401,
+      errorCode: 'unauthorized',
+      errorMessage: 'Invalid access token format',
+    };
+  }
+
+  const userRole = (claims.role || 'player') as UserRole;
+
+  // Validate role is one of the known roles
+  const validRoles: UserRole[] = ['admin', 'player', 'viewer'];
+  if (!validRoles.includes(userRole)) {
+    return {
+      success: false,
+      statusCode: 403,
+      errorCode: 'invalid_role',
+      errorMessage: 'User has an invalid role',
+    };
+  }
+
+  // Check if user role is in required roles
+  if (!options.requiredRoles.includes(userRole)) {
+    return {
+      success: false,
+      statusCode: 403,
+      errorCode: 'forbidden',
+      errorMessage: `User role '${userRole}' is not authorized for this endpoint`,
+    };
+  }
+
+  return {
+    success: true,
+    auth: {
+      userId: String(claims.sub),
+      role: userRole,
+      claims,
+    },
+  };
+}
+
 const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
   const startedAt = Date.now();
   const requestId = normalizeRequestId(req.headers['x-request-id'] as string | undefined);
@@ -806,6 +898,70 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       } catch (error) {
         console.error('[auth.logout] unexpected error:', error);
         sendError(res, 500, 'logout_failed', 'Unable to logout at this time');
+      }
+      return;
+    }
+
+    // RBAC Protected Endpoints
+
+    if (method === 'GET' && (pathname === '/api/profile' || pathname === '/profile')) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player', 'viewer'] });
+
+      if (!authResult.success || !authResult.auth) {
+        sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+        return;
+      }
+
+      sendJson(res, 200, {
+        user: {
+          id: authResult.auth.userId,
+          role: authResult.auth.role,
+        },
+        message: 'User profile retrieved successfully',
+      });
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/status' || pathname === '/admin/status')) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+
+      if (!authResult.success || !authResult.auth) {
+        sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+        return;
+      }
+
+      sendJson(res, 200, {
+        admin: true,
+        userId: authResult.auth.userId,
+        systemStatus: {
+          redisReady,
+          dbPoolReady: !dbPool.ended,
+          startupTime: new Date().toISOString(),
+        },
+        message: 'Admin status retrieved successfully',
+      });
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/users' || pathname === '/admin/users')) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+
+      if (!authResult.success || !authResult.auth) {
+        sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+        return;
+      }
+
+      try {
+        const query = 'SELECT id, email, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 10';
+        const result = await dbPool.query(query);
+        sendJson(res, 200, {
+          users: result.rows,
+          total: result.rowCount,
+          message: 'Users list retrieved successfully',
+        });
+      } catch (error) {
+        console.error('[admin.users] error:', error);
+        sendError(res, 500, 'database_error', 'Unable to retrieve users list');
       }
       return;
     }

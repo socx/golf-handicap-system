@@ -115,11 +115,42 @@ So that users can obtain new access tokens without re‑entering credentials.
 - Token storage/blacklist strategy
 
 ### Security Notes
-- Refresh tokens are JWTs with `tokenType=refresh` and unique `jti` claims.
-- Expired/invalid/non-refresh tokens return generic 401 responses without leaking token details.
-- Token rotation is enforced by issuing a new refresh token on each refresh.
-- Used refresh tokens are marked in Redis (`ghs:auth:refresh:rotated:<sha256>`) until token expiry to prevent replay.
-- If Redis is unavailable, refresh still functions but replay protection degrades to stateless JWT validation only.
+### Implementation Details
+
+**RBAC Middleware (`verifyAndAuthorize`):**
+- Extracts bearer token from Authorization header
+- Verifies JWT token using jwt.verify() with JWT secret
+- Validates token type is "access" and contains required claims (sub, role, tokenType)
+- Validates user role is one of: admin, player, viewer
+- Checks if user role is in endpoint's required roles list
+- Returns 401 for missing/invalid token
+- Returns 403 for insufficient permissions
+- Returns authenticated request context on success with userId, role, and claims
+
+**Protected Endpoints Implemented:**
+- `GET /api/profile` — All authenticated users (admin, player, viewer)
+- `GET /api/admin/status` — Admin only; returns system status (Redis ready, DB pool ready)
+- `GET /api/admin/users` — Admin only; returns list of recent users from database
+
+**JWT Claims Structure:**
+Access tokens include role field:
+```json
+{
+	"sub": "user-id",
+	"role": "admin|player|viewer",
+	"tokenType": "access",
+	"iat": 1234567890,
+	"exp": 1234571490
+}
+```
+
+**Test Coverage:**
+- Admin accessing admin-only endpoint: ✅ 200 OK
+- Player accessing admin-only endpoint: ✅ 403 Forbidden
+- Player accessing general endpoint: ✅ 200 OK
+- Admin accessing general endpoint: ✅ 200 OK
+- Missing authorization header: ✅ 401 Unauthorized
+
 
 ---
 
@@ -157,10 +188,10 @@ So that only authorised users can access admin‑level or restricted endpoints.
 **Target Date:** **31 May 2026**
 
 ### Acceptance Criteria
-- [ ] Middleware checks user role against required permissions.  
-- [ ] Roles: `admin`, `player`, `viewer` (configurable).  
-- [ ] Unauthorized access returns 403.  
-- [ ] RBAC rules documented and test‑covered.
+- [x] Middleware checks user role against required permissions.
+- [x] Roles: `admin`, `player`, `viewer` (configurable).
+- [x] Unauthorized access returns 403.
+- [x] RBAC rules documented and test‑covered.
 
 ### Dependencies
 - Login & JWT middleware  
