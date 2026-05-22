@@ -303,16 +303,23 @@ So that users can recover access securely.
 **Target Date:** **17 June 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/auth/password-reset/request` sends reset token to email.  
-- [ ] POST `/auth/password-reset/confirm` validates token and sets new password.  
-- [ ] Tokens expire after configurable duration.  
-- [ ] Reset events logged.  
-- [ ] No user enumeration (same response for valid/invalid email).
+- [x] POST `/auth/password-reset/request` sends reset token to email.  
+- [x] POST `/auth/password-reset/confirm` validates token and sets new password.  
+- [x] Tokens expire after configurable duration.  
+- [x] Reset events logged.  
+- [x] No user enumeration (same response for valid/invalid email).
 
 ### Dependencies
 - Email delivery module  
 - Token generation  
 - Users table
+
+### Implementation Notes
+- Added `password_reset_tokens` persistence with one-time-use token hashes and expiry (`packages/db/migrations/004_password_reset_tokens.sql`).
+- Added endpoints: `POST /auth/password-reset/request` and `POST /auth/password-reset/confirm`.
+- Local dev uses Mailpit by default (`EMAIL_TRANSPORT=mailpit`); production defaults to SMTP (`EMAIL_TRANSPORT=smtp` or `NODE_ENV=production`).
+- Added auth audit events: `auth_password_reset_requested`, `auth_password_reset_completed`.
+- E2E validated with Mailpit: reset email delivery, non-enumerating request response, successful reset, old-password rejection, and used-token replay rejection.
 
 ---
 

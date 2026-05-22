@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
 import { createClient } from 'redis';
+import nodemailer from 'nodemailer';
 import type { AuthTokens, JWTClaims, User, ValidationError, ValidationResult } from '@ghs/types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -20,6 +21,32 @@ const authAutoLoginEnabled = String(process.env.AUTH_AUTO_LOGIN_ENABLED || 'true
 const jwtSecret = process.env.JWT_SECRET || 'dev-jwt-secret-change-me';
 const jwtAccessExpiresIn = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m';
 const jwtRefreshExpiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '30d';
+const nodeEnv = (process.env.NODE_ENV || 'development').toLowerCase();
+
+// SMTP / email config
+const smtpHost = process.env.SMTP_HOST || 'localhost';
+const smtpPort = Number(process.env.SMTP_PORT || 1025);
+const smtpUser = process.env.SMTP_USER || '';
+const smtpPassword = process.env.SMTP_PASSWORD || '';
+const smtpFromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@localhost';
+const smtpFromName = process.env.SMTP_FROM_NAME || 'Golf Handicap System';
+const mailpitSmtpHost = process.env.MAILPIT_SMTP_HOST || 'localhost';
+const mailpitSmtpPort = Number(process.env.MAILPIT_SMTP_PORT || 1025);
+const emailTransport = (process.env.EMAIL_TRANSPORT || (nodeEnv === 'production' ? 'smtp' : 'mailpit')).toLowerCase();
+const passwordResetTokenExpiryMinutes = Number(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES || 60);
+
+function createMailTransport() {
+  if (emailTransport === 'mailpit') {
+    // Mailpit local SMTP (no auth, plain SMTP on port 1025)
+    return nodemailer.createTransport({ host: mailpitSmtpHost, port: mailpitSmtpPort, secure: false, auth: undefined });
+  }
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPassword },
+  });
+}
 
 // Types
 interface CacheTTL {
@@ -76,7 +103,9 @@ type AuthAuditEventType =
   | 'auth_refresh'
   | 'auth_user_activated'
   | 'auth_user_deactivated'
-  | 'auth_user_deleted';
+  | 'auth_user_deleted'
+  | 'auth_password_reset_requested'
+  | 'auth_password_reset_completed';
 
 const ttlByResource: CacheTTL = {
   dashboard: Number(process.env.CACHE_TTL_DASHBOARD_SECONDS || 60),
@@ -1257,6 +1286,115 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       } catch (error) {
         console.error('[admin.users] error:', error);
         sendError(res, 500, 'database_error', 'Unable to retrieve users list');
+      }
+      return;
+    }
+
+    // ── POST /auth/password-reset/request ──────────────────────────────
+    if (method === 'POST' && (pathname === '/auth/password-reset/request' || pathname === '/api/auth/password-reset/request')) {
+      const body = await readJsonBody(req);
+      const rawEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+      // Always return same response to prevent user enumeration
+      const safeResponse = { message: 'If that email is registered you will receive a reset link shortly.' };
+      if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+        sendJson(res, 200, safeResponse);
+        return;
+      }
+      try {
+        const userResult = await dbPool.query(
+          'SELECT id, email::text AS email FROM users WHERE email = $1 AND deleted_at IS NULL AND is_active = TRUE',
+          [rawEmail]
+        );
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          // Invalidate any existing unused tokens for this user
+          await dbPool.query(
+            'UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL',
+            [user.id]
+          );
+          // Generate a secure random token (32 bytes = 64 hex chars)
+          const rawToken = crypto.randomBytes(32).toString('hex');
+          const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+          const expiresAt = new Date(Date.now() + passwordResetTokenExpiryMinutes * 60 * 1000);
+          await dbPool.query(
+            'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+            [user.id, tokenHash, expiresAt]
+          );
+          // Send email
+          const resetUrl = `${process.env.APP_URL || 'http://localhost:5175'}/reset-password?token=${rawToken}`;
+          const transport = createMailTransport();
+          await transport.sendMail({
+            from: `"${smtpFromName}" <${smtpFromEmail}>`,
+            to: user.email,
+            subject: 'Reset your password',
+            text: `You requested a password reset. Use this link (valid for ${passwordResetTokenExpiryMinutes} minutes):\n\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
+            html: `<p>You requested a password reset. Click the link below (valid for ${passwordResetTokenExpiryMinutes} minutes):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, ignore this email.</p>`,
+          });
+          await logAuthAuditEvent({
+            requestId,
+            event: 'auth_password_reset_requested',
+            userId: user.id,
+            ipAddress: clientIp,
+            metadata: {},
+          });
+        }
+      } catch (error) {
+        console.error('[password-reset.request] error:', error);
+        // Still return safe response
+      }
+      sendJson(res, 200, safeResponse);
+      return;
+    }
+
+    // ── POST /auth/password-reset/confirm ──────────────────────────────
+    if (method === 'POST' && (pathname === '/auth/password-reset/confirm' || pathname === '/api/auth/password-reset/confirm')) {
+      const body = await readJsonBody(req);
+      const rawToken = typeof body.token === 'string' ? body.token.trim() : '';
+      const newPassword = typeof body.password === 'string' ? body.password : '';
+      if (!rawToken || !newPassword) {
+        sendError(res, 400, 'validation_error', 'token and password are required');
+        return;
+      }
+      if (newPassword.length < 8) {
+        sendError(res, 400, 'validation_error', 'password must be at least 8 characters');
+        return;
+      }
+      try {
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const tokenResult = await dbPool.query(
+          `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
+           FROM password_reset_tokens prt
+           JOIN users u ON u.id = prt.user_id
+           WHERE prt.token_hash = $1 AND u.deleted_at IS NULL AND u.is_active = TRUE`,
+          [tokenHash]
+        );
+        if (tokenResult.rows.length === 0) {
+          sendError(res, 400, 'invalid_token', 'Token is invalid or has expired');
+          return;
+        }
+        const tokenRow = tokenResult.rows[0];
+        if (tokenRow.used_at !== null) {
+          sendError(res, 400, 'invalid_token', 'Token has already been used');
+          return;
+        }
+        if (new Date(tokenRow.expires_at) < new Date()) {
+          sendError(res, 400, 'invalid_token', 'Token has expired');
+          return;
+        }
+        const newHash = await bcrypt.hash(newPassword, 12);
+        await dbPool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [newHash, tokenRow.user_id]);
+        await dbPool.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1', [tokenRow.id]);
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_password_reset_completed',
+          userId: tokenRow.user_id,
+          ipAddress: clientIp,
+          metadata: {},
+        });
+        sendJson(res, 200, { message: 'Password reset successfully' });
+      } catch (error) {
+        console.error('[password-reset.confirm] error:', error);
+        sendError(res, 500, 'internal_error', 'Unable to reset password');
       }
       return;
     }
