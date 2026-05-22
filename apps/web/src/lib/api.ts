@@ -75,8 +75,8 @@ export const getRefreshToken = () => refreshToken;
 
 // Auth API
 export const authApi = {
-  register: (email: string, password: string, name: string) =>
-    api.post<{ user: User; tokens?: AuthTokens }>('/auth/register', { email, password, name, role: 'player' }),
+  register: (email: string, password: string, role: 'admin' | 'player' = 'player') =>
+    api.post<{ user: User; tokens?: AuthTokens }>('/auth/register', { email, password, role }),
   login: (email: string, password: string) =>
     api.post<{ user: User; tokens: AuthTokens }>('/auth/login', { email, password }),
   logout: (refreshToken: string) =>
@@ -91,4 +91,22 @@ export const handleApiError = (error: unknown): string => {
     return error.response?.data?.error?.message || error.message || 'An error occurred';
   }
   return 'An unexpected error occurred';
+};
+
+export const setStoredUser = (user: User | null) => {
+  if (!user) {
+    localStorage.removeItem('ghs-user');
+    return;
+  }
+  localStorage.setItem('ghs-user', JSON.stringify(user));
+};
+
+export const getStoredUser = (): User | null => {
+  const raw = localStorage.getItem('ghs-user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
 };

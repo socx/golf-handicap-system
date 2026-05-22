@@ -76,15 +76,22 @@ So that users can authenticate and access the system.
 **Target Date:** **26 September 2026**
 
 ### Acceptance Criteria
-- [ ] Login form with email + password.  
-- [ ] Registration form (admin‑only access).  
-- [ ] Validation using React Hook Form + Zod.  
-- [ ] Error messages displayed clearly.  
-- [ ] Successful login stores tokens and redirects.
+- [x] Login form with email + password.  
+- [x] Registration form (admin‑only access).  
+- [x] Validation using React Hook Form + Zod.  
+- [x] Error messages displayed clearly.  
+- [x] Successful login stores tokens and redirects.
 
 ### Dependencies
 - Auth APIs  
 - Global layout
+
+### Implementation Notes
+- Added routed auth pages at `/auth/login` and `/auth/register` in `apps/web/src/App.tsx`.
+- Implemented forms in `apps/web/src/pages/LoginPage.tsx` and `apps/web/src/pages/RegisterPage.tsx` using React Hook Form + Zod.
+- Added clear inline and submit-level error messaging via `setError('root', ...)`.
+- Implemented login success flow to persist tokens + user to localStorage and redirect to `/`.
+- Registration page enforces admin-only access by checking the authenticated user role via `/auth/me`.
 
 ---
 
