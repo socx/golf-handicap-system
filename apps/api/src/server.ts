@@ -69,6 +69,15 @@ interface RequireRoleOptions {
   requiredRoles: UserRole[];
 }
 
+type AuthAuditEventType =
+  | 'auth_login_success'
+  | 'auth_login_failure'
+  | 'auth_logout'
+  | 'auth_refresh'
+  | 'auth_user_activated'
+  | 'auth_user_deactivated'
+  | 'auth_user_deleted';
+
 const ttlByResource: CacheTTL = {
   dashboard: Number(process.env.CACHE_TTL_DASHBOARD_SECONDS || 60),
   leaderboard: Number(process.env.CACHE_TTL_LEADERBOARD_SECONDS || 45),
@@ -156,6 +165,20 @@ function logRequest({ requestId, req, statusCode, durationMs }: LogRequest): voi
 function parseUrl(req: http.IncomingMessage): URL {
   const host = req.headers.host || `localhost:${port}`;
   return new URL(req.url || '/', `http://${host}`);
+}
+
+function getClientIp(req: http.IncomingMessage): string {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim().length > 0) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim().length > 0) {
+    return realIp.trim();
+  }
+
+  return req.socket.remoteAddress || 'unknown';
 }
 
 function buildCacheKey(resource: keyof CacheTTL, requestUrl: URL): string {
@@ -460,28 +483,50 @@ function parseUserDeleteRoute(path: string): { userId: string } | null {
   return { userId };
 }
 
-function logAuthAuditEvent({
+async function logAuthAuditEvent({
   requestId,
   event,
+  userId,
   actorUserId,
-  targetUserId,
+  ipAddress,
   metadata,
 }: {
   requestId: string;
-  event: string;
-  actorUserId: string;
-  targetUserId: string;
+  event: AuthAuditEventType;
+  userId?: string | null;
+  actorUserId?: string | null;
+  ipAddress: string;
   metadata?: Record<string, unknown>;
-}): void {
+}): Promise<void> {
+  const safeMetadata = metadata || {};
+
+  const query = `
+    INSERT INTO audit_logs (event_type, user_id, actor_user_id, ip_address, metadata)
+    VALUES ($1, $2, $3, $4, $5::jsonb)
+  `;
+
+  try {
+    await dbPool.query(query, [
+      event,
+      userId || null,
+      actorUserId || null,
+      ipAddress,
+      JSON.stringify(safeMetadata),
+    ]);
+  } catch (error) {
+    console.warn('[audit] failed to persist auth audit event:', (error as Error).message);
+  }
+
   console.log(
     JSON.stringify({
       level: 'info',
       event,
       service: 'ghs-api',
       requestId,
-      actorUserId,
-      targetUserId,
-      metadata: metadata || {},
+      userId: userId || null,
+      actorUserId: actorUserId || null,
+      ipAddress,
+      metadata: safeMetadata,
       timestamp: new Date().toISOString(),
     }),
   );
@@ -692,6 +737,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
   const method = (req.method || 'GET').toUpperCase();
   const requestUrl = parseUrl(req);
   const pathname = requestUrl.pathname;
+  const clientIp = getClientIp(req);
 
   try {
     if (pathname === '/health' || pathname === '/api/health') {
@@ -823,6 +869,15 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
           : false;
 
         if (!user || !user.is_active || !isValidPassword) {
+          await logAuthAuditEvent({
+            requestId,
+            event: 'auth_login_failure',
+            userId: user?.id || null,
+            ipAddress: clientIp,
+            metadata: {
+              reason: 'invalid_credentials',
+            },
+          });
           sendError(res, 401, 'invalid_credentials', 'Invalid email or password');
           return;
         }
@@ -835,6 +890,16 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
           created_at: user.created_at,
           updated_at: user.updated_at,
         };
+
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_login_success',
+          userId: responseUser.id,
+          ipAddress: clientIp,
+          metadata: {
+            role: responseUser.role,
+          },
+        });
 
         sendJson(res, 200, {
           user: responseUser,
@@ -867,11 +932,29 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       try {
         decodedToken = jwt.verify(validation.value.refreshToken, jwtSecret) as JWTClaims & { exp?: number };
       } catch {
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_refresh',
+          ipAddress: clientIp,
+          metadata: {
+            success: false,
+            reason: 'invalid_or_expired_refresh_token',
+          },
+        });
         sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
         return;
       }
 
       if (!decodedToken || decodedToken.tokenType !== 'refresh' || !decodedToken.sub) {
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_refresh',
+          ipAddress: clientIp,
+          metadata: {
+            success: false,
+            reason: 'invalid_refresh_token_claims',
+          },
+        });
         sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
         return;
       }
@@ -879,15 +962,46 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       try {
         const isUsable = await ensureRefreshTokenUsable(validation.value.refreshToken, decodedToken);
         if (!isUsable) {
+          await logAuthAuditEvent({
+            requestId,
+            event: 'auth_refresh',
+            userId: decodedToken.sub,
+            ipAddress: clientIp,
+            metadata: {
+              success: false,
+              reason: 'refresh_token_not_usable',
+            },
+          });
           sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
           return;
         }
 
         const user = await findUserById(decodedToken.sub);
         if (!user || !user.is_active) {
+          await logAuthAuditEvent({
+            requestId,
+            event: 'auth_refresh',
+            userId: decodedToken.sub,
+            ipAddress: clientIp,
+            metadata: {
+              success: false,
+              reason: 'user_not_found_or_inactive',
+            },
+          });
           sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
           return;
         }
+
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_refresh',
+          userId: user.id,
+          ipAddress: clientIp,
+          metadata: {
+            success: true,
+            role: user.role,
+          },
+        });
 
         sendJson(res, 200, {
           user,
@@ -956,16 +1070,15 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       try {
         await markRefreshTokenBlacklisted(validation.value.refreshToken, refreshClaims);
 
-        console.log(
-          JSON.stringify({
-            level: 'info',
-            event: 'auth_logout',
-            service: 'ghs-api',
-            requestId,
-            userId: accessClaims.sub,
-            timestamp: new Date().toISOString(),
-          }),
-        );
+        await logAuthAuditEvent({
+          requestId,
+          event: 'auth_logout',
+          userId: String(accessClaims.sub),
+          ipAddress: clientIp,
+          metadata: {
+            success: true,
+          },
+        });
 
         sendJson(res, 200, {
           success: true,
@@ -1007,11 +1120,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
           return;
         }
 
-        logAuthAuditEvent({
+        await logAuthAuditEvent({
           requestId,
           event: nextStatus ? 'auth_user_activated' : 'auth_user_deactivated',
+          userId,
           actorUserId: authResult.auth.userId,
-          targetUserId: userId,
+          ipAddress: clientIp,
           metadata: {
             is_active: updatedUser.is_active,
             role: updatedUser.role,
@@ -1056,11 +1170,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
           return;
         }
 
-        logAuthAuditEvent({
+        await logAuthAuditEvent({
           requestId,
           event: 'auth_user_deleted',
+          userId,
           actorUserId: authResult.auth.userId,
-          targetUserId: userId,
+          ipAddress: clientIp,
           metadata: {
             softDeleted: true,
             role: deletedUser.role,

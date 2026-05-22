@@ -272,15 +272,22 @@ So that security and compliance requirements are met.
 **Target Date:** **10 June 2026**
 
 ### Acceptance Criteria
-- [ ] Logs: login success, login failure, logout, refresh, deactivation, deletion.  
-- [ ] Stored in `audit_logs` table with timestamp, user_id, IP, event type.  
-- [ ] Admin UI can view logs (future epic).  
-- [ ] Sensitive data never logged.
+- [x] Logs: login success, login failure, logout, refresh, deactivation, deletion.  
+- [x] Stored in `audit_logs` table with timestamp, user_id, IP, event type.  
+- [x] Admin UI can view logs (future epic).  
+- [x] Sensitive data never logged.
 
 ### Dependencies
 - Login, logout, refresh  
 - Users table  
 - Audit_logs table (from Security epic)
+
+### Implementation Notes
+- `logAuthAuditEvent()` upgraded to async DB-persistent function inserting into `audit_logs`.
+- `getClientIp()` helper reads `x-forwarded-for`, `x-real-ip`, and `socket.remoteAddress`.
+- Events: `auth_login_success`, `auth_login_failure`, `auth_logout`, `auth_refresh`, `auth_user_activated`, `auth_user_deactivated`, `auth_user_deleted`.
+- Migration: `packages/db/migrations/003_auth_audit_logs.sql`.
+- E2E verified: all 6 event types persisted with IP; no passwords/tokens in metadata.
 
 ---
 
