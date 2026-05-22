@@ -31,10 +31,10 @@ So that authentication identities are persisted according to the system specific
 **Target Date:** **18 May 2026**
 
 ### Acceptance Criteria
-- [ ] `users` table includes: id (UUID), email (citext), password_hash, role, is_active, timestamps, deleted_at.  
-- [ ] Email is unique and case‑insensitive.  
-- [ ] Migrations apply and roll back cleanly.  
-- [ ] DB constraints enforce required fields.
+- [x] `users` table includes: id (UUID), email (citext), password_hash, role, is_active, timestamps, deleted_at.  
+- [x] Email is unique and case‑insensitive.  
+- [x] Migrations apply and roll back cleanly.  
+- [x] DB constraints enforce required fields.
 
 ### Dependencies
 - PostgreSQL connection  
