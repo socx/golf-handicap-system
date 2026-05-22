@@ -65,6 +65,33 @@ sudo -E bash infra/scripts/alertmanager-setup.sh
 - Expose `/metrics` endpoint on app (e.g., port 3005)
 - Prometheus config auto-scrapes it
 
+## Centralised logging (Loki + Promtail)
+
+Loki + Promtail provide searchable centralized logs from app/system services.
+
+**Provision on droplet:**
+```bash
+sudo bash infra/scripts/logging-setup.sh
+```
+
+**What gets aggregated:**
+- Backend logs: systemd journal units including `ghs-api`, `ghs-web`, `ghs-worker`
+- Frontend edge logs: nginx access logs (`/var/log/nginx/access.log`)
+- Database events: PostgreSQL logs (`/var/log/postgresql/*.log`)
+
+**Configuration files:**
+- `infra/logging/loki-config.yml`
+- `infra/logging/promtail-config.yml`
+
+**Search fields in Grafana Explore (Loki labels):**
+- `timestamp` (from log event time)
+- `requestId` (from API structured logs)
+- `userId` (from `x-user-id` request header when present)
+- `unit`, `job`, `service`
+
+**Retention policy:**
+- 30-day log retention configured in `loki-config.yml` (`retention_period: 30d`)
+
 ## Caching layer (Redis)
 
 Redis is used for TTL-based API response caching for high-traffic reads.

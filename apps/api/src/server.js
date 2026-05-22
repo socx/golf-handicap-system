@@ -44,6 +44,31 @@ function sendJson(res, statusCode, body) {
   res.end(JSON.stringify(body));
 }
 
+function normalizeRequestId(value) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return crypto.randomUUID();
+  }
+  return value.trim().slice(0, 128);
+}
+
+function logRequest({ requestId, req, statusCode, durationMs }) {
+  const userId = typeof req.headers['x-user-id'] === 'string' ? req.headers['x-user-id'] : null;
+  const logLine = {
+    level: 'info',
+    event: 'http_request',
+    service: 'ghs-api',
+    requestId,
+    userId,
+    method: (req.method || 'GET').toUpperCase(),
+    path: req.url || '/',
+    statusCode,
+    durationMs,
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log(JSON.stringify(logLine));
+}
+
 function parseUrl(req) {
   const host = req.headers.host || `localhost:${port}`;
   return new URL(req.url || '/', `http://${host}`);
@@ -148,6 +173,18 @@ function buildSettingsSummary() {
 }
 
 const server = http.createServer(async (req, res) => {
+  const startedAt = Date.now();
+  const requestId = normalizeRequestId(req.headers['x-request-id']);
+  res.setHeader('x-request-id', requestId);
+  res.on('finish', () => {
+    logRequest({
+      requestId,
+      req,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+
   const method = (req.method || 'GET').toUpperCase();
   const requestUrl = parseUrl(req);
   const pathname = requestUrl.pathname;

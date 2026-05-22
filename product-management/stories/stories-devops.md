@@ -341,12 +341,27 @@ So that logs from all API modules and background processes are searchable.
 **Target Date:** **16 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Log aggregation](ca://s?q=Explain_log_aggregation)** collects logs from:
+- [x] **[Log aggregation](ca://s?q=Explain_log_aggregation)** collects logs from:
   - backend  
   - frontend edge logs  
   - database events  
-- [ ] Searchable by timestamp, user, request ID.  
-- [ ] Retention policy configured.
+- [x] Searchable by timestamp, user, request ID.  
+- [x] Retention policy configured.
+
+### Implementation Notes
+- Setup script: `infra/scripts/logging-setup.sh` installs/configures Loki + Promtail.
+- Logging configs:
+  - `infra/logging/loki-config.yml`
+  - `infra/logging/promtail-config.yml`
+- Sources aggregated:
+  - backend service logs via systemd journal (`ghs-api`, `ghs-web`, `ghs-worker`)
+  - frontend edge logs from nginx access logs
+  - PostgreSQL logs from `/var/log/postgresql/*.log`
+- API structured request logs in `apps/api/src/server.js` now include:
+  - `requestId` (also returned in `x-request-id` response header)
+  - `userId` (from `x-user-id` header when present)
+  - method/path/status/duration/timestamp
+- Retention policy: 30 days in Loki (`retention_period: 30d`).
 
 ### Dependencies
 - **[Monitoring setup](ca://s?q=Explain_monitoring_dashboards)**
