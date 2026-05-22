@@ -65,6 +65,47 @@ sudo -E bash infra/scripts/alertmanager-setup.sh
 - Expose `/metrics` endpoint on app (e.g., port 3005)
 - Prometheus config auto-scrapes it
 
+## Caching layer (Redis)
+
+Redis is used for TTL-based API response caching for high-traffic reads.
+
+**Provision Redis on droplet:**
+```bash
+sudo bash infra/scripts/redis-setup.sh
+```
+
+**APP_ENV_FILE values:**
+```bash
+REDIS_URL=redis://127.0.0.1:6379
+CACHE_TTL_DASHBOARD_SECONDS=60
+CACHE_TTL_LEADERBOARD_SECONDS=45
+CACHE_TTL_SETTINGS_SECONDS=300
+# Optional: protects manual invalidation endpoint
+CACHE_ADMIN_KEY=<strong-random-value>
+```
+
+**Cached endpoints in `apps/api`:**
+- `GET /api/dashboard`
+- `GET /api/leaderboard?clubId=<id>`
+- `GET /api/settings`
+
+**Manual cache invalidation endpoint:**
+```bash
+# Invalidate all cached resources
+curl -X POST "http://127.0.0.1:3005/api/cache/invalidate?target=all" \
+  -H "x-cache-admin-key: $CACHE_ADMIN_KEY"
+
+# Invalidate one cache resource
+curl -X POST "http://127.0.0.1:3005/api/cache/invalidate?target=leaderboard" \
+  -H "x-cache-admin-key: $CACHE_ADMIN_KEY"
+```
+
+**Cache invalidation rules:**
+- Dashboard cache: invalidate on round create/update/delete, handicap recalculation, and daily stats rollup.
+- Leaderboard cache: invalidate on score posting, score correction, leaderboard rule/config changes.
+- Settings cache: invalidate on tenant/app settings updates or feature-flag changes.
+- Emergency/manual invalidation available via `POST /api/cache/invalidate`.
+
 ## Object storage (DigitalOcean Spaces)
 
 Store PDFs, images, and assets in DigitalOcean Spaces (S3-compatible).

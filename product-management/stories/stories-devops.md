@@ -264,12 +264,24 @@ So that dashboard and leaderboard endpoints are fast.
 **Target Date:** **06 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Redis instance](ca://s?q=Explain_Redis_instance)** provisioned.  
-- [ ] TTL-based caching for:
+- [x] **[Redis instance](ca://s?q=Explain_Redis_instance)** provisioned via `infra/scripts/redis-setup.sh`.  
+- [x] TTL-based caching for:
   - dashboard  
   - leaderboard  
   - settings  
-- [ ] Cache invalidation rules documented.
+- [x] Cache invalidation rules documented.
+
+### Implementation Notes
+- API Redis cache integration implemented in `apps/api/src/server.js` for:
+  - `GET /api/dashboard`
+  - `GET /api/leaderboard?clubId=<id>`
+  - `GET /api/settings`
+- TTLs are configurable with env vars:
+  - `CACHE_TTL_DASHBOARD_SECONDS`
+  - `CACHE_TTL_LEADERBOARD_SECONDS`
+  - `CACHE_TTL_SETTINGS_SECONDS`
+- Manual invalidation endpoint: `POST /api/cache/invalidate?target=all|dashboard|leaderboard|settings`
+- Invalidation rules are documented in `infra/README.md`.
 
 ### Dependencies
 - **[Dashboard APIs](ca://s?q=Explain_dashboard_summary_endpoint)**  
