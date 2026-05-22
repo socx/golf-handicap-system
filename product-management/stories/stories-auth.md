@@ -54,11 +54,11 @@ So that new users can create accounts and access the system.
 **Target Date:** **19 May 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/auth/register` accepts email, password, role.  
-- [ ] Passwords hashed using bcrypt or Argon2.  
-- [ ] Duplicate emails rejected with clear error.  
-- [ ] Returns user object + tokens (if auto‑login enabled).  
-- [ ] Validation errors follow standard error format.
+- [x] POST `/auth/register` accepts email, password, role.  
+- [x] Passwords hashed using bcrypt or Argon2.  
+- [x] Duplicate emails rejected with clear error.  
+- [x] Returns user object + tokens (if auto‑login enabled).  
+- [x] Validation errors follow standard error format.
 
 ### Dependencies
 - Users table  

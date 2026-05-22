@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.21.0",
     "redis": "^4.7.0"
   },
   "scripts": {

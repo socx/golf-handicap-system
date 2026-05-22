@@ -1,12 +1,23 @@
 const http = require('node:http');
 const crypto = require('node:crypto');
 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { Pool } = require('pg');
 const { createClient } = require('redis');
+const { loadEnvFromRoot } = require('../../../scripts/db/load-env');
+
+loadEnvFromRoot();
 
 const port = Number(process.env.API_PORT || process.env.PORT || 3005);
 
 const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const cacheAdminKey = process.env.CACHE_ADMIN_KEY || '';
+const dbUrl = process.env.DATABASE_URL || 'postgresql://localhost:5432/golf_db';
+const authAutoLoginEnabled = String(process.env.AUTH_AUTO_LOGIN_ENABLED || 'true').toLowerCase() === 'true';
+const jwtSecret = process.env.JWT_SECRET || 'dev-jwt-secret-change-me';
+const jwtAccessExpiresIn = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m';
+const jwtRefreshExpiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '30d';
 
 const ttlByResource = {
   dashboard: Number(process.env.CACHE_TTL_DASHBOARD_SECONDS || 60),
@@ -21,6 +32,7 @@ const cacheKeysByResource = {
 };
 
 const redisClient = createClient({ url: redisUrl });
+const dbPool = new Pool({ connectionString: dbUrl });
 
 let redisReady = false;
 
@@ -42,6 +54,21 @@ redisClient.connect().catch((error) => {
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
+}
+
+function sendError(res, statusCode, code, message, details) {
+  const errorBody = {
+    error: {
+      code,
+      message,
+    },
+  };
+
+  if (details) {
+    errorBody.error.details = details;
+  }
+
+  sendJson(res, statusCode, errorBody);
 }
 
 function normalizeRequestId(value) {
@@ -172,6 +199,98 @@ function buildSettingsSummary() {
   };
 }
 
+function readJsonBody(req, maxBytes = 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > maxBytes) {
+        reject(new Error('Request body too large'));
+      }
+    });
+
+    req.on('end', () => {
+      if (!body.trim()) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(new Error('Invalid JSON body'));
+      }
+    });
+
+    req.on('error', (error) => reject(error));
+  });
+}
+
+function validateRegistrationInput(payload) {
+  const errors = [];
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+  const password = typeof payload.password === 'string' ? payload.password : '';
+  const role = typeof payload.role === 'string' ? payload.role.trim().toLowerCase() : 'player';
+
+  if (!email) {
+    errors.push({ field: 'email', message: 'Email is required' });
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.push({ field: 'email', message: 'Email must be a valid address' });
+  }
+
+  if (!password) {
+    errors.push({ field: 'password', message: 'Password is required' });
+  } else if (password.length < 8) {
+    errors.push({ field: 'password', message: 'Password must be at least 8 characters long' });
+  }
+
+  if (!['player', 'admin'].includes(role)) {
+    errors.push({ field: 'role', message: 'Role must be one of: player, admin' });
+  }
+
+  return {
+    errors,
+    value: {
+      email,
+      password,
+      role,
+    },
+  };
+}
+
+function buildAuthTokens(user) {
+  const accessToken = jwt.sign(
+    { sub: user.id, role: user.role, tokenType: 'access' },
+    jwtSecret,
+    { expiresIn: jwtAccessExpiresIn },
+  );
+
+  const refreshToken = jwt.sign(
+    { sub: user.id, role: user.role, tokenType: 'refresh' },
+    jwtSecret,
+    { expiresIn: jwtRefreshExpiresIn },
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: jwtAccessExpiresIn,
+  };
+}
+
+async function registerUser(payload) {
+  const passwordHash = await bcrypt.hash(payload.password, 12);
+  const query = `
+    INSERT INTO users (email, password_hash, role, is_active)
+    VALUES ($1, $2, $3, TRUE)
+    RETURNING id, email::text AS email, role, is_active, created_at, updated_at
+  `;
+
+  const result = await dbPool.query(query, [payload.email, passwordHash, payload.role]);
+  return result.rows[0];
+}
+
 const server = http.createServer(async (req, res) => {
   const startedAt = Date.now();
   const requestId = normalizeRequestId(req.headers['x-request-id']);
@@ -255,6 +374,49 @@ const server = http.createServer(async (req, res) => {
           ttlSeconds: result.ttl,
         },
       });
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/register' || pathname === '/api/auth/register')) {
+      let payload;
+
+      try {
+        payload = await readJsonBody(req);
+      } catch (error) {
+        sendError(res, 400, 'invalid_json', error.message);
+        return;
+      }
+
+      const validation = validateRegistrationInput(payload);
+      if (validation.errors.length > 0) {
+        sendError(
+          res,
+          400,
+          'validation_error',
+          'Request validation failed',
+          validation.errors,
+        );
+        return;
+      }
+
+      try {
+        const user = await registerUser(validation.value);
+        const responseBody = { user };
+
+        if (authAutoLoginEnabled) {
+          responseBody.tokens = buildAuthTokens(user);
+        }
+
+        sendJson(res, 201, responseBody);
+      } catch (error) {
+        if (error && error.code === '23505') {
+          sendError(res, 409, 'email_already_exists', 'A user with this email already exists');
+          return;
+        }
+
+        console.error('[auth.register] unexpected error:', error);
+        sendError(res, 500, 'registration_failed', 'Unable to register user at this time');
+      }
       return;
     }
 
