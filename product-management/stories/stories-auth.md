@@ -135,10 +135,10 @@ So that users can explicitly end their sessions.
 **Target Date:** **26 May 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/auth/logout` invalidates refresh token.  
-- [ ] Subsequent use of token fails.  
-- [ ] Endpoint requires valid access token.  
-- [ ] Logout event logged for audit.
+- [x] POST `/auth/logout` invalidates refresh token.  
+- [x] Subsequent use of token fails.  
+- [x] Endpoint requires valid access token.  
+- [x] Logout event logged for audit.
 
 ### Dependencies
 - Refresh token mechanism

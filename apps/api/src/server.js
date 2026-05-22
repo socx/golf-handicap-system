@@ -33,6 +33,7 @@ const cacheKeysByResource = {
 
 const redisClient = createClient({ url: redisUrl });
 const dbPool = new Pool({ connectionString: dbUrl });
+const localRevokedRefreshTokenDigests = new Map();
 
 let redisReady = false;
 
@@ -352,6 +353,36 @@ function validateRefreshInput(payload) {
   };
 }
 
+function validateLogoutInput(payload) {
+  const errors = [];
+  const refreshToken = typeof payload.refreshToken === 'string' ? payload.refreshToken.trim() : '';
+
+  if (!refreshToken) {
+    errors.push({ field: 'refreshToken', message: 'refreshToken is required' });
+  }
+
+  return {
+    errors,
+    value: {
+      refreshToken,
+    },
+  };
+}
+
+function getBearerToken(req) {
+  const rawHeader = req.headers.authorization;
+  if (typeof rawHeader !== 'string') {
+    return null;
+  }
+
+  const match = rawHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  return match[1].trim();
+}
+
 function hashToken(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
@@ -361,12 +392,53 @@ function secondsUntilEpoch(epochSeconds) {
   return Math.max(1, Number(epochSeconds || 0) - nowSeconds);
 }
 
-async function ensureRefreshTokenUsable(refreshToken, decodedToken) {
+function isLocallyRevoked(digest) {
+  const expiresAt = localRevokedRefreshTokenDigests.get(digest);
+  if (!expiresAt) {
+    return false;
+  }
+
+  if (Date.now() >= expiresAt) {
+    localRevokedRefreshTokenDigests.delete(digest);
+    return false;
+  }
+
+  return true;
+}
+
+function markLocallyRevoked(digest, decodedToken) {
+  const expiresAt = Number(decodedToken.exp || 0) * 1000;
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    return;
+  }
+
+  localRevokedRefreshTokenDigests.set(digest, expiresAt);
+}
+
+async function markRefreshTokenBlacklisted(refreshToken, decodedToken) {
+  const digest = hashToken(refreshToken);
+  markLocallyRevoked(digest, decodedToken);
+
   if (!redisReady) {
+    return;
+  }
+
+  const blacklistedKey = `ghs:auth:refresh:blacklist:${digest}`;
+  const ttl = secondsUntilEpoch(decodedToken.exp);
+  await redisClient.set(blacklistedKey, '1', { EX: ttl });
+}
+
+async function ensureRefreshTokenUsable(refreshToken, decodedToken) {
+  const digest = hashToken(refreshToken);
+  if (isLocallyRevoked(digest)) {
+    return false;
+  }
+
+  if (!redisReady) {
+    markLocallyRevoked(digest, decodedToken);
     return true;
   }
 
-  const digest = hashToken(refreshToken);
   const rotatedKey = `ghs:auth:refresh:rotated:${digest}`;
   const blacklistedKey = `ghs:auth:refresh:blacklist:${digest}`;
   const [rotated, blacklisted] = await Promise.all([
@@ -380,6 +452,7 @@ async function ensureRefreshTokenUsable(refreshToken, decodedToken) {
 
   const ttl = secondsUntilEpoch(decodedToken.exp);
   await redisClient.set(rotatedKey, '1', { EX: ttl });
+  markLocallyRevoked(digest, decodedToken);
   return true;
 }
 
@@ -620,6 +693,88 @@ const server = http.createServer(async (req, res) => {
       } catch (error) {
         console.error('[auth.refresh] unexpected error:', error);
         sendError(res, 500, 'refresh_failed', 'Unable to refresh token at this time');
+      }
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/logout' || pathname === '/api/auth/logout')) {
+      let payload;
+
+      try {
+        payload = await readJsonBody(req);
+      } catch (error) {
+        sendError(res, 400, 'invalid_json', error.message);
+        return;
+      }
+
+      const validation = validateLogoutInput(payload);
+      if (validation.errors.length > 0) {
+        sendError(
+          res,
+          400,
+          'validation_error',
+          'Request validation failed',
+          validation.errors,
+        );
+        return;
+      }
+
+      const accessToken = getBearerToken(req);
+      if (!accessToken) {
+        sendError(res, 401, 'unauthorized', 'Missing or invalid access token');
+        return;
+      }
+
+      let accessClaims;
+      try {
+        accessClaims = jwt.verify(accessToken, jwtSecret);
+      } catch (error) {
+        sendError(res, 401, 'unauthorized', 'Missing or invalid access token');
+        return;
+      }
+
+      if (!accessClaims || accessClaims.tokenType !== 'access' || !accessClaims.sub) {
+        sendError(res, 401, 'unauthorized', 'Missing or invalid access token');
+        return;
+      }
+
+      let refreshClaims;
+      try {
+        refreshClaims = jwt.verify(validation.value.refreshToken, jwtSecret);
+      } catch (error) {
+        sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+        return;
+      }
+
+      if (!refreshClaims || refreshClaims.tokenType !== 'refresh' || !refreshClaims.sub) {
+        sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+        return;
+      }
+
+      if (String(refreshClaims.sub) !== String(accessClaims.sub)) {
+        sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
+        return;
+      }
+
+      try {
+        await markRefreshTokenBlacklisted(validation.value.refreshToken, refreshClaims);
+
+        console.log(JSON.stringify({
+          level: 'info',
+          event: 'auth_logout',
+          service: 'ghs-api',
+          requestId,
+          userId: accessClaims.sub,
+          timestamp: new Date().toISOString(),
+        }));
+
+        sendJson(res, 200, {
+          success: true,
+          loggedOutAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('[auth.logout] unexpected error:', error);
+        sendError(res, 500, 'logout_failed', 'Unable to logout at this time');
       }
       return;
     }
