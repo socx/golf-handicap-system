@@ -65,6 +65,44 @@ sudo -E bash infra/scripts/alertmanager-setup.sh
 - Expose `/metrics` endpoint on app (e.g., port 3005)
 - Prometheus config auto-scrapes it
 
+## Object storage (DigitalOcean Spaces)
+
+Store PDFs, images, and assets in DigitalOcean Spaces (S3-compatible).
+
+**Setup:**
+```bash
+# Configure bucket via DigitalOcean Console (or follow script guide):
+bash infra/scripts/do-spaces-setup.sh
+```
+
+**GitHub repository secrets required:**
+| Secret | Description |
+|--------|-------------|
+| `DO_SPACES_ENDPOINT` | https://nyc3.digitaloceanspaces.com (your region) |
+| `DO_SPACES_REGION` | nyc3 (your region) |
+| `DO_SPACES_BUCKET` | Bucket name |
+| `DO_SPACES_KEY` | Access Key |
+| `DO_SPACES_SECRET` | Secret Key |
+
+**Usage in application:**
+```javascript
+const StorageClient = require('@ghs/storage-client');
+const storage = new StorageClient();
+
+// Upload file
+const url = await storage.uploadFile(buffer, 'pdfs/invoice.pdf', {
+  contentType: 'application/pdf',
+});
+
+// Get signed URL (expires in 1 hour)
+const signedUrl = await storage.getSignedUrl('pdfs/invoice.pdf', 3600);
+
+// Delete old files
+await storage.deleteFile('pdfs/old-invoice.pdf');
+```
+
+**Storage client API:** See `packages/storage-client/src/index.js` for full documentation.
+
 ## Required repo secrets
 
 | Secret            | Description                     |
@@ -73,3 +111,5 @@ sudo -E bash infra/scripts/alertmanager-setup.sh
 | `DROPLET_USER`    | SSH username (e.g. `deploy`)    |
 | `DROPLET_SSH_KEY` | Private SSH key for that user   |
 | `APP_ENV_FILE`    | Environment variables (includes `DATABASE_URL`) |
+| `DO_SPACES_KEY`   | DigitalOcean Spaces access key  |
+| `DO_SPACES_SECRET`| DigitalOcean Spaces secret key  |

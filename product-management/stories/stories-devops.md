@@ -232,14 +232,21 @@ So that PDFs and assets can be stored and retrieved efficiently.
 **Target Date:** **04 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Object storage bucket](ca://s?q=Explain_object_storage_bucket)** created.  
-- [ ] Signed URL support.  
-- [ ] Lifecycle rules for cleanup.  
-- [ ] Permissions locked down.
+- [ ] DigitalOcean Spaces bucket created with:
+  - [ ] CORS configured for web requests
+  - [ ] Signed URLs enabled for time-limited access
+  - [ ] Lifecycle rules for cleanup (e.g., delete old temp files after 30 days)
+- [ ] API credentials stored as repository secrets
+- [ ] Node.js storage client library created in `packages/storage-client`:
+  - [ ] Upload file: `uploadFile(file, path, options)`
+  - [ ] Download signed URL: `getSignedUrl(path, expirySeconds)`
+  - [ ] Delete file: `deleteFile(path)`
+  - [ ] List objects: `listObjects(prefix)`
+- [ ] Environment configuration for local fallback (optional file system storage)
 
 ### Dependencies
-- **[PDF export](ca://s?q=Explain_round_export_PDF)**  
-- Cloud provider
+- DigitalOcean account with Spaces enabled
+- PDF export functionality (apps/api)
 
 ---
 
