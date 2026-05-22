@@ -136,9 +136,12 @@ jobs:
               printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/apps/api/.env.production"
             fi
 
-            cd "$APP_DIR" && "$NPM_BIN" ci --omit=dev --workspaces --include-workspace-root
+            cd "$APP_DIR" && "$NPM_BIN" ci --workspaces --include-workspace-root
             cd "$APP_DIR/apps/web"
             BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
+
+            # Remove development dependencies after build completes (saves runtime memory).
+            cd "$APP_DIR" && "$NPM_BIN" prune --omit=dev --workspaces --include-workspace-root
 
             # Extract DATABASE_URL from the .env.production file for migrations.
             if [ -f "$APP_DIR/apps/api/.env.production" ]; then
