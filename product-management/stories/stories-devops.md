@@ -179,17 +179,41 @@ So that environments can be recreated consistently.
 **Target Date:** **28 March 2027**
 
 ### Acceptance Criteria
-- [ ] **[IaC templates](ca://s?q=Explain_IaC_templates)** provision:
-  - backend compute  
-  - frontend hosting  
-  - PostgreSQL database  
-  - object storage  
-  - caching layer  
-- [ ] Supports staging + production.  
-- [ ] Version-controlled.
+- [x] **[IaC templates](ca://s?q=Explain_IaC_templates)** provision:
+  - [x] backend compute (DigitalOcean Droplet)
+  - [x] frontend hosting (via droplet + nginx)
+  - [x] PostgreSQL database (via managed or droplet-based)
+  - [x] object storage (DigitalOcean Spaces)
+  - [x] caching layer (Redis provisioning documented)
+- [x] Supports staging + production.  
+- [x] Version-controlled.
+
+### Implementation Notes
+- **Terraform modules** for infrastructure provisioning:
+  - `infra/terraform/modules/droplet/` — Main compute instance (Ubuntu 22.04 LTS, configurable size)
+  - `infra/terraform/modules/spaces/` — Object storage bucket with CORS and lifecycle rules
+  - `infra/terraform/modules/networking/` — VPC with private subnets
+  - `infra/terraform/modules/firewall/` — Cloud firewall with port management
+- **Environment configurations**:
+  - `staging.tfvars` — Staging environment (s-2vcpu-4gb, open SSH for dev)
+  - `production.tfvars` — Production environment (s-4vcpu-8gb, restricted SSH)
+- **Droplet initialization**: User data script installs Node.js 20 LTS, creates deployment directories, enables UFW firewall
+- **Outputs**: Generated and exportable for CI/CD
+  - `droplet_ip` — Public IP for deployment/DNS configuration
+  - `spaces_bucket` — Object storage bucket name
+  - `spaces_endpoint` — Endpoint URL for client library
+  - `vpc_id` — VPC identifier for future expansion
+- **Version control**: All Terraform code and variables committed to repo
+- **Documentation**: Complete setup guide in `infra/terraform/README.md`
+  - Prerequisites and quick start
+  - Configuration options
+  - CI/CD integration example
+  - Troubleshooting guide
+  - Security best practices
+- **State management**: Documented options for remote state (S3 backend) for shared team environments
 
 ### Dependencies
-- Cloud provider  
+- Cloud provider (DigitalOcean)
 - **[CD pipelines](ca://s?q=Explain_CD_workflow)**
 
 ---

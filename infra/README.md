@@ -6,6 +6,57 @@ Nginx reverse-proxy configuration and systemd service files for the GHS services
 
 This repo's responsibility is only to deploy the application code to the correct path and restart those services. See `.github/workflows/ci.yml`.
 
+## Infrastructure-as-Code (Terraform)
+
+Complete provisioning using Terraform for DigitalOcean resources.
+
+**Quick start:**
+```bash
+cd infra/terraform
+
+# Set DigitalOcean token
+export TF_VAR_digitalocean_token=dop_v1_xxxxx
+
+# Initialize (downloads providers)
+terraform init
+
+# Plan deployment (review changes)
+terraform plan -var-file=staging.tfvars -out=staging.plan
+
+# Apply infrastructure
+terraform apply staging.plan
+```
+
+**What it provisions:**
+- Droplet (main compute instance, configurable size)
+- VPC & networking (private virtual network)
+- Spaces bucket (object storage for PDFs, images)
+- Firewall (configurable SSH/HTTP/HTTPS access)
+
+**Environments:**
+- `staging.tfvars` — Staging environment (s-2vcpu-4gb droplet)
+- `production.tfvars` — Production environment (s-4vcpu-8gb droplet, restricted SSH)
+
+**Documentation:** See [infra/terraform/README.md](terraform/README.md) for detailed setup, configuration, and operations.
+
+**Key outputs after apply:**
+- `droplet_ip` — Public IP for deployment
+- `spaces_bucket` — Object storage bucket name
+- `spaces_endpoint` — Bucket endpoint for client library
+- `vpc_id` — VPC identifier for networking
+
+**CI/CD Integration:**
+Export outputs for GitHub Actions:
+```bash
+export DROPLET_IP=$(terraform output -raw droplet_ip)
+export DROPLET_HOST=$DROPLET_IP
+export SPACES_BUCKET=$(terraform output -raw spaces_bucket)
+```
+
+Update `.github/secrets`:
+- `DROPLET_HOST` — From `droplet_ip` output
+- `DO_SPACES_ENDPOINT` — From `spaces_endpoint` output
+
 ## Deploy target
 
 | Service     | Working directory              | Port  |
