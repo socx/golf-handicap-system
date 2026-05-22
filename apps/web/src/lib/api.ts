@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3920/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3005/api';
 
 export interface AuthTokens {
   accessToken: string;
