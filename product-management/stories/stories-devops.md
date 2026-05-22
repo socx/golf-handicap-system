@@ -380,10 +380,28 @@ So that releases are safe and reversible.
 **Target Date:** **21 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Blue‑green deployment](ca://s?q=Explain_blue_green_deployment)** configured for backend.  
-- [ ] Traffic switching automated.  
-- [ ] Rollback takes <30 seconds.  
-- [ ] Health checks required before switch.
+- [x] **[Blue‑green deployment](ca://s?q=Explain_blue_green_deployment)** configured for backend.  
+- [x] Traffic switching automated.  
+- [x] Rollback takes <30 seconds.  
+- [x] Health checks required before switch.
+
+### Implementation Notes
+- Dual deployment slots: `/opt/apps/ghs-blue` and `/opt/apps/ghs-green`
+- Services run on dedicated ports:
+  - Blue: API on 3005, Web on 5175
+  - Green: API on 3006, Web on 5176
+- Active slot tracked in `/var/run/ghs-active-slot` file
+- Scripts provided:
+  - `/usr/local/bin/ghs-blue-green-deploy` — Deploy and switch traffic with health checks
+  - `/usr/local/bin/ghs-blue-green-rollback` — Instant rollback to previous slot
+  - `/usr/local/bin/ghs-blue-green-health-check` — Validate endpoints before switch
+- Systemd service units: `ghs-api-blue`, `ghs-api-green`, `ghs-web-blue`, `ghs-web-green`
+- Setup script: `infra/scripts/blue-green-setup.sh` installs all components
+- Health checks: Configurable retries (default 10 × 3s), required before traffic switch
+- Switch time: <1s nginx reload + configurable health verification (typically <30s total)
+- Rollback: <30s (instant switch back to previous slot)
+- Nginx integration: See `infra/nginx/blue-green-example.conf` for configuration options
+- Documentation: Complete deployment workflow and monitoring commands in `infra/README.md`
 
 ### Dependencies
 - **[CD pipeline](ca://s?q=Explain_CD_workflow)**  

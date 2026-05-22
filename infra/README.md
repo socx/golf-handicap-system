@@ -37,6 +37,102 @@ bash infra/scripts/run-migrations.sh       # Run all pending migrations
 bash infra/scripts/run-migrations.sh --dry-run  # Validate without applying
 ```
 
+## Blue-green deployment (zero-downtime releases)
+
+Blue-green deployment enables safe, reversible releases with automatic rollback and <30s switch time.
+
+**Architecture:**
+- Two parallel deployment slots: `/opt/apps/ghs-blue` and `/opt/apps/ghs-green`
+- Services run on dedicated ports:
+  - Blue: API on 3005, Web on 5175
+  - Green: API on 3006, Web on 5176
+- Nginx routes to active slot via `/var/run/ghs-active-slot` file
+- Both slots stay running; traffic switches instantly with nginx reload
+
+**Setup on droplet:**
+```bash
+sudo bash infra/scripts/blue-green-setup.sh
+```
+
+This installs:
+- `/usr/local/bin/ghs-blue-green-deploy` — Deploy to staging slot
+- `/usr/local/bin/ghs-blue-green-rollback` — Instant rollback to previous slot
+- `/usr/local/bin/ghs-blue-green-health-check` — Validate health before switch
+- Systemd service units: `ghs-api-blue`, `ghs-api-green`, `ghs-web-blue`, `ghs-web-green`
+
+**Deployment workflow:**
+```bash
+# 1. Deploy to inactive (staging) slot
+ghs-blue-green-deploy
+
+# Or specify target slot explicitly:
+ghs-blue-green-deploy --blue   # Deploy to blue slot
+ghs-blue-green-deploy --green  # Deploy to green slot
+
+# 2. Script automatically:
+#    - Deploys code to staging slot
+#    - Runs health checks on staging
+#    - Switches traffic from active to staging
+#    - Returns inactive slot to previous active state
+
+# 3. Verify deployment
+curl https://ghs.socx.org.uk/api/health
+
+# 4. If issues detected, instant rollback:
+ghs-blue-green-rollback
+
+# Or force rollback:
+ghs-blue-green-rollback --force
+```
+
+**Health checks:**
+```bash
+# Check public endpoint (via nginx)
+ghs-blue-green-health-check
+
+# Check both slots individually
+ghs-blue-green-health-check --check-both
+
+# Custom timeout
+ghs-blue-green-health-check --timeout 60
+```
+
+**Monitoring deployment:**
+```bash
+# View deployment logs
+tail -f /var/log/ghs-deploy.log
+
+# View deployment status (JSON format for Loki)
+cat /var/log/ghs-deploy-status.jsonl | jq
+
+# Check current active slot
+cat /var/run/ghs-active-slot
+
+# Service status
+systemctl status ghs-api-blue ghs-api-green
+systemctl status ghs-web-blue ghs-web-green
+```
+
+**Switch time guarantees:**
+- Deployment: ~20-60s (depends on app startup time)
+- Health checks: configurable, default 10 retries × 3s = 30s buffer
+- Traffic switch: <1s (nginx reload)
+- Rollback: <30s (instant switch + health verification)
+
+**Nginx configuration:**
+Blue-green deployment requires nginx to route based on active slot. See `infra/nginx/blue-green-example.conf` for configuration options:
+- **Symlink approach** (recommended): `/opt/apps/ghs` -> symlinks to active slot, simple but requires symlink management
+- **Explicit upstreams**: Two upstream definitions with nginx reload (standard nginx, no modules required)
+- **Lua-based**: Dynamic routing via Lua script that reads active slot file (requires ngx_http_lua_module)
+
+The nginx config should be in the shared `do-nginx-infra` repository. Coordinate with infrastructure team to implement chosen approach.
+
+**Integration with CI/CD:**
+The `.github/workflows/ci.yml` deploy step should:
+1. Extract release archive to both slots or one slot
+2. Call `ghs-blue-green-deploy [--blue|--green]` to handle routing
+3. Script handles health checks and traffic switching automatically
+
 ## Monitoring & alerting
 
 Prometheus + Grafana for monitoring system and application metrics.

@@ -1,0 +1,22 @@
+[Unit]
+Description=GHS Web Server (Blue Slot)
+After=network.target
+Wants=ghs-web-blue.service
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/apps/ghs-blue/apps/web
+Environment="NODE_ENV=production"
+Environment="SLOT=blue"
+Environment="PORT=5175"
+EnvironmentFile=/etc/ghs/.env.production
+ExecStart=/usr/bin/node --loader vite/esm src/server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ghs-web-blue
+
+[Install]
+WantedBy=multi-user.target

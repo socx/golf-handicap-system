@@ -1,0 +1,22 @@
+[Unit]
+Description=GHS API Server (Green Slot)
+After=network.target postgresql.service
+Wants=ghs-api-green.service
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/apps/ghs-green/apps/api
+Environment="NODE_ENV=production"
+Environment="SLOT=green"
+Environment="PORT=3006"
+EnvironmentFile=/etc/ghs/.env.production
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ghs-api-green
+
+[Install]
+WantedBy=multi-user.target
