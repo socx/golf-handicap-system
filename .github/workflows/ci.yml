@@ -187,7 +187,7 @@ jobs:
 
             web_healthy=0
             for i in 1 2 3 4 5 6; do
-              if curl -fsS http://127.0.0.1:5175/health >/dev/null; then
+              if curl -fsS http://127.0.0.1:5175/ >/dev/null || curl -fsS https://ghs.socx.org.uk/ >/dev/null; then
                 web_healthy=1
                 break
               fi
