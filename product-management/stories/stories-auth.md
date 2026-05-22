@@ -241,15 +241,22 @@ So that accounts can be removed without losing historical data.
 **Target Date:** **05 June 2026**
 
 ### Acceptance Criteria
-- [ ] DELETE `/users/:id` sets `deleted_at`.  
-- [ ] Deleted users cannot authenticate.  
-- [ ] Deleted users excluded from queries unless explicitly included.  
-- [ ] Audit log entry created.
+- [x] DELETE `/users/:id` sets `deleted_at`.  
+- [x] Deleted users cannot authenticate.  
+- [x] Deleted users excluded from queries unless explicitly included.  
+- [x] Audit log entry created.
 
 ### Dependencies
 - Users table  
 - RBAC  
 - Audit logging
+
+### Implementation Notes
+- Added admin-only soft-delete endpoints: `DELETE /users/:id` and `DELETE /api/users/:id`.
+- Soft delete updates `deleted_at`, `updated_at`, and forces `is_active = false`.
+- Authentication already excludes soft-deleted users via `deleted_at IS NULL` in auth lookups.
+- Admin users list now excludes soft-deleted users by default; pass `includeDeleted=true` to include them explicitly.
+- Soft-delete emits structured audit event `auth_user_deleted` with actor and target user ids.
 
 ---
 

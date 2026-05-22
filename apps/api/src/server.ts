@@ -423,6 +423,18 @@ async function setUserActivationStatus(id: string, isActive: boolean): Promise<U
   return (result.rows[0] as User | undefined) || null;
 }
 
+async function softDeleteUserById(id: string): Promise<User | null> {
+  const query = `
+    UPDATE users
+    SET deleted_at = NOW(), updated_at = NOW(), is_active = FALSE
+    WHERE id = $1 AND deleted_at IS NULL
+    RETURNING id, email::text AS email, role, is_active, created_at, updated_at
+  `;
+
+  const result = await dbPool.query(query, [id]);
+  return (result.rows[0] as User | undefined) || null;
+}
+
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -436,6 +448,16 @@ function parseUserActivationRoute(path: string): { userId: string; action: 'acti
   const userId = String(match[1] || '');
   const action = String(match[2] || '') as 'activate' | 'deactivate';
   return { userId, action };
+}
+
+function parseUserDeleteRoute(path: string): { userId: string } | null {
+  const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const userId = String(match[1] || '');
+  return { userId };
 }
 
 function logAuthAuditEvent({
@@ -1007,6 +1029,55 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       return;
     }
 
+    const userDeleteRoute = parseUserDeleteRoute(pathname);
+    if (method === 'DELETE' && userDeleteRoute) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+
+      if (!authResult.success || !authResult.auth) {
+        sendError(
+          res,
+          authResult.statusCode || 401,
+          authResult.errorCode || 'unauthorized',
+          authResult.errorMessage || 'Unauthorized',
+        );
+        return;
+      }
+
+      const { userId } = userDeleteRoute;
+      if (!isUuid(userId)) {
+        sendError(res, 400, 'validation_error', 'User id must be a valid UUID');
+        return;
+      }
+
+      try {
+        const deletedUser = await softDeleteUserById(userId);
+        if (!deletedUser) {
+          sendError(res, 404, 'not_found', 'User not found');
+          return;
+        }
+
+        logAuthAuditEvent({
+          requestId,
+          event: 'auth_user_deleted',
+          actorUserId: authResult.auth.userId,
+          targetUserId: userId,
+          metadata: {
+            softDeleted: true,
+            role: deletedUser.role,
+          },
+        });
+
+        sendJson(res, 200, {
+          user: deletedUser,
+          message: 'User soft-deleted successfully',
+        });
+      } catch (error) {
+        console.error('[users.delete] unexpected error:', error);
+        sendError(res, 500, 'user_delete_failed', 'Unable to soft-delete user');
+      }
+      return;
+    }
+
     // RBAC Protected Endpoints
 
     if (method === 'GET' && (pathname === '/api/profile' || pathname === '/profile')) {
@@ -1057,11 +1128,15 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       }
 
       try {
-        const query = 'SELECT id, email, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 10';
+        const includeDeleted = requestUrl.searchParams.get('includeDeleted') === 'true';
+        const query = includeDeleted
+          ? 'SELECT id, email, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 10'
+          : 'SELECT id, email, role, is_active, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 10';
         const result = await dbPool.query(query);
         sendJson(res, 200, {
           users: result.rows,
           total: result.rowCount,
+          includeDeleted,
           message: 'Users list retrieved successfully',
         });
       } catch (error) {
