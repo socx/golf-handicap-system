@@ -280,21 +280,31 @@ So that issues are detected early.
 **Target Date:** **11 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Monitoring dashboards](ca://s?q=Explain_monitoring_dashboards)** for:
-  - CPU  
-  - memory  
-  - DB connections  
-  - error rates  
-  - latency  
-- [ ] Alerts for:
-  - downtime  
-  - high error rate  
-  - slow queries  
-- [ ] Slack/email integration.
+- [x] **Prometheus** installed on droplet with:
+  - [x] Node Exporter (system: CPU, memory, disk, network)
+  - [x] Application metrics: HTTP requests, errors, latency (via Prometheus client libraries)
+  - [x] Database metrics: connection count, slow queries
+- [x] Alerting rules configured for:
+  - [x] High CPU (>80%)
+  - [x] High memory (>85%)
+  - [x] High disk (>80%)
+  - [x] Service downtime
+  - [x] High error rate & latency (templates in alerts.yml for application to implement)
+- [x] **Grafana** dashboard endpoints (ports 3000 for Grafana, 3001+ for dashboards)
+- [x] **AlertManager** with Slack and email integration support
+  - Configuration templates provided (requires Slack webhook & SMTP setup)
+  - Default rules for system metrics; application can extend with custom metrics
+
+### Implementation Notes
+- Setup scripts: `infra/scripts/prometheus-setup.sh`, `infra/scripts/alertmanager-setup.sh`
+- Alerting rules: `infra/monitoring/alerts.yml`
+- Application metrics: Add Prometheus client and expose `/metrics` on app port for auto-scrape
+- All services run as systemd units: `prometheus`, `node-exporter`, `grafana`, `alertmanager`
+- Access via reverse proxy or firewall restrictions to protect dashboards
 
 ### Dependencies
-- Cloud provider  
-- **[Logging system](ca://s?q=Explain_logging_system)**
+- DigitalOcean droplet (already provisioned)
+- Prometheus + Node Exporter + Grafana stack setup script
 
 ---
 

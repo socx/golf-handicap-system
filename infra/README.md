@@ -37,6 +37,34 @@ bash infra/scripts/run-migrations.sh       # Run all pending migrations
 bash infra/scripts/run-migrations.sh --dry-run  # Validate without applying
 ```
 
+## Monitoring & alerting
+
+Prometheus + Grafana for monitoring system and application metrics.
+
+**Setup:**
+```bash
+# On the droplet:
+sudo bash infra/scripts/prometheus-setup.sh
+
+# Optionally configure AlertManager for Slack/email:
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/..."
+export ALERT_EMAIL="ops@example.com"
+sudo -E bash infra/scripts/alertmanager-setup.sh
+```
+
+**Access:**
+- Prometheus: http://droplet-ip:9090 (port 9090, restrict via firewall)
+- Grafana: http://droplet-ip:3000 (port 3000, default creds: admin/admin)
+- Node Exporter: http://droplet-ip:9100 (system metrics)
+- AlertManager: http://droplet-ip:9093 (alert management)
+
+**Alerting rules:** See `infra/monitoring/alerts.yml`
+
+**For API application metrics:**
+- Add Prometheus client library to `apps/api`
+- Expose `/metrics` endpoint on app (e.g., port 3005)
+- Prometheus config auto-scrapes it
+
 ## Required repo secrets
 
 | Secret            | Description                     |
