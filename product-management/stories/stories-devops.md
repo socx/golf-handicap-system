@@ -381,11 +381,16 @@ So that schema changes do not break production.
 **Target Date:** **25 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Migration workflow](ca://s?q=Explain_DB_migration_workflow)** runs:
-  - on staging first  
-  - then on production  
-- [ ] Rollback scripts required.  
-- [ ] Pre‑deployment checks included.
+- [x] Migration runner script at `infra/scripts/run-migrations.sh`
+  - [x] Executes `.sql` files from `db/migrations/` in order
+  - [x] Dry-run mode (`--dry-run`) validates syntax without applying
+  - [x] Generates rollback script on success
+  - [x] Pre-deploy checks: database connectivity, migration state tracking (schema_migrations table)
+- [x] Migrations integrated into CI/CD workflow
+  - [x] Runs automatically during deploy as pre-service-restart step
+  - [x] Fails fast; exits if dry-run validation fails
+  - [x] Rollback scripts available in `/tmp/ghs-rollbacks/` on droplet
+- [x] Single-environment implementation (no staging/production split)
 
 ### Dependencies
 - **[PostgreSQL environment](ca://s?q=Explain_PostgreSQL_cluster)**

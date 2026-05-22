@@ -138,6 +138,26 @@ jobs:
               cd "$APP_DIR/apps/worker" && "$NPM_BIN" ci --omit=dev
             fi
 
+            # Extract DATABASE_URL from the .env.production file for migrations.
+            if [ -f "$APP_DIR/apps/api/.env.production" ]; then
+              MIGRATION_DB_URL=$(grep '^DATABASE_URL=' "$APP_DIR/apps/api/.env.production" | cut -d'=' -f2-)
+            fi
+
+            # Run database migrations.
+            if [ -d "$APP_DIR/db/migrations" ] && [ "$(find "$APP_DIR/db/migrations" -name "*.sql" 2>/dev/null | wc -l)" -gt 0 ]; then
+              if [ -z "${MIGRATION_DB_URL:-}" ]; then
+                echo "WARNING: DATABASE_URL not found in .env.production; skipping migrations." >&2
+              else
+                echo "Running database migrations (dry-run)..."
+                DRY_RUN=1 DATABASE_URL="$MIGRATION_DB_URL" bash "$APP_DIR/infra/scripts/run-migrations.sh" || {
+                  echo "Migration dry-run failed; aborting deploy." >&2
+                  exit 1
+                }
+                echo "Migration dry-run succeeded. Running actual migrations..."
+                DATABASE_URL="$MIGRATION_DB_URL" bash "$APP_DIR/infra/scripts/run-migrations.sh"
+              fi
+            fi
+
             sudo systemctl daemon-reload
 
             # Required services.

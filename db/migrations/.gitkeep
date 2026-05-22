@@ -1,0 +1,9 @@
+-- Example migration: 001_init_schema.sql
+-- Run this as: DATABASE_URL=... bash infra/scripts/run-migrations.sh
+--
+-- Migrations in this directory are executed in numeric order.
+-- File naming convention: NNN_description.sql
+--
+-- This is a placeholder. Replace with actual schema initialization.
+
+CREATE SCHEMA IF NOT EXISTS public;
