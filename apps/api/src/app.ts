@@ -1,0 +1,163 @@
+import http from 'node:http';
+import { env } from './config/env';
+import { redisState } from './lib/redis';
+import { sendJson, normalizeRequestId, logRequest, parseUrl } from './lib/http';
+import { getOrSetCache, invalidateCache, buildDashboardSummary, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';
+import { verifyAndAuthorize } from './middleware/auth';
+import { handleRegister } from './routes/auth/register';
+import { handleLogin } from './routes/auth/login';
+import { handleRefresh } from './routes/auth/refresh';
+import { handleLogout } from './routes/auth/logout';
+import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes/auth/passwordReset';
+import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
+
+function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
+  const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
+  if (!match) return null;
+  return { userId: String(match[1] || ''), action: String(match[2] || '') as 'activate' | 'deactivate' };
+}
+
+function parseUserDeleteRoute(path: string): { userId: string } | null {
+  const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { userId: String(match[1] || '') };
+}
+
+const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+  const startedAt = Date.now();
+  const requestId = normalizeRequestId(req.headers['x-request-id'] as string | undefined);
+  res.setHeader('x-request-id', requestId);
+  res.on('finish', () => {
+    logRequest({ requestId, req, statusCode: res.statusCode || 500, durationMs: Date.now() - startedAt });
+  });
+
+  const method = (req.method || 'GET').toUpperCase();
+  const requestUrl = parseUrl(req);
+  const pathname = requestUrl.pathname;
+
+  try {
+    // ── Health ──────────────────────────────────────────────────────────
+    if (pathname === '/health' || pathname === '/api/health') {
+      sendJson(res, 200, {
+        status: 'ok',
+        service: 'ghs-api',
+        cache: { provider: 'redis', redisReady: redisState.ready, redisUrl: env.redisUrl },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // ── Cache-backed dashboard / leaderboard / settings ─────────────────
+    if (method === 'GET' && pathname === '/api/dashboard') {
+      const result = await getOrSetCache({ resource: 'dashboard', requestUrl, computeValue: async () => buildDashboardSummary() });
+      sendJson(res, 200, { ...result.value, cache: { hit: result.cacheHit, key: result.key, ttlSeconds: result.ttl } });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/leaderboard') {
+      const result = await getOrSetCache({ resource: 'leaderboard', requestUrl, computeValue: async () => buildLeaderboardSummary(requestUrl) });
+      sendJson(res, 200, { ...result.value, cache: { hit: result.cacheHit, key: result.key, ttlSeconds: result.ttl } });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/settings') {
+      const result = await getOrSetCache({ resource: 'settings', requestUrl, computeValue: async () => buildSettingsSummary() });
+      sendJson(res, 200, { ...result.value, cache: { hit: result.cacheHit, key: result.key, ttlSeconds: result.ttl } });
+      return;
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/auth/register' || pathname === '/api/auth/register')) {
+      await handleRegister(req, res);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/login' || pathname === '/api/auth/login')) {
+      await handleLogin(req, res, requestId);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/refresh' || pathname === '/api/auth/refresh')) {
+      await handleRefresh(req, res, requestId);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/logout' || pathname === '/api/auth/logout')) {
+      await handleLogout(req, res, requestId);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/password-reset/request' || pathname === '/api/auth/password-reset/request')) {
+      await handlePasswordResetRequest(req, res, requestId);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/password-reset/confirm' || pathname === '/api/auth/password-reset/confirm')) {
+      await handlePasswordResetConfirm(req, res, requestId);
+      return;
+    }
+
+    // ── Admin ─────────────────────────────────────────────────────────────
+    if (method === 'GET' && (pathname === '/api/admin/status' || pathname === '/admin/status')) {
+      await handleAdminStatus(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/users' || pathname === '/admin/users')) {
+      await handleListUsers(req, res, requestUrl);
+      return;
+    }
+
+    const userActivationRoute = parseUserActivationRoute(pathname);
+    if (method === 'PATCH' && userActivationRoute) {
+      await handleUserActivation(req, res, requestId, userActivationRoute.userId, userActivationRoute.action);
+      return;
+    }
+
+    const userDeleteRoute = parseUserDeleteRoute(pathname);
+    if (method === 'DELETE' && userDeleteRoute) {
+      await handleUserDelete(req, res, requestId, userDeleteRoute.userId);
+      return;
+    }
+
+    // ── RBAC demo profile ────────────────────────────────────────────────
+    if (method === 'GET' && (pathname === '/api/profile' || pathname === '/profile')) {
+      const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player', 'viewer'] });
+      if (!authResult.success || !authResult.auth) {
+        sendJson(res, authResult.statusCode || 401, { error: { code: authResult.errorCode, message: authResult.errorMessage } });
+        return;
+      }
+      sendJson(res, 200, { user: { id: authResult.auth.userId, role: authResult.auth.role }, message: 'User profile retrieved successfully' });
+      return;
+    }
+
+    // ── Cache invalidation ────────────────────────────────────────────────
+    if (method === 'POST' && pathname === '/api/cache/invalidate') {
+      if (env.cacheAdminKey && req.headers['x-cache-admin-key'] !== env.cacheAdminKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Invalid cache admin key' });
+        return;
+      }
+      const target = requestUrl.searchParams.get('target') || 'all';
+      if (!['all', 'dashboard', 'leaderboard', 'settings'].includes(target)) {
+        sendJson(res, 400, { error: 'invalid_target', message: 'target must be one of: all, dashboard, leaderboard, settings' });
+        return;
+      }
+      const result = await invalidateCache(target as 'all' | 'dashboard' | 'leaderboard' | 'settings');
+      sendJson(res, 200, { ...result, target, invalidatedAt: new Date().toISOString() });
+      return;
+    }
+
+    if (pathname.startsWith('/api/')) {
+      sendJson(res, 200, { message: 'API bootstrap route', path: pathname });
+      return;
+    }
+
+    sendJson(res, 200, { message: 'ghs-api running', health: '/health', apiHealth: '/api/health' });
+  } catch (error) {
+    sendJson(res, 500, { error: 'internal_error', message: (error as Error).message });
+  }
+});
+
+server.listen(env.port, () => {
+  console.log(`ghs-api listening on http://localhost:${env.port}`);
+});
