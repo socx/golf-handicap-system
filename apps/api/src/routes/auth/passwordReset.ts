@@ -4,7 +4,7 @@ import http from 'node:http';
 import { sendJson, sendError, readJsonBody, getClientIp } from '../../lib/http';
 import { dbPool } from '../../lib/db';
 import { logAuthAuditEvent } from '../../lib/audit';
-import { createMailTransport, getFromAddress } from '../../lib/email';
+import { sendTemplatedEmail } from '../../lib/email';
 import { env } from '../../config/env';
 
 export async function handlePasswordResetRequest(
@@ -44,13 +44,13 @@ export async function handlePasswordResetRequest(
       );
 
       const resetUrl = `${env.appUrl}/reset-password?token=${rawToken}`;
-      const transport = createMailTransport();
-      await transport.sendMail({
-        from: getFromAddress(),
+      await sendTemplatedEmail({
         to: user.email,
-        subject: 'Reset your password',
-        text: `You requested a password reset. Use this link (valid for ${env.passwordResetTokenExpiryMinutes} minutes):\n\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
-        html: `<p>You requested a password reset. Click the link below (valid for ${env.passwordResetTokenExpiryMinutes} minutes):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, ignore this email.</p>`,
+        template: 'password_reset',
+        data: {
+          resetUrl,
+          expiresMinutes: env.passwordResetTokenExpiryMinutes,
+        },
       });
 
       await logAuthAuditEvent({

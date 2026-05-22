@@ -25,4 +25,6 @@ export const env = {
   smtpFromName: process.env.SMTP_FROM_NAME || 'Golf Handicap System',
   mailpitSmtpHost: process.env.MAILPIT_SMTP_HOST || 'localhost',
   mailpitSmtpPort: Number(process.env.MAILPIT_SMTP_PORT || 1025),
+  sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+  sesRegion: process.env.SES_REGION || 'eu-west-2',
 };
