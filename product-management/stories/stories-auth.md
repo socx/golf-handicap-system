@@ -335,13 +335,19 @@ So that the frontend can determine the user’s identity and role.
 **Target Date:** **18 June 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/auth/me` returns user id, email, role, is_active.  
-- [ ] Requires valid access token.  
-- [ ] Returns 401 if token invalid or expired.
+- [x] GET `/auth/me` returns user id, email, role, is_active.  
+- [x] Requires valid access token.  
+- [x] Returns 401 if token invalid or expired.
 
 ### Dependencies
 - JWT middleware  
 - Users table
+
+### Implementation Notes
+- Added session introspection endpoint support for both `GET /auth/me` and `GET /api/auth/me`.
+- Endpoint is enforced by JWT access-token validation and returns `401` for missing, invalid, or expired tokens.
+- Response includes authenticated user identity fields required by frontend session bootstrapping (`id`, `email`, `role`, `is_active`).
+- Linked implementation commit: `dacb559` (`#58 feat(auth): implement GET /auth/me session introspection endpoint`).
 
 ---
 
