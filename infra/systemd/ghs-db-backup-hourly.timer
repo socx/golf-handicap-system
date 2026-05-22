@@ -1,0 +1,18 @@
+[Unit]
+Description=GHS PostgreSQL Hourly Backup Timer
+Requires=ghs-db-backup-hourly.service
+After=network-online.target
+
+[Timer]
+# Run every hour, starting 5 minutes after boot
+OnBootSec=5min
+OnUnitActiveSec=1h
+OnCalendar=
+Persistent=true
+AccuracySec=1min
+
+# Backup log files are rotated by systemd automatically
+# Adjust if needed with journal retention settings
+
+[Install]
+WantedBy=timers.target

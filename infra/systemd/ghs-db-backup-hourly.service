@@ -1,0 +1,21 @@
+[Unit]
+Description=GHS PostgreSQL Hourly Backup
+After=network.target postgresql.service
+Wants=ghs-db-backup-hourly.timer
+
+[Service]
+Type=oneshot
+User=root
+Environment="DB_NAME=ghs_db"
+Environment="DB_USER=ghs_db_super_user"
+Environment="DB_HOST=127.0.0.1"
+Environment="DB_PORT=5432"
+Environment="BACKUP_DIR=/var/backups/ghs/postgres"
+Environment="BACKUP_RETENTION_HOURLY=48"
+ExecStart=/usr/local/bin/ghs-pg-backup --hourly
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ghs-db-backup-hourly
+
+[Install]
+WantedBy=multi-user.target

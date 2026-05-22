@@ -92,6 +92,121 @@ sudo bash infra/scripts/logging-setup.sh
 **Retention policy:**
 - 30-day log retention configured in `loki-config.yml` (`retention_period: 30d`)
 
+## Database backups & restore testing
+
+Automated PostgreSQL backups with dual schedule (hourly + daily) and monthly restore testing.
+
+**Setup on droplet:**
+```bash
+sudo bash infra/scripts/backup-setup.sh
+```
+
+This installs:
+- `/usr/local/bin/ghs-pg-backup` — Backup script
+- `/usr/local/bin/ghs-pg-restore-test` — Restore test script
+- Systemd service/timer units for automated backups
+
+**Backup schedule:**
+- **Hourly backups**: Run every hour, keep last 48 hours
+- **Daily backups**: Run at 2:00 AM UTC, keep last 30 days
+- **Restore tests**: Run monthly on the 1st at 3:00 AM UTC
+
+**Backup directory structure:**
+```
+/var/backups/ghs/postgres/
+├── hourly/              # Hourly backups (48-hour retention)
+├── daily/               # Daily backups (30-day retention)
+├── restore-tests/       # Monthly restore test logs
+└── logs/
+    ├── backup.log              # Human-readable backup log
+    ├── backup-status.jsonl     # JSON log lines (parseable by Loki)
+    └── restore-test.log        # Restore test results
+```
+
+**Configuration (env vars):**
+```bash
+DB_NAME=ghs_db
+DB_USER=ghs_db_super_user
+DB_HOST=127.0.0.1
+DB_PORT=5432
+BACKUP_DIR=/var/backups/ghs/postgres
+BACKUP_RETENTION_HOURLY=48    # Hours
+BACKUP_RETENTION_DAILY=30     # Days
+```
+
+**Manual backup execution:**
+```bash
+# Trigger daily backup immediately
+sudo systemctl start ghs-db-backup-daily.service
+
+# Trigger hourly backup immediately
+sudo systemctl start ghs-db-backup-hourly.service
+
+# Run restore test (creates temp test database, restores, validates, drops)
+sudo /usr/local/bin/ghs-pg-restore-test
+
+# Restore test with specific backup file
+sudo /usr/local/bin/ghs-pg-restore-test /var/backups/ghs/postgres/daily/ghs_db-20260501-020000.dump
+
+# Restore from backup to production database (manual recovery):
+# 1. Create recovery database
+psql -U ghs_db_super_user -c "CREATE DATABASE ghs_db_recovery;"
+# 2. Restore backup
+pg_restore -d ghs_db_recovery /var/backups/ghs/postgres/daily/ghs_db-20260501-020000.dump
+# 3. Verify recovery database
+psql -U ghs_db_super_user -d ghs_db_recovery -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';"
+# 4. Swap databases (after validation)
+psql -U ghs_db_super_user -c "ALTER DATABASE ghs_db RENAME TO ghs_db_old;"
+psql -U ghs_db_super_user -c "ALTER DATABASE ghs_db_recovery RENAME TO ghs_db;"
+# 5. Restart services
+systemctl restart ghs-api ghs-web
+```
+
+**Monitoring backup health:**
+```bash
+# View backup logs
+tail -f /var/backups/ghs/postgres/logs/backup.log
+
+# View backup status (JSON format, parsed by Loki)
+cat /var/backups/ghs/postgres/logs/backup-status.jsonl | jq '.[latest]'
+
+# View recent backup history
+systemctl status ghs-db-backup-daily.service --no-pager
+systemctl status ghs-db-backup-hourly.service --no-pager
+
+# Check backup file sizes
+du -sh /var/backups/ghs/postgres/daily/*
+du -sh /var/backups/ghs/postgres/hourly/*
+
+# List scheduled timers
+systemctl list-timers ghs-db-backup-* --no-pager
+
+# View restore test results
+tail -f /var/backups/ghs/postgres/restore-tests/logs/restore-test.log
+```
+
+**Backup alerts (via Prometheus + Loki):**
+- `PostgreSQLBackupFailed` — Backup process exited with error (severity: critical)
+- `PostgreSQLBackupMissed` — No successful backup in last 24 hours (severity: warning)
+- `PostgreSQLRestoreTestFailed` — Monthly restore test failed (severity: warning)
+- `BackupDiskSpaceLow` — Backup partition <10% free (severity: warning)
+
+See `infra/monitoring/alerts.yml` for full alert rules.
+
+**External backup storage (recommended for production):**
+
+For additional RTO/RPO protection:
+1. Configure WAL archiving to external storage (S3/Spaces) in PostgreSQL `postgresql.conf`
+2. Copy daily backup dumps to DigitalOcean Spaces or external object storage
+3. Maintain backup copies in geographic redundancy
+
+Example:
+```bash
+# In compress/upload script (cron job):
+# After backup-setup.sh completes, add:
+aws s3 cp /var/backups/ghs/postgres/daily/ s3://my-backup-bucket/ghs-db/ --recursive
+```
+
 ## Caching layer (Redis)
 
 Redis is used for TTL-based API response caching for high-traffic reads.

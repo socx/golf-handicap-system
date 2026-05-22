@@ -1,0 +1,14 @@
+[Unit]
+Description=GHS PostgreSQL Daily Backup Timer
+Requires=ghs-db-backup-daily.service
+After=network-online.target
+
+[Timer]
+# Run daily at 2:00 AM (02:00)
+OnCalendar=*-*-* 02:00:00
+OnBootSec=5min
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

@@ -455,10 +455,37 @@ So that data is protected and recoverable.
 **Target Date:** **30 April 2027**
 
 ### Acceptance Criteria
-- [ ] **[Automated backups](ca://s?q=Explain_DB_backup_strategy)** daily + hourly.  
-- [ ] Restore tested monthly.  
-- [ ] Alerts for failed backups.  
-- [ ] Documentation included.
+- [x] **[Automated backups](ca://s?q=Explain_DB_backup_strategy)** daily + hourly.  
+- [x] Restore tested monthly.  
+- [x] Alerts for failed backups.  
+- [x] Documentation included.
+
+### Implementation Notes
+- Setup script: `infra/scripts/backup-setup.sh` installs backup infrastructure on droplet
+- Backup script: `/usr/local/bin/ghs-pg-backup [--hourly|--daily]`
+  - Supports custom retention: BACKUP_RETENTION_HOURLY (48h default), BACKUP_RETENTION_DAILY (30d default)
+  - Performs `pg_dump` in custom format with compression
+  - Generates JSON-formatted backup status logs for Loki aggregation
+  - Validates backup integrity with `pg_restore -l`
+  - Auto-removes backups older than retention window
+- Backup schedule via systemd timers:
+  - Hourly backups: Run every hour, retain 48 hours
+  - Daily backups: Run 2:00 AM UTC, retain 30 days
+- Restore testing script: `/usr/local/bin/ghs-pg-restore-test`
+  - Finds latest daily backup if not specified
+  - Creates temporary test database
+  - Restores backup using `pg_restore`
+  - Validates restored schema with `information_schema` checks
+  - Executes monthly on 1st at 3:00 AM UTC
+  - Auto-cleans temp database on completion
+- Backup alerts configured in `infra/monitoring/alerts.yml`:
+  - `PostgreSQLBackupFailed` — Backup process error (critical)
+  - `PostgreSQLBackupMissed` — No backup in 24h (warning)
+  - `PostgreSQLRestoreTestFailed` — Monthly test failed (warning)
+  - `BackupDiskSpaceLow` — Backup partition <10% (warning)
+- Backup directory: `/var/backups/ghs/postgres/{hourly,daily,restore-tests,logs}`
+- JSON-formatted logs at `backup-status.jsonl` for Loki stream aggregation
+- Documentation: See `infra/README.md` for backup/recovery procedures + manual restore steps
 
 ### Dependencies
 - **[PostgreSQL environment](ca://s?q=Explain_PostgreSQL_cluster)**

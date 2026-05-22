@@ -68,3 +68,52 @@ groups:
         annotations:
           summary: "High API latency detected"
           description: "p99 latency is {{ $value }}s (threshold: 1s)"
+
+  - name: ghs_database
+    interval: 1m
+    rules:
+      # Database backup failure (monitored via Loki log aggregation)
+      # Note: This is a placeholder rule; actual monitoring happens via Loki queries
+      # Loki will parse JSON logs from ghs-db-backup service and alert on FAILED status
+      - alert: PostgreSQLBackupFailed
+        expr: |
+          increase(ghs_db_backup_failures_total[1d]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL backup failed"
+          description: "Backup process failed. Check /var/backups/ghs/postgres/logs/ or query Loki for backup status"
+
+      # Database backup missed (hasn't run in expected timeframe)
+      - alert: PostgreSQLBackupMissed
+        expr: |
+          time() - ghs_db_backup_last_successful_timestamp > 86400
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL daily backup missed"
+          description: "No successful backup in the last 24 hours"
+
+      # Restore test failure
+      - alert: PostgreSQLRestoreTestFailed
+        expr: |
+          increase(ghs_db_restore_test_failures_total[30d]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL restore test failed"
+          description: "Monthly restore test failed. Backup integrity may be compromised"
+
+      # Low disk space in backup directory
+      - alert: BackupDiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/var/backups"} / node_filesystem_size_bytes{mountpoint="/var/backups"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space in backup partition"
+          description: "Backup partition has {{ $value }}% free space (threshold: 10%)"

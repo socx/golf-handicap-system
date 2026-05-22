@@ -1,0 +1,21 @@
+[Unit]
+Description=GHS PostgreSQL Restore Test
+After=network.target postgresql.service
+Wants=ghs-db-restore-test.timer
+
+[Service]
+Type=oneshot
+User=root
+Environment="DB_NAME=ghs_db"
+Environment="DB_USER=ghs_db_super_user"
+Environment="DB_HOST=127.0.0.1"
+Environment="DB_PORT=5432"
+Environment="BACKUP_DIR=/var/backups/ghs/postgres"
+Environment="CLEANUP=true"
+ExecStart=/usr/local/bin/ghs-pg-restore-test
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ghs-db-restore-test
+
+[Install]
+WantedBy=multi-user.target
