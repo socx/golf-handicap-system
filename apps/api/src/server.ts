@@ -6,7 +6,6 @@ import { Pool } from 'pg';
 import { createClient } from 'redis';
 import type { AuthTokens, JWTClaims, User, ValidationError, ValidationResult } from '@ghs/types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { loadEnvFromRoot } = require('../../../scripts/db/load-env');
 
 loadEnvFromRoot();
@@ -268,7 +267,7 @@ function readJsonBody(
 
       try {
         resolve(JSON.parse(body) as Record<string, unknown>);
-      } catch (error) {
+      } catch {
         reject(new Error('Invalid JSON body'));
       }
     });
@@ -699,7 +698,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       let decodedToken: JWTClaims & { exp?: number };
       try {
         decodedToken = jwt.verify(validation.value.refreshToken, jwtSecret) as JWTClaims & { exp?: number };
-      } catch (error) {
+      } catch {
         sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
         return;
       }
@@ -758,7 +757,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       let accessClaims: JWTClaims;
       try {
         accessClaims = jwt.verify(accessToken, jwtSecret) as JWTClaims;
-      } catch (error) {
+      } catch {
         sendError(res, 401, 'unauthorized', 'Missing or invalid access token');
         return;
       }
@@ -771,7 +770,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       let refreshClaims: JWTClaims & { exp?: number };
       try {
         refreshClaims = jwt.verify(validation.value.refreshToken, jwtSecret) as JWTClaims & { exp?: number };
-      } catch (error) {
+      } catch {
         sendError(res, 401, 'invalid_refresh_token', 'Invalid or expired refresh token');
         return;
       }
