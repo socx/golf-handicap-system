@@ -100,6 +100,17 @@ curl -X POST "http://127.0.0.1:3005/api/cache/invalidate?target=leaderboard" \
   -H "x-cache-admin-key: $CACHE_ADMIN_KEY"
 ```
 
+**Automated smoke check (recommended):**
+```bash
+# Local API port check (on droplet)
+BASE_URL="http://127.0.0.1:3005" CACHE_ADMIN_KEY="<your-key>" \
+  bash infra/scripts/redis-smoke.sh
+
+# Public domain check (skip local redis-cli ping)
+CHECK_LOCAL_REDIS=false BASE_URL="https://ghs.socx.org.uk" CACHE_ADMIN_KEY="<your-key>" \
+  bash infra/scripts/redis-smoke.sh
+```
+
 **Cache invalidation rules:**
 - Dashboard cache: invalidate on round create/update/delete, handicap recalculation, and daily stats rollup.
 - Leaderboard cache: invalidate on score posting, score correction, leaderboard rule/config changes.
