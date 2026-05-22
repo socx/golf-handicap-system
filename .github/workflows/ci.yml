@@ -140,8 +140,9 @@ jobs:
             cd "$APP_DIR/apps/web"
             BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
 
-            # Remove development dependencies after build completes (saves runtime memory).
-            cd "$APP_DIR" && "$NPM_BIN" prune --omit=dev --workspace packages/types --workspace apps/api --workspace apps/web --no-audit --no-fund
+            # Keep web dev dependencies installed because ghs-web runs via `npm run preview` (vite preview).
+            # Only prune API workspace development dependencies after the web build completes.
+            cd "$APP_DIR" && "$NPM_BIN" prune --omit=dev --workspace packages/types --workspace apps/api --no-audit --no-fund
 
             # Extract DATABASE_URL from the .env.production file for migrations.
             if [ -f "$APP_DIR/apps/api/.env.production" ]; then
@@ -165,8 +166,19 @@ jobs:
 
             sudo systemctl daemon-reload
 
+            WEB_SERVICE="ghs-web"
+            API_SERVICE=""
+            if sudo systemctl cat ghs-api.service >/dev/null 2>&1; then
+              API_SERVICE="ghs-api"
+            elif sudo systemctl cat www-api.service >/dev/null 2>&1; then
+              API_SERVICE="www-api"
+            else
+              echo "Missing required API unit: ghs-api.service or www-api.service" >&2
+              exit 1
+            fi
+
             # Required services.
-            for svc in ghs-web ghs-api; do
+            for svc in "$WEB_SERVICE" "$API_SERVICE"; do
               if ! sudo systemctl cat "${svc}.service" >/dev/null 2>&1; then
                 echo "Missing required unit: ${svc}.service — install systemd files from do-nginx-infra on the droplet" >&2
                 exit 1
@@ -199,7 +211,7 @@ jobs:
               if [ -d "$BACKUP_DIR/apps/web" ]; then
                 rm -rf "$APP_DIR/apps/web"
                 cp -a "$BACKUP_DIR/apps/web" "$APP_DIR/apps/web"
-                sudo systemctl restart ghs-web || true
+                sudo systemctl restart "$WEB_SERVICE" || true
               fi
               exit 1
             fi
