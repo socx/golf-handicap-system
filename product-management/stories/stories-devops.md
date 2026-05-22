@@ -243,6 +243,8 @@ So that PDFs and assets can be stored and retrieved efficiently.
 
 ---
 
+
+
 ## 7. Set up caching layer (Redis)
 
 **As a developer**  
