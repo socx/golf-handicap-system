@@ -7,15 +7,14 @@ type ActivationState = 'loading' | 'success' | 'error';
 
 export const ActivateAccountPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [state, setState] = useState<ActivationState>('loading');
-  const [message, setMessage] = useState('Activating your account...');
+  const token = (searchParams.get('token') || '').trim();
+  const [state, setState] = useState<ActivationState>(token ? 'loading' : 'error');
+  const [message, setMessage] = useState(
+    token ? 'Activating your account...' : 'Activation token is missing from this link.',
+  );
 
   useEffect(() => {
-    const token = searchParams.get('token') || '';
-
     if (!token) {
-      setState('error');
-      setMessage('Activation token is missing from this link.');
       return;
     }
 
@@ -31,7 +30,7 @@ export const ActivateAccountPage: React.FC = () => {
     };
 
     void activate();
-  }, [searchParams]);
+  }, [token]);
 
   const cardByState: Record<ActivationState, React.ReactNode> = {
     loading: (
