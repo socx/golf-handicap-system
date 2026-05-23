@@ -110,9 +110,6 @@ jobs:
               exit 1
             fi
 
-            # Lower npm parallelism to reduce peak memory on small droplets.
-            export npm_config_jobs=1
-
             rm -rf "$TMP_DIR"
             mkdir -p "$TMP_DIR"
             tar -xzf /tmp/release.tgz -C "$TMP_DIR"

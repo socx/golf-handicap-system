@@ -97,10 +97,21 @@ for FILE in "${MIGRATION_FILES[@]}"; do
 
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "[run-migrations]   (dry-run mode: checking syntax only)"
-    if ! psql "$DB_URL" -c "BEGIN; $(cat "$FILE"); ROLLBACK;" >/dev/null 2>&1; then
+
+    DRY_RUN_SQL="$(mktemp /tmp/ghs-migration-dry-run.XXXXXX.sql)"
+    {
+      echo "BEGIN;"
+      cat "$FILE"
+      echo "ROLLBACK;"
+    } > "$DRY_RUN_SQL"
+
+    if ! psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$DRY_RUN_SQL"; then
+      rm -f "$DRY_RUN_SQL"
       echo "[run-migrations] ERROR: Migration syntax check failed for $FILENAME" >&2
       exit 1
     fi
+
+    rm -f "$DRY_RUN_SQL"
   else
     # Execute migration inside a transaction.
     if ! psql "$DB_URL" <<EOF
