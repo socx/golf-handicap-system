@@ -89,7 +89,7 @@ for FILE in "${MIGRATION_FILES[@]}"; do
   # Check if already applied.
   if psql "$DB_URL" -tc "SELECT 1 FROM schema_migrations WHERE version = '$VERSION'" | grep -q 1; then
     echo "[run-migrations] SKIP: $FILENAME (already applied)"
-    ((SKIPPED_COUNT++))
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
     continue
   fi
 
@@ -130,7 +130,7 @@ EOF
     echo "DELETE FROM schema_migrations WHERE version = '$VERSION';" >> "$ROLLBACK_SCRIPT"
     echo "" >> "$ROLLBACK_SCRIPT"
 
-    ((APPLIED_COUNT++))
+    APPLIED_COUNT=$((APPLIED_COUNT + 1))
   fi
 done
 
