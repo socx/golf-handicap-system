@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthSplitLayout } from '../components/auth/AuthSplitLayout';
-import { authApi, handleApiError } from '../api/auth';
-import { setStoredUser, setTokens } from '../lib/authStorage';
+import { handleApiError } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -16,6 +16,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export const LoginPage: React.FC = () => {
   const selfRegistrationEnabled = String(import.meta.env.VITE_SELF_REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
+  const { login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -30,9 +31,7 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     setSubmitting(true);
     try {
-      const { data: response } = await authApi.login(data.email, data.password);
-      setTokens(response.tokens.accessToken, response.tokens.refreshToken);
-      setStoredUser(response.user);
+      await login(data.email, data.password);
       navigate(from, { replace: true });
     } catch (error) {
       setError('root', { message: handleApiError(error) });

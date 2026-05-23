@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { AuthSplitLayout, AuthStatusCard } from '../components/auth/AuthSplitLayout';
-import { authApi, handleApiError } from '../api/auth';
-import { getAccessToken, getStoredUser } from '../lib/authStorage';
+import { authApi } from '../api/auth';
+import { handleApiError } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 
 const registerSchema = z
   .object({
@@ -23,9 +24,9 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export const RegisterPage: React.FC = () => {
   const selfRegistrationEnabled = String(import.meta.env.VITE_SELF_REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState('Please check your inbox for your activation link.');
 
@@ -41,25 +42,21 @@ export const RegisterPage: React.FC = () => {
 
   useEffect(() => {
     const checkAccess = async () => {
-      const token = getAccessToken();
-      const user = getStoredUser();
-      if (!token || !user) {
-        setAccessChecked(true);
-        return;
-      }
-
       try {
-        const { data } = await authApi.me();
-        setIsAdmin(data.user.role === 'admin');
+        if (isAuthenticated) {
+          await refreshUser();
+        }
       } catch {
-        setIsAdmin(false);
+        // Access defaults to self-registration policy when auth lookup fails.
       } finally {
         setAccessChecked(true);
       }
     };
 
     void checkAccess();
-  }, []);
+  }, [isAuthenticated, refreshUser]);
+
+  const isAdmin = user?.role === 'admin';
 
   const onSubmit = async (data: RegisterForm) => {
     setSubmitting(true);

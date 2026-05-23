@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { getAccessToken } from '../lib/authStorage';
+import RouteFallback from './RouteFallback';
+import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,8 +9,13 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (!getAccessToken()) {
+  if (isLoading) {
+    return <RouteFallback />;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 

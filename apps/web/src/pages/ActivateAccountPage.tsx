@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { authApi, handleApiError } from '../api/auth';
+import { authApi } from '../api/auth';
+import { handleApiError } from '../api/client';
 import { AuthSplitLayout, AuthStatusCard } from '../components/auth/AuthSplitLayout';
 
 type ActivationState = 'loading' | 'success' | 'error';

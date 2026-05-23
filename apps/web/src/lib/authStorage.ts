@@ -6,25 +6,26 @@ export interface User {
   is_active: boolean;
 }
 
-const ACCESS_TOKEN_KEY = 'ghs-access-token';
 const REFRESH_TOKEN_KEY = 'ghs-refresh-token';
 const USER_KEY = 'ghs-user';
 
-let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+let accessToken: string | null = null;
 let refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
 export const setTokens = (access: string, refresh: string) => {
   accessToken = access;
   refreshToken = refresh;
-  localStorage.setItem(ACCESS_TOKEN_KEY, access);
   localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
 };
 
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
+export const setAccessToken = (access: string | null) => {
+  accessToken = access;
 };
 
 export const getAccessToken = () => accessToken;
