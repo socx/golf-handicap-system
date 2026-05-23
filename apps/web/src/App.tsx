@@ -13,6 +13,11 @@ const RegisterPage = lazy(async () => {
   return { default: module.RegisterPage };
 });
 
+const ActivateAccountPage = lazy(async () => {
+  const module = await import('./pages/ActivateAccountPage');
+  return { default: module.ActivateAccountPage };
+});
+
 const HomePage = lazy(async () => import('./pages/HomePage'));
 
 function AppRoutes() {
@@ -20,6 +25,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/register" element={<RegisterPage />} />
+      <Route path="/auth/activate" element={<ActivateAccountPage />} />
       <Route
         path="/"
         element={

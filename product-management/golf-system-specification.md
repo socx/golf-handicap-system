@@ -133,7 +133,18 @@ This application is a full-featured golf club management system that:
 ## 4. REST API Modules & Endpoint Groups
 
 ### 4.1 Auth Module (`/auth`)
-Handles user registration, login, JWT issuance and refresh. Users are linked to player profiles (a player is the golf entity; a user is the login identity).
+Handles user registration, account activation, login, JWT issuance and refresh. Users are linked to player profiles (a player is the golf entity; a user is the login identity).
+
+Registration policy is environment-configurable:
+- `SELF_REGISTRATION_ENABLED=true` allows unauthenticated player self-registration.
+- `SELF_REGISTRATION_ENABLED=false` restricts registration to authenticated admins only.
+- Self-registration can only create users with `role='player'` (never `admin`).
+
+Registration and activation lifecycle:
+1. User submits registration details.
+2. User record is created with `is_active=false`.
+3. System emails an activation link.
+4. User activates via link (`/auth/activate`), setting `is_active=true`.
 
 ### 4.2 Player Module (`/players`)
 CRUD for player profiles. Validates uniqueness of email. Exposes search/filter endpoints. Returns current handicap index (fetched from handicap records or cached).
@@ -352,7 +363,13 @@ All endpoints return `application/json`. All timestamps are ISO 8601 UTC. Authen
 ### 6.1 Auth Endpoints (`/auth`)
 
 #### POST /auth/register
-Create a user account.
+Create a user account in inactive state and send activation email.
+
+Rules:
+- If `SELF_REGISTRATION_ENABLED=false`, unauthenticated registration returns `403`.
+- Unauthenticated registration is always forced to `role='player'`.
+- Authenticated admins may create `player` or `admin` users.
+
 ```json
 // Request
 {
@@ -363,9 +380,19 @@ Create a user account.
 
 // Response 201
 {
-  "user": { "id": "uuid", "email": "john@example.com", "role": "player" },
-  "token": "jwt_access_token",
-  "refreshToken": "jwt_refresh_token"
+  "user": { "id": "uuid", "email": "john@example.com", "role": "player", "is_active": false },
+  "message": "Registration successful. Please check your email to activate your account."
+}
+```
+
+#### GET /auth/activate?token=...  /  POST /auth/activate
+Activates an inactive account using an email activation token.
+
+```json
+// Response 200
+{
+  "message": "Account activated successfully. You can now sign in.",
+  "user": { "id": "uuid", "email": "john@example.com", "role": "player", "is_active": true }
 }
 ```
 
@@ -759,8 +786,9 @@ After calculating the raw new index:
 
 ```
 /                        → Dashboard (recent rounds, handicap trend)
-/login                   → Login page
-/register                → Register page
+/auth/login              → Login page
+/auth/register           → Register page (self-registration if enabled, admin provisioning otherwise)
+/auth/activate           → Account activation page
 
 /players                 → Player list
 /players/new             → Create player
@@ -922,6 +950,8 @@ V003__add_soft_delete_indexes.sql
 - JWT access tokens (short-lived: 1h) + refresh tokens (7d), stored in HTTP-only cookies or memory (not localStorage)
 - Role-based access: `admin` can manage all data; `player` can only read/write their own rounds and read courses/players
 - The API validates JWT at middleware level and enforces route-level authorisation checks
+- New registrations are inactive by default and require email activation before login is permitted
+- Self-registration behavior is controlled by env (`SELF_REGISTRATION_ENABLED`); unauthenticated users can only self-register as `player`
 
 ### 10.2 Input Validation
 - Validate all request bodies with **Joi** or **Zod** in the REST API request pipeline

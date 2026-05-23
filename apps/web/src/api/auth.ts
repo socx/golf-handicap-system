@@ -45,9 +45,11 @@ api.interceptors.response.use(
 
 export const authApi = {
   register: (email: string, password: string, role: 'admin' | 'player' = 'player') =>
-    api.post<{ user: User; tokens?: AuthTokens }>('/auth/register', { email, password, role }),
+    api.post<{ user: User; message: string }>('/auth/register', { email, password, role }),
   login: (email: string, password: string) =>
     api.post<{ user: User; tokens: AuthTokens }>('/auth/login', { email, password }),
+  activateAccount: (token: string) =>
+    api.post<{ message: string; user: User }>('/auth/activate', { token }),
   logout: (refreshToken: string) =>
     api.post(
       '/auth/logout',

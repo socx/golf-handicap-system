@@ -35,9 +35,11 @@ export const HomePage: React.FC = () => {
         </p>
 
         <div className="mt-5 flex gap-3">
-          <Link className="rounded-lg border border-teal-700 px-3 py-2 text-sm font-medium text-teal-700" to="/auth/register">
-            Admin registration page
-          </Link>
+          {user?.role === 'admin' ? (
+            <Link className="rounded-lg border border-teal-700 px-3 py-2 text-sm font-medium text-teal-700" to="/auth/register">
+              Register a user
+            </Link>
+          ) : null}
           <button
             onClick={() => void handleLogout()}
             className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"

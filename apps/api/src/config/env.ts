@@ -11,6 +11,8 @@ export const env = {
   cacheAdminKey: process.env.CACHE_ADMIN_KEY || '',
   dbUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/golf_db',
   appUrl: process.env.APP_URL || 'http://localhost:5175',
+  selfRegistrationEnabled: String(process.env.SELF_REGISTRATION_ENABLED || 'false').toLowerCase() === 'true',
+  accountActivationTokenExpiryHours: Number(process.env.ACCOUNT_ACTIVATION_TOKEN_EXPIRY_HOURS || 24),
   authAutoLoginEnabled: String(process.env.AUTH_AUTO_LOGIN_ENABLED || 'true').toLowerCase() === 'true',
   jwtSecret: process.env.JWT_SECRET || 'dev-jwt-secret-change-me',
   jwtAccessExpiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m',

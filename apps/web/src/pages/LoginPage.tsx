@@ -15,6 +15,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export const LoginPage: React.FC = () => {
+  const selfRegistrationEnabled = String(import.meta.env.VITE_SELF_REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
   const location = useLocation();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -55,14 +56,14 @@ export const LoginPage: React.FC = () => {
         { value: 'Role-based', label: 'Admin registration and protected access' },
         { value: 'Single source', label: 'Player and competition data in one system' },
       ]}
-      footer={(
+      footer={selfRegistrationEnabled ? (
         <>
-          Need to create a user?{' '}
+          Need an account?{' '}
           <Link className="font-semibold text-teal-700 transition hover:text-teal-800" to="/auth/register">
-            Open the admin registration page
+            Register as a player
           </Link>
         </>
-      )}
+      ) : 'Need an account? Contact an administrator for an activation invite.'}
     >
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div>

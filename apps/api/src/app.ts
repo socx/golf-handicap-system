@@ -10,6 +10,7 @@ import { handleRefresh } from './routes/auth/refresh';
 import { handleLogout } from './routes/auth/logout';
 import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes/auth/passwordReset';
 import { handleMe } from './routes/auth/me';
+import { handleActivateAccount } from './routes/auth/activate';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
@@ -85,6 +86,16 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'POST' && (pathname === '/auth/logout' || pathname === '/api/auth/logout')) {
       await handleLogout(req, res, requestId);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/auth/activate' || pathname === '/api/auth/activate')) {
+      await handleActivateAccount(req, res, requestUrl.searchParams.get('token') || '');
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/auth/activate' || pathname === '/api/auth/activate')) {
+      await handleActivateAccount(req, res);
       return;
     }
 

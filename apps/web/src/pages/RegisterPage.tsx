@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AuthSplitLayout, AuthStatusCard } from '../components/auth/AuthSplitLayout';
 import { authApi, handleApiError } from '../api/auth';
 import { getAccessToken, getStoredUser } from '../lib/authStorage';
@@ -12,7 +12,7 @@ const registerSchema = z
     email: z.string().email('Please enter a valid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
-    role: z.enum(['player', 'admin']),
+    role: z.enum(['player', 'admin']).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ['confirmPassword'],
@@ -22,10 +22,12 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>;
 
 export const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
+  const selfRegistrationEnabled = String(import.meta.env.VITE_SELF_REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
   const [submitting, setSubmitting] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [registrationMessage, setRegistrationMessage] = useState('Please check your inbox for your activation link.');
 
   const {
     register,
@@ -62,8 +64,10 @@ export const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterForm) => {
     setSubmitting(true);
     try {
-      await authApi.register(data.email, data.password, data.role);
-      navigate('/auth/login', { replace: true });
+      const role = isAdmin ? data.role || 'player' : 'player';
+      const { data: response } = await authApi.register(data.email, data.password, role);
+      setRegistrationMessage(response.message || 'Please check your inbox for your activation link.');
+      setRegistrationComplete(true);
     } catch (error) {
       setError('root', { message: handleApiError(error) });
     } finally {
@@ -71,53 +75,89 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  const canRegister = isAdmin || selfRegistrationEnabled;
+
+  if (registrationComplete) {
+    return (
+      <AuthSplitLayout
+        intro="Registration submitted"
+        introDetail=""
+        title="Activation required"
+        description="Your account has been created in an inactive state until the activation link is used."
+        asideBadge="Email activation"
+        asideEyebrow="Onboarding security"
+        asideTitle="Every new account must be activated via email before sign-in."
+        asideDescription="This ensures new users verify ownership of their email address before accessing player data."
+        asideStats={[
+          { value: 'Inactive', label: 'Until activation link is clicked' },
+          { value: 'Player-only', label: 'Self-registration always uses player role' },
+          { value: 'Verified', label: 'Activation confirms account ownership' },
+        ]}
+      >
+        <AuthStatusCard
+          eyebrow="Next step"
+          title="Check your email"
+          description={registrationMessage}
+          action={(
+            <Link
+              to="/auth/login"
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Back to sign in
+            </Link>
+          )}
+        />
+      </AuthSplitLayout>
+    );
+  }
+
   if (!accessChecked) {
     return (
       <AuthSplitLayout
-        intro="Validating admin access before opening registration"
+        intro="Validating registration access"
         introDetail=""
         title="Checking permissions"
-        description="Only authenticated admins can create users."
-        asideBadge="Admin workspace"
+        description="Determining whether this environment allows self-registration or requires admin provisioning."
+        asideBadge="Registration policy"
         asideEyebrow="Controlled onboarding"
-        asideTitle="Provision staff and players with the right permissions from a single administration flow."
-        asideDescription="Registration is restricted to authenticated administrators so account creation stays auditable and role assignment stays deliberate."
+        asideTitle="Registration behavior is controlled centrally via environment flags."
+        asideDescription="Self-registration can be enabled for players only, while administrators can still provision users with explicit roles."
         asideStats={[
-          { value: 'Admins', label: 'Can create and manage privileged accounts' },
-          { value: 'Players', label: 'Can access score and handicap workflows' },
-          { value: 'Auditable', label: 'Role-based access remains explicit and reviewable' },
+          { value: 'Flag-driven', label: 'Self-registration can be switched on or off' },
+          { value: 'Inactive', label: 'New accounts require activation email click' },
+          { value: 'Secure', label: 'Sign-in only available after activation' },
         ]}
       >
         <AuthStatusCard
           title="Checking permissions"
-          description="Only authenticated admins can create users."
+          description="Determining whether this environment currently allows self-registration."
           leading={<div className="h-10 w-10 animate-pulse rounded-full bg-teal-100" />}
         />
       </AuthSplitLayout>
     );
   }
 
-  if (!isAdmin) {
+  if (!canRegister) {
     return (
       <AuthSplitLayout
-        intro="Restricted administrative route"
+        intro="Self-registration is disabled"
         introDetail=""
-        title="Admin-only registration"
-        description="This route is reserved for authenticated administrators who are creating new users and assigning roles."
-        asideBadge="Admin workspace"
+        title="Registration unavailable"
+        description="This environment requires an administrator to provision new accounts."
+        asideBadge="Registration policy"
         asideEyebrow="Controlled onboarding"
-        asideTitle="Provision staff and players with the right permissions from a single administration flow."
-        asideDescription="Registration is restricted to authenticated administrators so account creation stays auditable and role assignment stays deliberate."
+        asideTitle="Self-registration is currently turned off in environment configuration."
+        asideDescription="Ask an administrator to create your account. You will still receive an activation email and remain inactive until activated."
         asideStats={[
-          { value: 'Admins', label: 'Can create and manage privileged accounts' },
-          { value: 'Players', label: 'Can access score and handicap workflows' },
-          { value: 'Auditable', label: 'Role-based access remains explicit and reviewable' },
+          { value: 'Admin managed', label: 'Admins provision registration details' },
+          { value: 'Email activation', label: 'Account stays inactive until link click' },
+          { value: 'Auditable', label: 'Provisioning path remains controlled' },
         ]}
       >
         <AuthStatusCard
-          eyebrow="Access denied"
-          title="Admin-only registration"
-          description="This route is reserved for authenticated administrators who are creating new users and assigning roles."
+          eyebrow="Disabled"
+          title="Self-registration is disabled"
+          description="Registration is currently restricted. Contact an administrator to provision your account."
           tone="warning"
           action={(
             <Link
@@ -132,20 +172,26 @@ export const RegisterPage: React.FC = () => {
     );
   }
 
+  const intro = isAdmin ? 'Administrator-controlled account creation' : 'Player self-registration';
+  const title = isAdmin ? 'Create a new user' : 'Create your player account';
+  const description = isAdmin
+    ? 'Use this form to provision player or admin access. New users remain inactive until they click their activation email link.'
+    : 'Self-registration creates a player account only. Your account will remain inactive until you activate it from email.';
+
   return (
     <AuthSplitLayout
-      intro="Administrator-controlled account creation"
+      intro={intro}
       introDetail=""
-      title="Create a new user"
-      description="Use this form to provision player or admin access with explicit role assignment and password validation."
-      asideBadge="Admin workspace"
+      title={title}
+      description={description}
+      asideBadge={isAdmin ? 'Admin workspace' : 'Self-registration'}
       asideEyebrow="Controlled onboarding"
-      asideTitle="Provision staff and players with the right permissions from a single administration flow."
-      asideDescription="Registration is restricted to authenticated administrators so account creation stays auditable and role assignment stays deliberate."
+      asideTitle="All registrations require email activation before first sign-in."
+      asideDescription="New users are stored as inactive in the database and become active only after clicking their activation link."
       asideStats={[
-        { value: 'Admins', label: 'Can create and manage privileged accounts' },
-        { value: 'Players', label: 'Can access score and handicap workflows' },
-        { value: 'Auditable', label: 'Role-based access remains explicit and reviewable' },
+        { value: 'Inactive first', label: 'Accounts start inactive by design' },
+        { value: 'Email link', label: 'Activation requires link verification' },
+        { value: isAdmin ? 'Admin + Player' : 'Player only', label: isAdmin ? 'Admin can assign role' : 'Self-signup cannot create admins' },
       ]}
       footer={(
         <>
@@ -201,19 +247,21 @@ export const RegisterPage: React.FC = () => {
               )}
             </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-slate-700">
-                Role
-              </label>
-              <select
-                id="role"
-                {...register('role')}
-                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
-              >
-                <option value="player">player</option>
-                <option value="admin">admin</option>
-              </select>
-            </div>
+            {isAdmin ? (
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-slate-700">
+                  Role
+                </label>
+                <select
+                  id="role"
+                  {...register('role')}
+                  className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+                >
+                  <option value="player">player</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+            ) : null}
 
             {errors.root?.message && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
@@ -226,7 +274,7 @@ export const RegisterPage: React.FC = () => {
               disabled={submitting}
               className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? 'Creating user...' : 'Create user'}
+              {submitting ? 'Submitting registration...' : 'Register'}
             </button>
           </form>
     </AuthSplitLayout>

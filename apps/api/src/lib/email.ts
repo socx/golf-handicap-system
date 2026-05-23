@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
 type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses';
-type TemplateName = 'password_reset';
+type TemplateName = 'password_reset' | 'account_activation';
 
 interface EmailBody {
   text: string;
@@ -15,8 +15,14 @@ interface PasswordResetTemplateData {
   expiresMinutes: number;
 }
 
+interface AccountActivationTemplateData {
+  activationUrl: string;
+  expiresHours: number;
+}
+
 type TemplateData = {
   password_reset: PasswordResetTemplateData;
+  account_activation: AccountActivationTemplateData;
 };
 
 interface SendEmailOptions {
@@ -69,6 +75,16 @@ function renderTemplate<T extends TemplateName>(template: T, data: TemplateData[
         body: {
           text: `You requested a password reset. Use this link (valid for ${t.expiresMinutes} minutes):\n\n${t.resetUrl}\n\nIf you did not request this, ignore this email.`,
           html: `<p>You requested a password reset. Click the link below (valid for ${t.expiresMinutes} minutes):</p><p><a href="${t.resetUrl}">${t.resetUrl}</a></p><p>If you did not request this, ignore this email.</p>`,
+        },
+      };
+    }
+    case 'account_activation': {
+      const t = data as AccountActivationTemplateData;
+      return {
+        subject: 'Activate your account',
+        body: {
+          text: `Welcome to Golf Handicap System. Activate your account using this link (valid for ${t.expiresHours} hours):\n\n${t.activationUrl}\n\nIf you did not request this account, ignore this email.`,
+          html: `<p>Welcome to Golf Handicap System.</p><p>Activate your account using the link below (valid for ${t.expiresHours} hours):</p><p><a href="${t.activationUrl}">${t.activationUrl}</a></p><p>If you did not request this account, ignore this email.</p>`,
         },
       };
     }

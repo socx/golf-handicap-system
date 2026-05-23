@@ -1,10 +1,12 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { User, ValidationError, ValidationResult } from '@ghs/types';
 import { sendJson, sendError, readJsonBody } from '../../lib/http';
-import { buildAuthTokens } from '../../lib/tokens';
 import { dbPool } from '../../lib/db';
 import { env } from '../../config/env';
+import { verifyAndAuthorize } from '../../middleware/auth';
+import { sendTemplatedEmail } from '../../lib/email';
 
 function validateRegistrationInput(
   payload: Record<string, unknown>,
@@ -37,17 +39,52 @@ async function registerUser(payload: { email: string; password: string; role: st
   const passwordHash = await bcrypt.hash(payload.password, 12);
   const result = await dbPool.query(
     `INSERT INTO users (email, password_hash, role, is_active)
-     VALUES ($1, $2, $3, TRUE)
+     VALUES ($1, $2, $3, FALSE)
      RETURNING id, email::text AS email, role, is_active, created_at, updated_at`,
     [payload.email, passwordHash, payload.role],
   );
   return result.rows[0] as User;
 }
 
+async function createActivationToken(userId: string): Promise<string> {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  await dbPool.query(
+    `INSERT INTO account_activation_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, NOW() + ($3::text || ' hours')::interval)`,
+    [userId, tokenHash, String(env.accountActivationTokenExpiryHours)],
+  );
+
+  return rawToken;
+}
+
+async function sendActivationEmail(email: string, token: string): Promise<void> {
+  const appUrl = env.appUrl.replace(/\/$/, '');
+  const activationUrl = `${appUrl}/auth/activate?token=${encodeURIComponent(token)}`;
+
+  await sendTemplatedEmail({
+    to: email,
+    template: 'account_activation',
+    data: {
+      activationUrl,
+      expiresHours: env.accountActivationTokenExpiryHours,
+    },
+  });
+}
+
 export async function handleRegister(
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ): Promise<void> {
+  const adminAuth = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const isAdminRegistration = adminAuth.success === true;
+
+  if (!env.selfRegistrationEnabled && !isAdminRegistration) {
+    sendError(res, 403, 'self_registration_disabled', 'Self-registration is disabled');
+    return;
+  }
+
   let payload: Record<string, unknown>;
   try {
     payload = await readJsonBody(req);
@@ -63,12 +100,20 @@ export async function handleRegister(
   }
 
   try {
-    const user = await registerUser(validation.value);
-    const responseBody: Record<string, unknown> = { user };
-    if (env.authAutoLoginEnabled) {
-      responseBody.tokens = buildAuthTokens(user);
-    }
-    sendJson(res, 201, responseBody);
+    const role = isAdminRegistration ? validation.value.role : 'player';
+    const user = await registerUser({
+      email: validation.value.email,
+      password: validation.value.password,
+      role,
+    });
+
+    const activationToken = await createActivationToken(user.id);
+    await sendActivationEmail(user.email, activationToken);
+
+    sendJson(res, 201, {
+      user,
+      message: 'Registration successful. Please check your email to activate your account.',
+    });
   } catch (error) {
     const err = error as Record<string, unknown>;
     if (err && err.code === '23505') {
@@ -76,6 +121,6 @@ export async function handleRegister(
       return;
     }
     console.error('[auth.register] unexpected error:', error);
-    sendError(res, 500, 'registration_failed', 'Unable to register user at this time');
+    sendError(res, 500, 'registration_failed', 'Unable to complete registration at this time');
   }
 }
