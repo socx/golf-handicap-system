@@ -110,6 +110,9 @@ jobs:
               exit 1
             fi
 
+            # Lower npm parallelism to reduce peak memory on small droplets.
+            export npm_config_jobs=1
+
             rm -rf "$TMP_DIR"
             mkdir -p "$TMP_DIR"
             tar -xzf /tmp/release.tgz -C "$TMP_DIR"
@@ -136,10 +139,14 @@ jobs:
               printf '%s\n' "$APP_ENV_FILE" > "$APP_DIR/.env.production"
             fi
 
-            cd "$APP_DIR" && "$NPM_BIN" ci --workspace packages/types --workspace apps/api --workspace apps/web --no-audit --no-fund
+            # Install/build API stack first (smaller dependency graph than web + API combined).
+            cd "$APP_DIR" && "$NPM_BIN" ci --workspace packages/types --workspace apps/api --no-audit --no-fund
             cd "$APP_DIR/apps/api"
             "$NPM_BIN" run build --if-present
             cp -a dist/. src/
+
+            # Install web dependencies separately to avoid OOM during a single large npm ci.
+            cd "$APP_DIR" && "$NPM_BIN" install --workspace packages/types --workspace apps/web --include=dev --no-audit --no-fund
             cd "$APP_DIR/apps/web"
             BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
 
