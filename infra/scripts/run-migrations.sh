@@ -80,8 +80,9 @@ mkdir -p "$ROLLBACK_DIR"
 ROLLBACK_SCRIPT="$ROLLBACK_DIR/rollback-$(date +%Y%m%d%H%M%S).sql"
 APPLIED_COUNT=0
 SKIPPED_COUNT=0
+PENDING_FILES=()
 
-# Process each migration.
+# Determine pending migrations.
 for FILE in "${MIGRATION_FILES[@]}"; do
   FILENAME=$(basename "$FILE")
   VERSION="${FILENAME%.sql}"
@@ -93,51 +94,72 @@ for FILE in "${MIGRATION_FILES[@]}"; do
     continue
   fi
 
+  PENDING_FILES+=("$FILE")
+done
+
+if [ "${#PENDING_FILES[@]}" -eq 0 ]; then
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[run-migrations] DRY-RUN COMPLETE: No pending migrations."
+  else
+    echo "[run-migrations] Migration complete: 0 applied, $SKIPPED_COUNT skipped."
+  fi
+  exit 0
+fi
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo "[run-migrations]   (dry-run mode: checking pending migrations in-order)"
+
+  DRY_RUN_SQL="$(mktemp /tmp/ghs-migration-dry-run.XXXXXX.sql)"
+  {
+    echo "BEGIN;"
+    for FILE in "${PENDING_FILES[@]}"; do
+      FILENAME=$(basename "$FILE")
+      VERSION="${FILENAME%.sql}"
+      echo "-- RUN: $FILENAME"
+      cat "$FILE"
+      echo "-- RECORD: $VERSION"
+      echo "INSERT INTO schema_migrations (version) VALUES ('$VERSION');"
+    done
+    echo "ROLLBACK;"
+  } > "$DRY_RUN_SQL"
+
+  if ! psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$DRY_RUN_SQL"; then
+    rm -f "$DRY_RUN_SQL"
+    echo "[run-migrations] ERROR: Migration dry-run failed" >&2
+    exit 1
+  fi
+
+  rm -f "$DRY_RUN_SQL"
+  echo "[run-migrations] DRY-RUN COMPLETE: All pending migrations are valid."
+  exit 0
+fi
+
+# Process pending migrations.
+for FILE in "${PENDING_FILES[@]}"; do
+  FILENAME=$(basename "$FILE")
+  VERSION="${FILENAME%.sql}"
+
   echo "[run-migrations] RUN: $FILENAME"
 
-  if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[run-migrations]   (dry-run mode: checking syntax only)"
-
-    DRY_RUN_SQL="$(mktemp /tmp/ghs-migration-dry-run.XXXXXX.sql)"
-    {
-      echo "BEGIN;"
-      cat "$FILE"
-      echo "ROLLBACK;"
-    } > "$DRY_RUN_SQL"
-
-    if ! psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$DRY_RUN_SQL"; then
-      rm -f "$DRY_RUN_SQL"
-      echo "[run-migrations] ERROR: Migration syntax check failed for $FILENAME" >&2
-      exit 1
-    fi
-
-    rm -f "$DRY_RUN_SQL"
-  else
-    # Execute migration inside a transaction.
-    if ! psql "$DB_URL" <<EOF
+  # Execute migration inside a transaction.
+  if ! psql "$DB_URL" <<EOF
 BEGIN;
 $(cat "$FILE")
 INSERT INTO schema_migrations (version) VALUES ('$VERSION');
 COMMIT;
 EOF
-    then
-      echo "[run-migrations] ERROR: Migration failed for $FILENAME" >&2
-      exit 1
-    fi
-
-    # Append a rollback instruction (simplified: not a true inverse).
-    echo "-- Rollback for $VERSION" >> "$ROLLBACK_SCRIPT"
-    echo "DELETE FROM schema_migrations WHERE version = '$VERSION';" >> "$ROLLBACK_SCRIPT"
-    echo "" >> "$ROLLBACK_SCRIPT"
-
-    APPLIED_COUNT=$((APPLIED_COUNT + 1))
+  then
+    echo "[run-migrations] ERROR: Migration failed for $FILENAME" >&2
+    exit 1
   fi
-done
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[run-migrations] DRY-RUN COMPLETE: All migration syntax is valid."
-  exit 0
-fi
+  # Append a rollback instruction (simplified: not a true inverse).
+  echo "-- Rollback for $VERSION" >> "$ROLLBACK_SCRIPT"
+  echo "DELETE FROM schema_migrations WHERE version = '$VERSION';" >> "$ROLLBACK_SCRIPT"
+  echo "" >> "$ROLLBACK_SCRIPT"
+
+  APPLIED_COUNT=$((APPLIED_COUNT + 1))
+done
 
 echo "[run-migrations] Migration complete: $APPLIED_COUNT applied, $SKIPPED_COUNT skipped."
 echo "[run-migrations] Rollback script written to: $ROLLBACK_SCRIPT"
