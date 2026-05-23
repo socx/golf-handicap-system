@@ -156,18 +156,33 @@ jobs:
               MIGRATION_DB_URL=$(grep '^DATABASE_URL=' "$APP_DIR/.env.production" | cut -d'=' -f2-)
             fi
 
-            # Run database migrations.
-            if [ -d "$APP_DIR/db/migrations" ] && [ "$(find "$APP_DIR/db/migrations" -name "*.sql" 2>/dev/null | wc -l)" -gt 0 ]; then
+            # Run database migrations from both package and root migration directories.
+            MIGRATION_DIRS=()
+            if [ -d "$APP_DIR/packages/db/migrations" ]; then
+              MIGRATION_DIRS+=("$APP_DIR/packages/db/migrations")
+            fi
+            if [ -d "$APP_DIR/db/migrations" ]; then
+              MIGRATION_DIRS+=("$APP_DIR/db/migrations")
+            fi
+
+            if [ "${#MIGRATION_DIRS[@]}" -gt 0 ]; then
               if [ -z "${MIGRATION_DB_URL:-}" ]; then
                 echo "WARNING: DATABASE_URL not found in root .env.production; skipping migrations." >&2
               else
-                echo "Running database migrations (dry-run)..."
-                DRY_RUN=1 DATABASE_URL="$MIGRATION_DB_URL" bash "$APP_DIR/infra/scripts/run-migrations.sh" || {
-                  echo "Migration dry-run failed; aborting deploy." >&2
-                  exit 1
-                }
-                echo "Migration dry-run succeeded. Running actual migrations..."
-                DATABASE_URL="$MIGRATION_DB_URL" bash "$APP_DIR/infra/scripts/run-migrations.sh"
+                for MIGRATION_DIR in "${MIGRATION_DIRS[@]}"; do
+                  if [ "$(find "$MIGRATION_DIR" -name "*.sql" 2>/dev/null | wc -l)" -eq 0 ]; then
+                    continue
+                  fi
+
+                  echo "Running database migrations from $MIGRATION_DIR (dry-run)..."
+                  DRY_RUN=1 DATABASE_URL="$MIGRATION_DB_URL" MIGRATIONS_DIR="$MIGRATION_DIR" bash "$APP_DIR/infra/scripts/run-migrations.sh" || {
+                    echo "Migration dry-run failed for $MIGRATION_DIR; aborting deploy." >&2
+                    exit 1
+                  }
+
+                  echo "Migration dry-run succeeded for $MIGRATION_DIR. Running actual migrations..."
+                  DATABASE_URL="$MIGRATION_DB_URL" MIGRATIONS_DIR="$MIGRATION_DIR" bash "$APP_DIR/infra/scripts/run-migrations.sh"
+                done
               fi
             fi
 
