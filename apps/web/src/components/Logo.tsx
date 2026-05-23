@@ -6,7 +6,7 @@ interface LogoProps {
 }
 
 export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
-  const sizeMap = { sm: 48, md: 64, lg: 96 };
+  const sizeMap = { sm: 72, md: 96, lg: 108 };
   const s = sizeMap[size];
   const padding = s * 0.15;
   const innerS = s - padding * 2;
@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
           className="bg-teal-600 dark:bg-teal-500 flex items-center justify-center"
           style={{ width: innerS, height: innerS, borderRadius: '12px' }}
         >
-          <span className="text-white font-bold" style={{ fontSize: innerS * 0.5 }}>
+          <span className="text-white font-bold" style={{ fontSize: innerS * 0.4 }}>
             GHS
           </span>
         </div>
