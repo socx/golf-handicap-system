@@ -9,7 +9,10 @@ export type AuthAuditEventType =
   | 'auth_user_deactivated'
   | 'auth_user_deleted'
   | 'auth_password_reset_requested'
-  | 'auth_password_reset_completed';
+  | 'auth_password_reset_completed'
+  | 'player_user_linked'
+  | 'player_user_unlinked'
+  | 'player_deleted';
 
 export async function logAuthAuditEvent({
   requestId,

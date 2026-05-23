@@ -12,6 +12,7 @@ import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes
 import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
+import { handleCreatePlayer, handleDeletePlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -23,6 +24,20 @@ function parseUserDeleteRoute(path: string): { userId: string } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { userId: String(match[1] || '') };
+}
+
+function parsePlayerRoute(path: string): { playerId: string; action: 'update' | 'link-user' | 'delete' } | null {
+  const updateOrDeleteMatch = path.match(/^\/(?:api\/)?players\/([0-9a-fA-F-]+)$/);
+  if (updateOrDeleteMatch) {
+    return { playerId: String(updateOrDeleteMatch[1] || ''), action: 'update' };
+  }
+
+  const linkMatch = path.match(/^\/(?:api\/)?players\/([0-9a-fA-F-]+)\/link-user$/);
+  if (linkMatch) {
+    return { playerId: String(linkMatch[1] || ''), action: 'link-user' };
+  }
+
+  return null;
 }
 
 const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -122,6 +137,33 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'GET' && (pathname === '/api/admin/users' || pathname === '/admin/users')) {
       await handleListUsers(req, res, requestUrl);
+      return;
+    }
+
+    // ── Players ───────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/api/players' || pathname === '/players')) {
+      await handleCreatePlayer(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/players' || pathname === '/players')) {
+      await handleListPlayers(req, res, requestUrl);
+      return;
+    }
+
+    const playerRoute = parsePlayerRoute(pathname);
+    if (playerRoute && method === 'PATCH' && playerRoute.action === 'update') {
+      await handleUpdatePlayer(req, res, playerRoute.playerId);
+      return;
+    }
+
+    if (playerRoute && method === 'PATCH' && playerRoute.action === 'link-user') {
+      await handleLinkPlayerUser(req, res, requestId, playerRoute.playerId);
+      return;
+    }
+
+    if (playerRoute && method === 'DELETE' && playerRoute.action === 'update') {
+      await handleDeletePlayer(req, res, requestId, playerRoute.playerId);
       return;
     }
 
