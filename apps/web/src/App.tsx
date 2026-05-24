@@ -22,6 +22,9 @@ const ActivateAccountPage = lazy(async () => {
 
 const DashboardPage = lazy(async () => import('./pages/DashboardPage'));
 const SectionPlaceholderPage = lazy(async () => import('./pages/SectionPlaceholderPage'));
+const ComponentPreviewPage = lazy(async () =>
+  import('./pages/ComponentPreviewPage').then((m) => ({ default: m.ComponentPreviewPage }))
+);
 
 function AppRoutes() {
   return (
@@ -29,6 +32,7 @@ function AppRoutes() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/register" element={<RegisterPage />} />
       <Route path="/auth/activate" element={<ActivateAccountPage />} />
+      <Route path="/components" element={<ComponentPreviewPage />} />
 
       <Route
         element={
