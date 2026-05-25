@@ -112,9 +112,14 @@ export const CourseDetailPage: React.FC = () => {
             {course.city}, {course.country}
           </p>
         </div>
-        <Button variant="secondary" onClick={() => navigate('/courses')}>
-          Back to Courses
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate(`/courses/${course.id}/configurations/new`)}>
+            Add Tee Configuration
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/courses')}>
+            Back to Courses
+          </Button>
+        </div>
       </div>
 
       {/* Course Details Card */}
@@ -282,6 +287,16 @@ export const CourseDetailPage: React.FC = () => {
                       )}
                     </div>
                   )}
+
+                  <div className="border-t border-slate-100 pt-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => navigate(`/courses/${course.id}/configurations/${teeConfig.id}/edit`)}
+                    >
+                      Edit Configuration
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

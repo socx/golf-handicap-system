@@ -46,3 +46,41 @@ describe('coursesApi.list', () => {
     expect(response.data.pagination.pages).toBe(1);
   });
 });
+
+describe('tee configuration API helpers', () => {
+  it('calls create configuration endpoint', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 'cfg-1' } } as never);
+
+    await coursesApi.createConfiguration('course-1', {
+      name: 'Members',
+      teeColour: 'White',
+      holes: [
+        {
+          holeNumber: 1,
+          distanceYards: 350,
+          par: 4,
+          strokeIndex: 1,
+        },
+      ],
+    });
+
+    expect(postSpy).toHaveBeenCalledWith('/courses/course-1/configurations', expect.any(Object));
+  });
+
+  it('calls update configuration metadata and holes endpoints', async () => {
+    const patchSpy = vi.spyOn(api, 'patch').mockResolvedValue({ data: {} } as never);
+
+    await coursesApi.updateConfiguration('cfg-1', { name: 'Updated' });
+    await coursesApi.updateConfigurationHoles('cfg-1', [
+      {
+        id: 'hole-1',
+        par: 5,
+      },
+    ]);
+
+    expect(patchSpy).toHaveBeenNthCalledWith(1, '/configurations/cfg-1', { name: 'Updated' });
+    expect(patchSpy).toHaveBeenNthCalledWith(2, '/configurations/cfg-1', {
+      holes: [{ id: 'hole-1', par: 5 }],
+    });
+  });
+});

@@ -32,6 +32,7 @@ const ComponentPreviewPage = lazy(async () =>
 
 const CoursesPage = lazy(async () => import('./pages/CoursesPage'));
 const CourseDetailPage = lazy(async () => import('./pages/CourseDetailPage'));
+const CourseTeeConfigEditorPage = lazy(async () => import('./pages/CourseTeeConfigEditorPage'));
 const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 
@@ -60,6 +61,8 @@ function AppRoutes() {
         />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+        <Route path="/courses/:courseId/configurations/new" element={<CourseTeeConfigEditorPage />} />
+        <Route path="/courses/:courseId/configurations/:configId/edit" element={<CourseTeeConfigEditorPage />} />
         <Route path="/rounds" element={<RoundsPage />} />
         <Route
           path="/handicap"

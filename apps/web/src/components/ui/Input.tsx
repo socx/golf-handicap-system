@@ -28,6 +28,7 @@ export interface InputProps {
   min?: string | number;
   max?: string | number;
   'aria-describedby'?: string;
+  'aria-label'?: string;
 }
 
 const sizeStyles: Record<InputSize, string> = {

@@ -25,6 +25,34 @@ export interface TeeConfigurationDetail extends TeeConfiguration {
   holes: Hole[];
 }
 
+export interface TeeConfigurationCreatePayload {
+  name: string;
+  teeColour: string;
+  courseRating?: number | null;
+  slopeRating?: number | null;
+  holes: Array<{
+    holeNumber: number;
+    distanceYards?: number | null;
+    par: number;
+    strokeIndex: number;
+  }>;
+}
+
+export interface TeeConfigurationUpdatePayload {
+  name?: string;
+  teeColour?: string;
+  courseRating?: number | null;
+  slopeRating?: number | null;
+}
+
+export interface TeeHoleUpdatePayload {
+  id: string;
+  holeNumber?: number;
+  distanceYards?: number | null;
+  par?: number;
+  strokeIndex?: number;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -92,4 +120,10 @@ export const coursesApi = {
   },
 
   get: (courseId: string) => api.get<Course>(`/courses/${courseId}`),
+  createConfiguration: (courseId: string, payload: TeeConfigurationCreatePayload) =>
+    api.post<TeeConfigurationDetail>(`/courses/${courseId}/configurations`, payload),
+  updateConfiguration: (configId: string, payload: TeeConfigurationUpdatePayload) =>
+    api.patch<TeeConfigurationDetail>(`/configurations/${configId}`, payload),
+  updateConfigurationHoles: (configId: string, holes: TeeHoleUpdatePayload[]) =>
+    api.patch<{ holes: Hole[] }>(`/configurations/${configId}`, { holes }),
 };

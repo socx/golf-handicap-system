@@ -239,15 +239,37 @@ So that admins can manage course setups visually.
 **Target Date:** **05 August 2026**
 
 ### Acceptance Criteria
-- [ ] Form for configuration metadata.  
-- [ ] Editable table/grid for holes (distance, par, stroke index).  
-- [ ] Validation errors shown clearly.  
-- [ ] Save triggers appropriate API calls.  
-- [ ] Success shows toast + redirect.
+- [x] Form for configuration metadata.  
+- [x] Editable table/grid for holes (distance, par, stroke index).  
+- [x] Validation errors shown clearly.  
+- [x] Save triggers appropriate API calls.  
+- [x] Success shows toast + redirect.
 
 ### Dependencies
 - Create/update configuration APIs  
 - Frontend routing
+
+### Implementation Notes
+- Added a dedicated tee configuration editor page at `apps/web/src/pages/CourseTeeConfigEditorPage.tsx` supporting both create and edit modes.
+- Added routes in `apps/web/src/App.tsx`:
+	- `/courses/:courseId/configurations/new`
+	- `/courses/:courseId/configurations/:configId/edit`
+- Extended `coursesApi` in `apps/web/src/api/courses.ts` with:
+	- `createConfiguration(courseId, payload)`
+	- `updateConfiguration(configId, payload)`
+	- `updateConfigurationHoles(configId, holes)`
+- Updated `CourseDetailPage` to include navigation actions:
+	- Add Tee Configuration button
+	- Edit Configuration button per tee configuration card
+- Editor includes metadata form fields (name, tee colour, course rating, slope rating) and an editable holes table (hole number, distance, par, stroke index).
+- Validation errors are shown in a clear error summary list and block save when invalid.
+- Save behavior:
+	- Create mode calls configuration create API.
+	- Edit mode calls metadata update API and holes update API.
+	- Both show success toast and redirect back to course detail page.
+- Added tests:
+	- `apps/web/src/test/CourseTeeConfigEditorPage.test.tsx` (create, edit, validation)
+	- Extended `apps/web/src/api/courses.test.ts` for new API helpers.
 
 ---
 
