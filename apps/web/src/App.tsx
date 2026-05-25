@@ -1,9 +1,11 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import AppErrorBoundary from './components/feedback/AppErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteFallback from './components/RouteFallback';
 import AppLayout from './components/layout/AppLayout';
 import { AuthProvider } from './context/AuthContext';
+import ToastProvider from './components/feedback/ToastProvider';
 
 const LoginPage = lazy(async () => {
   const module = await import('./pages/LoginPage');
@@ -73,11 +75,15 @@ function AppRoutes() {
 
 export const App: React.FC = () => (
   <BrowserRouter>
-    <AuthProvider>
-      <Suspense fallback={<RouteFallback />}>
-        <AppRoutes />
-      </Suspense>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppErrorBoundary>
+          <Suspense fallback={<RouteFallback />}>
+            <AppRoutes />
+          </Suspense>
+        </AppErrorBoundary>
+      </AuthProvider>
+    </ToastProvider>
   </BrowserRouter>
 );
 
