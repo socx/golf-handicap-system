@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
 	color: #0f172a;
 	background-color: #f8fafc;
@@ -20,7 +22,7 @@ body {
 	min-height: 100vh;
 }
 
-.dark :root,
+:root.dark,
 .dark body {
 	color: #e2e8f0;
 	background-color: #020617;
