@@ -88,4 +88,33 @@ describe('PlayersPage', () => {
       });
     });
   });
+
+  it('keeps focus in filter input while typing', async () => {
+    vi.spyOn(playersApi, 'list').mockResolvedValue({
+      players: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 1,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/players']}>
+        <Routes>
+          <Route path="/players" element={<PlayersPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const filterInput = await screen.findByPlaceholderText('Filter by club...');
+    filterInput.focus();
+    expect(filterInput).toHaveFocus();
+
+    fireEvent.change(filterInput, { target: { value: 'N' } });
+    await waitFor(() => {
+      expect(filterInput).toHaveFocus();
+    });
+  });
 });

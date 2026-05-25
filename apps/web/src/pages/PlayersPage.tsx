@@ -12,6 +12,7 @@ const PAGE_SIZE = 10;
 export const PlayersPage: React.FC = () => {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[] | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [club, setClub] = useState('');
@@ -28,6 +29,7 @@ export const PlayersPage: React.FC = () => {
     let cancelled = false;
 
     const fetchPlayers = async () => {
+      setIsFetching(true);
       try {
         const result = await playersApi.list({
           page,
@@ -46,6 +48,10 @@ export const PlayersPage: React.FC = () => {
         console.error('Failed to fetch players:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch players');
         setPlayers([]);
+      } finally {
+        if (!cancelled) {
+          setIsFetching(false);
+        }
       }
     };
 
@@ -93,10 +99,16 @@ export const PlayersPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Input placeholder="Search by name or email..." value={search} onChange={handleSearchChange} disabled={loading} />
-        <Input placeholder="Filter by club..." value={club} onChange={handleClubChange} disabled={loading} />
-        <Input placeholder="Filter by country..." value={country} onChange={handleCountryChange} disabled={loading} maxLength={2} />
+        <Input placeholder="Search by name or email..." value={search} onChange={handleSearchChange} />
+        <Input placeholder="Filter by club..." value={club} onChange={handleClubChange} />
+        <Input placeholder="Filter by country..." value={country} onChange={handleCountryChange} maxLength={2} />
       </div>
+
+      {isFetching && players !== null && (
+        <p className="text-xs text-slate-500 dark:text-slate-400" role="status" aria-live="polite">
+          Updating player results...
+        </p>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
