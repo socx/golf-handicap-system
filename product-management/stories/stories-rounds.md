@@ -31,16 +31,25 @@ So that detailed round data can be stored per player and tee configuration.
 **Target Date:** **15 July 2026**
 
 ### Acceptance Criteria
-- [ ] `rounds` table includes: id, player_id, tee_configuration_id, played_at, playing_handicap, adjusted_gross_score, score_differential, totals, flags, timestamps.  
-- [ ] `hole_scores` table includes: id, round_id, hole_number, strokes, putts, GIR, fairway_hit, in_sand, penalties, net_double_bogey_adjusted.  
-- [ ] Hole numbers unique per round.  
-- [ ] Indexes on player/date and tee_configuration_id.  
-- [ ] Migrations apply and roll back cleanly.
+- [x] `rounds` table includes: id, player_id, tee_configuration_id, played_at, playing_handicap, adjusted_gross_score, score_differential, totals, flags, timestamps.  
+- [x] `hole_scores` table includes: id, round_id, hole_number, strokes, putts, GIR, fairway_hit, in_sand, penalties, net_double_bogey_adjusted.  
+- [x] Hole numbers unique per round.  
+- [x] Indexes on player/date and tee_configuration_id.  
+- [x] Migrations apply and roll back cleanly.
 
 ### Dependencies
 - Players table  
 - Tee configurations & holes  
 - Migration tooling
+
+### Implementation Notes
+- Added `009_rounds_and_hole_scores.sql` to `db/migrations` (deploy/CI path) and `packages/db/migrations` (local migration script path).
+- `rounds` schema includes core round metadata, aggregate totals, flags, soft-delete column, and timestamps.
+- `hole_scores` schema includes per-hole scoring fields and adjustment columns.
+- Enforced unique hole number per round via `idx_hole_scores_round_hole_unique`.
+- Added indexes for `rounds(player_id, played_at)` and `rounds(tee_configuration_id)` plus `hole_scores(round_id)`.
+- Foreign key constraints are added conditionally to avoid migration failures in partially-provisioned environments.
+- Added `apps/api/test/rounds-migrations.e2e.test.mjs` to validate schema creation, unique/index presence, and transaction rollback behavior.
 
 ---
 
