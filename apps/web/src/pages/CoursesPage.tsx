@@ -11,6 +11,7 @@ export const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
   const [search, setSearch] = useState('');
   const [country, setCountry] = useState('');
   const [page, setPage] = useState(1);
@@ -25,6 +26,7 @@ export const CoursesPage: React.FC = () => {
     let cancelled = false;
 
     const fetchCourses = async () => {
+      setIsFetching(true);
       try {
         const response = await coursesApi.list(page, 10, search || undefined, country || undefined);
         if (cancelled) return;
@@ -36,6 +38,8 @@ export const CoursesPage: React.FC = () => {
         console.error('Failed to fetch courses:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch courses');
         setCourses([]);
+      } finally {
+        if (!cancelled) setIsFetching(false);
       }
     };
 
@@ -82,15 +86,18 @@ export const CoursesPage: React.FC = () => {
           placeholder="Search courses by name..."
           value={search}
           onChange={handleSearchChange}
-          disabled={loading}
         />
         <Input
           placeholder="Filter by country..."
           value={country}
           onChange={handleCountryChange}
-          disabled={loading}
         />
       </div>
+
+      {/* Fetching status */}
+      {isFetching && courses !== null && (
+        <p role="status" aria-live="polite" className="sr-only">Updating course results...</p>
+      )}
 
       {/* Error message */}
       {error && (
