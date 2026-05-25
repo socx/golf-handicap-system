@@ -76,8 +76,8 @@ export const CoursesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Courses</h2>
-        <p className="mt-1 text-sm text-slate-600">Browse and manage golf courses.</p>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Courses</h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Browse and manage golf courses.</p>
       </div>
 
       {/* Search and filters */}
@@ -101,8 +101,8 @@ export const CoursesPage: React.FC = () => {
 
       {/* Error message */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
 
@@ -111,7 +111,7 @@ export const CoursesPage: React.FC = () => {
         <div className="space-y-4">
           <Table>
             <TableHead>
-              <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
+              <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 dark:border-slate-800 dark:text-slate-300">
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">City</th>
                 <th className="px-4 py-3">Country</th>
@@ -123,12 +123,12 @@ export const CoursesPage: React.FC = () => {
               {(courses || []).map((course) => (
                 <tr
                   key={course.id}
-                  className="border-b border-slate-100 transition hover:bg-slate-50"
+                  className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-900 dark:hover:bg-slate-900/40"
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">{course.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{course.city}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{course.country}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{course.phone || '—'}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">{course.name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.city}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.country}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.phone || '—'}</td>
                   <td className="px-4 py-3">
                     <Button
                       size="sm"
@@ -159,8 +159,8 @@ export const CoursesPage: React.FC = () => {
           <SkeletonTable rows={5} columns={5} />
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-sm text-slate-600">No courses found</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/40">
+          <p className="text-sm text-slate-600 dark:text-slate-400">No courses found</p>
         </div>
       )}
     </div>

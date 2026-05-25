@@ -295,13 +295,13 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
           <Button variant="secondary" onClick={() => navigate('/courses')}>
             Back to Courses
           </Button>
         </div>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">Course ID is missing.</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          <p className="text-sm text-red-700 dark:text-red-300">Course ID is missing.</p>
         </div>
       </div>
     );
@@ -311,7 +311,7 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
           <Button variant="secondary" onClick={() => navigate(`/courses/${courseId}`)}>
             Back to Course
           </Button>
@@ -325,8 +325,8 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
-          <p className="mt-1 text-sm text-slate-600">Configure tee metadata and hole setup.</p>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Configure tee metadata and hole setup.</p>
         </div>
         <Button variant="secondary" onClick={() => navigate(`/courses/${courseId}`)}>
           Back to Course
@@ -334,15 +334,15 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
       </div>
 
       {pageError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">{pageError}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          <p className="text-sm text-red-700 dark:text-red-300">{pageError}</p>
         </div>
       )}
 
       {validationIssues.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
-          <p className="text-sm font-semibold text-red-700">Please fix the following validation errors:</p>
-          <ul className="mt-2 list-disc pl-5 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20" role="alert">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-300">Please fix the following validation errors:</p>
+          <ul className="mt-2 list-disc pl-5 text-sm text-red-700 dark:text-red-300">
             {validationIssues.map((issue) => (
               <li key={`${issue.field}-${issue.message}`}>{issue.message}</li>
             ))}
@@ -351,25 +351,25 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
       )}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6" noValidate>
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Configuration Metadata</h3>
+        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/40">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Configuration Metadata</h3>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="config-name">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="config-name">
                 Name
               </label>
               <Input id="config-name" value={metadata.name} onChange={handleMetadataChange('name')} />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="config-tee-colour">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="config-tee-colour">
                 Tee Colour
               </label>
               <Input id="config-tee-colour" value={metadata.teeColour} onChange={handleMetadataChange('teeColour')} />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="config-course-rating">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="config-course-rating">
                 Course Rating
               </label>
               <Input
@@ -383,7 +383,7 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="config-slope-rating">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="config-slope-rating">
                 Slope Rating
               </label>
               <Input
@@ -397,9 +397,9 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
 
             {!isEditMode && (
               <div className="md:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Hole Count</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Hole Count</span>
                 <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="holeCount"
@@ -409,7 +409,7 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
                     />
                     9 holes
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="holeCount"
@@ -425,21 +425,21 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Hole Setup</h3>
-          <p className="mt-1 text-sm text-slate-600">Edit distance, par, and stroke index for each hole.</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/40">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Hole Setup</h3>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Edit distance, par, and stroke index for each hole.</p>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
               <thead>
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                <tr className="text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-400">
                   <th className="px-2 py-2">Hole</th>
                   <th className="px-2 py-2">Distance (yds)</th>
                   <th className="px-2 py-2">Par</th>
                   <th className="px-2 py-2">Stroke Index</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {holes.map((hole, index) => (
                   <tr key={hole.id || `hole-${index}`}>
                     <td className="px-2 py-2">
