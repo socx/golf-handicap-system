@@ -5,12 +5,26 @@ export interface Player {
   first_name: string;
   last_name: string;
   middle_name: string | null;
+  dob: string | null;
+  gender: string | null;
   club: string | null;
   country: string;
   handicap_index: number | null;
   email: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PlayerUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string | null;
+  dob?: string | null;
+  gender?: string | null;
+  club?: string | null;
+  email?: string | null;
+  country?: string;
+  handicap_index?: number | null;
 }
 
 export interface PlayersListResponse {
@@ -59,6 +73,14 @@ export function normalizePlayersListResponse(payload: unknown): PlayersListRespo
 }
 
 export const playersApi = {
+  get: async (playerId: string): Promise<Player> => {
+    const response = await api.get<{ player: Player }>(`/players/${playerId}`);
+    return response.data.player;
+  },
+  update: async (playerId: string, payload: PlayerUpdatePayload): Promise<Player> => {
+    const response = await api.patch<{ player: Player }>(`/players/${playerId}`, payload);
+    return response.data.player;
+  },
   list: async (query: PlayersListQuery = {}): Promise<PlayersListResponse> => {
     const params = new URLSearchParams();
 

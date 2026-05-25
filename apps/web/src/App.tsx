@@ -33,6 +33,7 @@ const ComponentPreviewPage = lazy(async () =>
 const CoursesPage = lazy(async () => import('./pages/CoursesPage'));
 const CourseDetailPage = lazy(async () => import('./pages/CourseDetailPage'));
 const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
+const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 
 function AppRoutes() {
   return (
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/players" element={<PlayersPage />} />
+        <Route path="/players/:playerId/edit" element={<PlayerEditPage />} />
         <Route
           path="/players/:playerId"
           element={<SectionPlaceholderPage title="Player Profile" description="Detailed player profile views are scheduled in the next story." />}

@@ -24,6 +24,10 @@ export interface InputProps {
   minLength?: number;
   required?: boolean;
   pattern?: string;
+  step?: string | number;
+  min?: string | number;
+  max?: string | number;
+  'aria-describedby'?: string;
 }
 
 const sizeStyles: Record<InputSize, string> = {

@@ -142,9 +142,14 @@ export const PlayersPage: React.FC = () => {
                     {typeof player.handicap_index === 'number' ? player.handicap_index.toFixed(1) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <Button size="sm" variant="secondary" onClick={() => handleOpenProfile(player.id)} disabled={loading}>
-                      View Profile
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => handleOpenProfile(player.id)} disabled={loading}>
+                        View Profile
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/players/${player.id}/edit`)} disabled={loading}>
+                        Edit
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

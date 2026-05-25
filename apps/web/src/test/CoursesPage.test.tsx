@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { coursesApi } from '../api/courses';
 import CoursesPage from '../pages/CoursesPage';
 
-const makeMockResponse = (courses = [], pagination = { page: 1, limit: 10, total: 0, pages: 1 }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const makeMockResponse = (courses: any[] = [], pagination = { page: 1, limit: 10, total: 0, pages: 1 }) => ({
   data: { data: courses, pagination },
   status: 200,
   statusText: 'OK',

@@ -13,7 +13,7 @@ import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
-import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
+import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
@@ -194,6 +194,11 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     }
 
     const playerRoute = parsePlayerRoute(pathname);
+    if (playerRoute && method === 'GET' && playerRoute.action === 'update') {
+      await handleGetPlayer(req, res, playerRoute.playerId);
+      return;
+    }
+
     if (playerRoute && method === 'PATCH' && playerRoute.action === 'update') {
       await handleUpdatePlayer(req, res, playerRoute.playerId);
       return;

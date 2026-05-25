@@ -360,6 +360,35 @@ function buildPlayersCsv(rows: Player[]): string {
   return `${lines.join('\n')}\n`;
 }
 
+export async function handleGetPlayer(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  playerId: string,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  if (!isUuid(playerId)) {
+    sendError(res, 400, 'validation_error', 'Player id must be a valid UUID');
+    return;
+  }
+
+  try {
+    const player = await fetchPlayerById(playerId);
+    if (!player || player.deleted_at) {
+      sendError(res, 404, 'not_found', 'Player not found');
+      return;
+    }
+    sendJson(res, 200, { player });
+  } catch (error) {
+    console.error('[players.get] unexpected error:', error);
+    sendError(res, 500, 'player_fetch_failed', 'Unable to fetch player at this time');
+  }
+}
+
 export async function handleCreatePlayer(
   req: http.IncomingMessage,
   res: http.ServerResponse,

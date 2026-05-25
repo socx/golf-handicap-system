@@ -13,6 +13,8 @@ describe('PlayersPage', () => {
           first_name: 'Mia',
           last_name: 'Turner',
           middle_name: null,
+          dob: null,
+          gender: null,
           club: 'Harbor Golf Club',
           country: 'GB',
           handicap_index: 8.2,

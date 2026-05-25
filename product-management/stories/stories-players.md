@@ -274,14 +274,23 @@ So that admins can update player details.
 **Target Date:** **10 July 2026**
 
 ### Acceptance Criteria
-- [ ] Form supports editing all fields.  
-- [ ] Validation errors shown clearly.  
-- [ ] Save triggers PATCH `/players/:id`.  
-- [ ] Success shows toast + redirect.
+- [x] Form supports editing all fields.  
+- [x] Validation errors shown clearly.  
+- [x] Save triggers PATCH `/players/:id`.  
+- [x] Success shows toast + redirect.
 
 ### Dependencies
 - Update player API  
 - Frontend routing
+
+### Implementation Notes
+- Added `handleGetPlayer` handler to `apps/api/src/routes/players.ts` exposing `GET /players/:id` (admin auth required).
+- Wired `GET /players/:id` in `apps/api/src/app.ts`.
+- Extended `apps/web/src/api/players.ts`: added `dob`/`gender` to `Player` type, `PlayerUpdatePayload` interface, `playersApi.get()` and `playersApi.update()` methods.
+- Created `apps/web/src/pages/PlayerEditPage.tsx` with form for all player fields, client-side validation, success toast + redirect to `/players`, server error display.
+- Wired `/players/:playerId/edit` route in `App.tsx`; added Edit button on `PlayersPage`.
+- Extended `InputProps` to accept `step`, `min`, `max`, `aria-describedby` for numeric inputs.
+- Tests: `apps/web/src/test/PlayerEditPage.test.tsx` — 5 tests covering load/populate, required validation, PATCH on submit, server error display, cancel navigation.
 
 ---
 
