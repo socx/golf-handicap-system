@@ -290,10 +290,10 @@ So that users can choose light or dark mode.
 **Target Date:** **15 October 2026**
 
 ### Acceptance Criteria
-- [ ] Light/dark mode toggle.  
-- [ ] Tailwind dark mode classes configured.  
-- [ ] Theme stored in localStorage.  
-- [ ] Smooth transitions.
+- [x] Light/dark mode toggle.  
+- [x] Tailwind dark mode classes configured.  
+- [x] Theme stored in localStorage.  
+- [x] Smooth transitions.
 
 ### Dependencies
 - Tailwind setup  

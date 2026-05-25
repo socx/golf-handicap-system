@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import RouteFallback from './components/RouteFallback';
 import AppLayout from './components/layout/AppLayout';
 import { AuthProvider } from './context/AuthContext';
+import ThemeProvider from './context/ThemeContext';
 import ToastProvider from './components/feedback/ToastProvider';
 
 const LoginPage = lazy(async () => {
@@ -75,15 +76,17 @@ function AppRoutes() {
 
 export const App: React.FC = () => (
   <BrowserRouter>
-    <ToastProvider>
-      <AuthProvider>
-        <AppErrorBoundary>
-          <Suspense fallback={<RouteFallback />}>
-            <AppRoutes />
-          </Suspense>
-        </AppErrorBoundary>
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AppErrorBoundary>
+            <Suspense fallback={<RouteFallback />}>
+              <AppRoutes />
+            </Suspense>
+          </AppErrorBoundary>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   </BrowserRouter>
 );
 

@@ -12,9 +12,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ children, className, hoverable = false, border = true, ...props }, ref) => {
     const cardClass = twMerge(
       clsx(
-        'rounded-lg bg-white transition-all duration-200',
-        border ? 'border border-slate-200' : 'shadow-md',
-        hoverable && 'hover:shadow-lg hover:border-slate-300 cursor-pointer',
+        'rounded-lg bg-white transition-colors duration-300 dark:bg-slate-950',
+        border ? 'border border-slate-200 dark:border-slate-800' : 'shadow-md',
+        hoverable && 'hover:shadow-lg hover:border-slate-300 cursor-pointer dark:hover:border-slate-700',
         className
       )
     );
@@ -40,7 +40,7 @@ export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
       <div
         ref={ref}
         className={twMerge(
-          clsx('px-6 py-4', divider && 'border-b border-slate-200', className)
+          clsx('px-6 py-4', divider && 'border-b border-slate-200 dark:border-slate-800', className)
         )}
         {...props}
       >
@@ -59,7 +59,7 @@ export interface CardBodyProps extends React.HTMLAttributes<HTMLDivElement> {
 export const CardBody = React.forwardRef<HTMLDivElement, CardBodyProps>(
   ({ children, className, ...props }, ref) => {
     return (
-      <div ref={ref} className={twMerge(clsx('px-6 py-4', className))} {...props}>
+      <div ref={ref} className={twMerge(clsx('px-6 py-4 text-slate-700 dark:text-slate-300', className))} {...props}>
         {children}
       </div>
     );
@@ -78,7 +78,7 @@ export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
       <div
         ref={ref}
         className={twMerge(
-          clsx('px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-lg', className)
+          clsx('px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-lg dark:border-slate-800 dark:bg-slate-900', className)
         )}
         {...props}
       >

@@ -15,7 +15,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
     <div className="flex flex-col items-center gap-2">
       <div className="flex items-center justify-center" style={{ width: s, height: s }}>
         <div
-          className="bg-teal-600 dark:bg-teal-500 flex items-center justify-center"
+          className="flex items-center justify-center bg-teal-600 dark:bg-teal-500"
           style={{ width: innerS, height: innerS, borderRadius: '12px' }}
         >
           <span className="text-white font-bold" style={{ fontSize: innerS * 0.4 }}>

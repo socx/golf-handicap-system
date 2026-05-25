@@ -58,7 +58,7 @@ export const LoginPage: React.FC = () => {
       footer={selfRegistrationEnabled ? (
         <>
           Need an account?{' '}
-          <Link className="font-semibold text-teal-700 transition hover:text-teal-800" to="/auth/register">
+          <Link className="font-semibold text-teal-700 transition hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200" to="/auth/register">
             Register as a player
           </Link>
         </>
@@ -66,7 +66,7 @@ export const LoginPage: React.FC = () => {
     >
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -74,30 +74,30 @@ export const LoginPage: React.FC = () => {
                 type="email"
                 autoComplete="email"
                 {...register('email')}
-                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition-colors focus:border-teal-500 focus:ring-4 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-teal-900/40"
               />
-              {errors.email && <p className="mt-2 text-sm font-medium text-rose-600">{errors.email.message}</p>}
+              {errors.email && <p className="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400">{errors.email.message}</p>}
             </div>
 
             <div>
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Password
                 </label>
-                <span className="text-sm font-medium text-teal-700">Secure access</span>
+                <span className="text-sm font-medium text-teal-700 dark:text-teal-300">Secure access</span>
               </div>
               <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 {...register('password')}
-                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition-colors focus:border-teal-500 focus:ring-4 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-teal-900/40"
               />
-              {errors.password && <p className="mt-2 text-sm font-medium text-rose-600">{errors.password.message}</p>}
+              {errors.password && <p className="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400">{errors.password.message}</p>}
             </div>
 
             {errors.root?.message && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
                 {errors.root.message}
               </div>
             )}
@@ -105,7 +105,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
             >
               {submitting ? 'Signing in...' : 'Sign in'}
             </button>

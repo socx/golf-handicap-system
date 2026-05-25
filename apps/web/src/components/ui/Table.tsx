@@ -9,10 +9,10 @@ export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
 export const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({ children, className, ...props }, ref) => {
     return (
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
         <table
           ref={ref}
-          className={twMerge(clsx('w-full text-left text-sm', className))}
+          className={twMerge(clsx('w-full text-left text-sm text-slate-700 dark:text-slate-300', className))}
           {...props}
         >
           {children}
@@ -33,7 +33,7 @@ export const TableHead = React.forwardRef<HTMLTableSectionElement, TableHeadProp
     return (
       <thead
         ref={ref}
-        className={twMerge(clsx('bg-slate-50 border-b border-slate-200', className))}
+        className={twMerge(clsx('bg-slate-50 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-900', className))}
         {...props}
       >
         {children}
@@ -73,9 +73,9 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
         ref={ref}
         className={twMerge(
           clsx(
-            'border-b border-slate-200 last:border-b-0',
-            striped && 'odd:bg-white even:bg-slate-50',
-            hover && 'hover:bg-teal-50 transition-colors',
+            'border-b border-slate-200 last:border-b-0 dark:border-slate-800',
+            striped && 'odd:bg-white even:bg-slate-50 dark:odd:bg-slate-950 dark:even:bg-slate-900',
+            hover && 'hover:bg-teal-50 transition-colors dark:hover:bg-slate-800',
             className
           )
         )}
@@ -103,8 +103,8 @@ export const TableHeaderCell = React.forwardRef<HTMLTableCellElement, TableHeade
         ref={ref}
         className={twMerge(
           clsx(
-            'px-6 py-3 font-semibold text-slate-900',
-            sortable && 'cursor-pointer hover:bg-slate-100 select-none',
+            'px-6 py-3 font-semibold text-slate-900 dark:text-slate-100',
+            sortable && 'cursor-pointer hover:bg-slate-100 select-none dark:hover:bg-slate-800',
             className
           )
         )}
@@ -140,7 +140,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
     return (
       <td
         ref={ref}
-        className={twMerge(clsx('px-6 py-4 text-slate-700', className))}
+        className={twMerge(clsx('px-6 py-4 text-slate-700 dark:text-slate-300', className))}
         {...props}
       >
         {children}

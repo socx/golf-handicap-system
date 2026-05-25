@@ -77,7 +77,7 @@ export const Pagination = React.forwardRef<HTMLDivElement, PaginationProps>(
 
       if (isEllipsis) {
         return (
-          <span className="px-2 py-1 text-slate-500">
+            <span className="px-2 py-1 text-slate-500 dark:text-slate-400">
             {page}
           </span>
         );
@@ -92,8 +92,8 @@ export const Pagination = React.forwardRef<HTMLDivElement, PaginationProps>(
               'rounded-md border transition-colors duration-200 font-medium disabled:cursor-not-allowed',
               sizeStyles[size],
               isActive
-                ? 'bg-teal-600 text-white border-teal-600'
-                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600 active:bg-teal-50'
+                ? 'bg-teal-600 text-white border-teal-600 dark:bg-teal-500 dark:border-teal-500 dark:text-slate-950'
+                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600 active:bg-teal-50 dark:border-slate-700 dark:text-slate-100 dark:hover:border-teal-400 dark:hover:text-teal-300 dark:active:bg-slate-800'
             )
           )}
         >
@@ -117,8 +117,8 @@ export const Pagination = React.forwardRef<HTMLDivElement, PaginationProps>(
             clsx(
               'rounded-md border px-3 py-2 transition-colors duration-200 disabled:cursor-not-allowed',
               currentPage === 1
-                ? 'border-slate-200 text-slate-400'
-                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600'
+                ? 'border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-600'
+                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-teal-400 dark:hover:text-teal-300'
             )
           )}
           aria-label="Previous page"
@@ -151,8 +151,8 @@ export const Pagination = React.forwardRef<HTMLDivElement, PaginationProps>(
             clsx(
               'rounded-md border px-3 py-2 transition-colors duration-200 disabled:cursor-not-allowed',
               currentPage === totalPages
-                ? 'border-slate-200 text-slate-400'
-                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600'
+                ? 'border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-600'
+                : 'border-slate-300 text-slate-900 hover:border-teal-600 hover:text-teal-600 dark:border-slate-700 dark:text-slate-100 dark:hover:border-teal-400 dark:hover:text-teal-300'
             )
           )}
           aria-label="Next page"

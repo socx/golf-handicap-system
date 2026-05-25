@@ -15,12 +15,12 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 disabled:bg-teal-400',
+    'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 disabled:bg-teal-400 dark:bg-teal-500 dark:text-slate-950 dark:hover:bg-teal-400 dark:active:bg-teal-300 dark:disabled:bg-teal-700',
   secondary:
-    'bg-slate-200 text-slate-900 hover:bg-slate-300 active:bg-slate-400 disabled:bg-slate-100',
-  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 disabled:bg-red-400',
+    'bg-slate-200 text-slate-900 hover:bg-slate-300 active:bg-slate-400 disabled:bg-slate-100 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:active:bg-slate-600 dark:disabled:bg-slate-900',
+  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 disabled:bg-red-400 dark:bg-red-500 dark:text-slate-50 dark:hover:bg-red-400 dark:active:bg-red-300 dark:disabled:bg-red-800',
   ghost:
-    'bg-transparent text-teal-600 hover:bg-teal-50 active:bg-teal-100 disabled:text-teal-300',
+    'bg-transparent text-teal-600 hover:bg-teal-50 active:bg-teal-100 disabled:text-teal-300 dark:text-teal-300 dark:hover:bg-slate-800 dark:active:bg-slate-700 dark:disabled:text-slate-600',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
