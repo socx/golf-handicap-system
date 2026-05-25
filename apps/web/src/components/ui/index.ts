@@ -48,3 +48,7 @@ export type {
 // Pagination
 export { Pagination } from './Pagination';
 export type { PaginationProps } from './Pagination';
+
+// PlayerSelector
+export { PlayerSelector } from './PlayerSelector';
+export type { PlayerSelectorProps } from './PlayerSelector';
