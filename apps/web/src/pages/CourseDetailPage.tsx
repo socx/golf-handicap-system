@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesApi, type Course } from '../api/courses';
 import { Button } from '../components/ui/Button';
+import { SkeletonCard, SkeletonForm, SkeletonList, SkeletonTable } from '../components/ui/Skeleton';
 
 export const CourseDetailPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -55,8 +56,22 @@ export const CourseDetailPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-sm text-slate-600">Loading course details...</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <SkeletonCard className="max-w-xl" />
+          </div>
+          <div className="hidden md:block">
+            <SkeletonForm fields={0} className="w-36 p-0" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <SkeletonForm fields={4} />
+          <SkeletonList items={3} />
+        </div>
+
+        <div className="space-y-4">
+          <SkeletonTable rows={3} columns={4} />
         </div>
       </div>
     );

@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Table, TableHead, TableBody } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 export const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -147,8 +148,8 @@ export const CoursesPage: React.FC = () => {
           </div>
         </div>
       ) : loading ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-sm text-slate-600">Loading courses...</p>
+        <div className="space-y-4">
+          <SkeletonTable rows={5} columns={5} />
         </div>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">

@@ -269,9 +269,9 @@ So that the UI feels responsive and polished.
 **Target Date:** **13 October 2026**
 
 ### Acceptance Criteria
-- [ ] Skeleton components for lists, forms, cards.  
-- [ ] Used across player, course, round pages.  
-- [ ] Tailwind animations enabled.
+- [x] Skeleton components for lists, forms, cards.  
+- [x] Used across player, course, round pages.  
+- [x] Tailwind animations enabled.
 
 ### Dependencies
 - UI components
