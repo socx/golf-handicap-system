@@ -65,15 +65,24 @@ So that players can record their performance in detail.
 **Target Date:** **22 July 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/rounds` accepts playerId, teeConfigurationId, playedAt, playingHandicap (optional), and `holeScores[]`.  
-- [ ] Validates holeScores length matches configuration hole_count.  
-- [ ] Stores round + hole_scores in a transaction.  
-- [ ] Returns computed totals and per‑hole data.  
-- [ ] Validation errors follow standard format.
+- [x] POST `/rounds` accepts playerId, teeConfigurationId, playedAt, playingHandicap (optional), and `holeScores[]`.  
+- [x] Validates holeScores length matches configuration hole_count.  
+- [x] Stores round + hole_scores in a transaction.  
+- [x] Returns computed totals and per‑hole data.  
+- [x] Validation errors follow standard format.
 
 ### Dependencies
 - Rounds & hole_scores tables  
 - Player and configuration APIs
+
+### Implementation Notes
+- Added `apps/api/src/routes/rounds.ts` with `handleCreateRound` to implement `POST /api/rounds` (also exposed as `/rounds`).
+- Request payload supports `playerId`, `teeConfigurationId`, `playedAt`, optional `playingHandicap`, and `holeScores[]`.
+- Validation includes UUID checks, playedAt parsing, per-hole field checks, unique `holeNumber`, and standard `validation_error` responses with field details.
+- Validates `holeScores.length` against `tee_configurations.hole_count` before insert.
+- Persists `rounds` and `hole_scores` within a DB transaction.
+- Computes and stores totals (`gross_score`, `adjusted_gross_score`, `total_putts`, `total_gir`, `total_fairways_hit`, `total_penalties`) and returns per-hole data sorted by hole number.
+- Wired route in `apps/api/src/app.ts` and added e2e coverage in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 

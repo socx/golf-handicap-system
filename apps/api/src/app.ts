@@ -15,6 +15,7 @@ import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
+import { handleCreateRound } from './routes/rounds';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -251,6 +252,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const teeConfigRoute = parseTeeConfigurationRoute(pathname);
     if (teeConfigRoute && method === 'PATCH') {
       await handleUpdateTeeConfiguration(req, res, teeConfigRoute.configId);
+      return;
+    }
+
+    // ── Rounds ────────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/api/rounds' || pathname === '/rounds')) {
+      await handleCreateRound(req, res);
       return;
     }
 
