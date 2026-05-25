@@ -313,10 +313,10 @@ So that the app can provide feedback for actions.
 **Target Date:** **16 October 2026**
 
 ### Acceptance Criteria
-- [ ] Toasts for success, error, warning, info.  
-- [ ] Auto‑dismiss + manual close.  
-- [ ] Accessible (ARIA roles).  
-- [ ] Reusable across app.
+- [x] Toasts for success, error, warning, info.  
+- [x] Auto‑dismiss + manual close.  
+- [x] Accessible (ARIA roles).  
+- [x] Reusable across app.
 
 ### Dependencies
 - UI components

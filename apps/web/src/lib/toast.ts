@@ -8,6 +8,8 @@ export interface ToastMessage {
   durationMs?: number;
 }
 
+export interface ToastOptions extends Omit<ToastMessage, 'id'> {}
+
 type ToastListener = (toast: ToastMessage) => void;
 
 const listeners = new Set<ToastListener>();
@@ -27,7 +29,7 @@ export function subscribeToasts(listener: ToastListener): () => void {
   };
 }
 
-export function showToast(toast: Omit<ToastMessage, 'id'>): ToastMessage {
+export function showToast(toast: ToastOptions): ToastMessage {
   const entry: ToastMessage = {
     id: createToastId(),
     durationMs: 5000,
@@ -46,3 +48,35 @@ export function showErrorToast(title: string, description: string): ToastMessage
     variant: 'error',
   });
 }
+
+export function showInfoToast(title: string, description?: string): ToastMessage {
+  return showToast({
+    title,
+    description,
+    variant: 'info',
+  });
+}
+
+export function showSuccessToast(title: string, description?: string): ToastMessage {
+  return showToast({
+    title,
+    description,
+    variant: 'success',
+  });
+}
+
+export function showWarningToast(title: string, description?: string): ToastMessage {
+  return showToast({
+    title,
+    description,
+    variant: 'warning',
+  });
+}
+
+export const toast = {
+  show: showToast,
+  info: showInfoToast,
+  success: showSuccessToast,
+  warning: showWarningToast,
+  error: showErrorToast,
+};
