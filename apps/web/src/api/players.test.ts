@@ -45,3 +45,21 @@ describe('playersApi.search', () => {
     expect(players[0]?.id).toBe('3');
   });
 });
+
+describe('playersApi.list', () => {
+  it('builds query params and returns normalized list payload', async () => {
+    const getSpy = vi.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: [{ id: '4', first_name: 'Leo', last_name: 'Nguyen' }],
+        pagination: { page: 2, limit: 10, total: 11, pages: 2 },
+      },
+    } as never);
+
+    const result = await playersApi.list({ page: 2, limit: 10, search: 'leo', club: 'City Club', country: 'US' });
+
+    expect(getSpy).toHaveBeenCalledWith('/players?page=2&limit=10&search=leo&club=City+Club&country=US');
+    expect(result.players).toHaveLength(1);
+    expect(result.players[0]?.id).toBe('4');
+    expect(result.pagination).toEqual({ page: 2, limit: 10, total: 11, totalPages: 2 });
+  });
+});

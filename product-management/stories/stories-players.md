@@ -222,14 +222,20 @@ So that admins and users can browse players.
 **Target Date:** **30 June 2026**
 
 ### Acceptance Criteria
-- [ ] `/players` shows paginated list.  
-- [ ] Search and filters (club, country).  
-- [ ] Clicking a player opens profile page.  
-- [ ] Tailwind styling consistent with design system.
+- [x] `/players` shows paginated list.  
+- [x] Search and filters (club, country).  
+- [x] Clicking a player opens profile page.  
+- [x] Tailwind styling consistent with design system.
 
 ### Dependencies
 - Player search API  
 - Frontend layout shell
+
+### Implementation Notes
+- Replaced `/players` placeholder route with a real list page wired to the existing player search/list API.
+- Implemented paginated table UI with search, club, and country filters and design-system-consistent Tailwind styling.
+- Added player profile navigation from the list (`View Profile`) and introduced a route target at `/players/:playerId` for profile navigation handoff.
+- Added frontend tests for list rendering, filter query behavior, API query normalization, and profile-route navigation.
 
 ---
 

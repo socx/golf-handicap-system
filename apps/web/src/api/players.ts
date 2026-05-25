@@ -23,6 +23,14 @@ export interface PlayersListResponse {
   };
 }
 
+export interface PlayersListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  club?: string;
+  country?: string;
+}
+
 interface RawPlayersListResponse {
   players?: Player[];
   data?: Player[];
@@ -51,6 +59,19 @@ export function normalizePlayersListResponse(payload: unknown): PlayersListRespo
 }
 
 export const playersApi = {
+  list: async (query: PlayersListQuery = {}): Promise<PlayersListResponse> => {
+    const params = new URLSearchParams();
+
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.search) params.set('search', query.search);
+    if (query.club) params.set('club', query.club);
+    if (query.country) params.set('country', query.country);
+
+    const queryString = params.toString();
+    const response = await api.get<unknown>(queryString ? `/players?${queryString}` : '/players');
+    return normalizePlayersListResponse(response.data);
+  },
   search: async (search: string, limit = 10): Promise<Player[]> => {
     const params = new URLSearchParams({ search, limit: String(limit) });
     const response = await api.get<unknown>(`/players?${params}`);

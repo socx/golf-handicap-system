@@ -32,6 +32,7 @@ const ComponentPreviewPage = lazy(async () =>
 
 const CoursesPage = lazy(async () => import('./pages/CoursesPage'));
 const CourseDetailPage = lazy(async () => import('./pages/CourseDetailPage'));
+const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 
 function AppRoutes() {
   return (
@@ -50,9 +51,10 @@ function AppRoutes() {
       >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/players" element={<PlayersPage />} />
         <Route
-          path="/players"
-          element={<SectionPlaceholderPage title="Players" description="Player roster and account management is queued for the next implementation story." />}
+          path="/players/:playerId"
+          element={<SectionPlaceholderPage title="Player Profile" description="Detailed player profile views are scheduled in the next story." />}
         />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
