@@ -31,10 +31,10 @@ So that golf courses can be stored with their essential details.
 **Target Date:** **18 June 2026**
 
 ### Acceptance Criteria
-- [ ] `courses` table includes: id, name, address, city, country, phone, email, website, timestamps, deleted_at.  
-- [ ] Name is required and unique per country.  
-- [ ] Soft delete supported.  
-- [ ] Migrations apply and roll back cleanly.
+- [x] `courses` table includes: id, name, address, city, country, phone, email, website, timestamps, deleted_at.  
+- [x] Name is required and unique per country.  
+- [x] Soft delete supported.  
+- [x] Migrations apply and roll back cleanly.
 
 ### Dependencies
 - Migration tooling  
@@ -54,11 +54,11 @@ So that each course can have multiple tee sets with per‑hole data.
 **Target Date:** **24 June 2026**
 
 ### Acceptance Criteria
-- [ ] `tee_configurations` includes: id, course_id, name, tee_colour, hole_count, course_rating, slope_rating, timestamps.  
-- [ ] `holes` includes: id, tee_configuration_id, hole_number, distance_yards, par, stroke_index.  
-- [ ] Hole numbers must be unique per configuration.  
-- [ ] Stroke index must be 1–18 and unique per configuration.  
-- [ ] Supports 9‑hole and 18‑hole configurations.
+- [x] `tee_configurations` includes: id, course_id, name, tee_colour, hole_count, course_rating, slope_rating, timestamps.  
+- [x] `holes` includes: id, tee_configuration_id, hole_number, distance_yards, par, stroke_index.  
+- [x] Hole numbers must be unique per configuration.  
+- [x] Stroke index must be 1–18 and unique per configuration.  
+- [x] Supports 9‑hole and 18‑hole configurations.
 
 ### Dependencies
 - Courses table  
@@ -78,11 +78,11 @@ So that admins can define playable setups efficiently.
 **Target Date:** **01 July 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/courses/:id/configurations` accepts configuration metadata + `holes[]`.  
-- [ ] Validates hole count, hole numbers, par, stroke index.  
-- [ ] Creates configuration + holes in a single transaction.  
-- [ ] Returns configuration with holes.  
-- [ ] Errors follow standard format.
+- [x] POST `/courses/:id/configurations` accepts configuration metadata + `holes[]`.  
+- [x] Validates hole count, hole numbers, par, stroke index.  
+- [x] Creates configuration + holes in a single transaction.  
+- [x] Returns configuration with holes.  
+- [x] Errors follow standard format.
 
 ### Dependencies
 - Tee configuration & holes tables  
@@ -102,10 +102,10 @@ So that admins can correct or refine course data.
 **Target Date:** **08 July 2026**
 
 ### Acceptance Criteria
-- [ ] PATCH `/configurations/:id` updates metadata.  
-- [ ] PATCH `/configurations/:id/holes` updates hole details.  
-- [ ] Validation rules enforced (hole count, stroke index uniqueness).  
-- [ ] Returns updated configuration + holes.
+- [x] PATCH `/configurations/:id` updates metadata.  
+- [x] PATCH `/configurations/:id/holes` updates hole details.  
+- [x] Validation rules enforced (hole count, stroke index uniqueness).  
+- [x] Returns updated configuration + holes.
 
 ### Dependencies
 - Create tee configuration API  
@@ -125,9 +125,9 @@ So that the frontend can display course details and available tees.
 **Target Date:** **10 July 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/courses/:id` returns course + tee configurations.  
-- [ ] Includes hole_count, course_rating, slope_rating.  
-- [ ] Excludes soft‑deleted configurations unless explicitly requested.
+- [x] GET `/courses/:id` returns course + tee configurations.  
+- [x] Includes hole_count, course_rating, slope_rating.  
+- [x] Excludes soft‑deleted configurations unless explicitly requested.
 
 ### Dependencies
 - Courses table  
@@ -147,10 +147,10 @@ So that users can quickly find the course they need.
 **Target Date:** **12 July 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/courses` supports `search`, `country`, `page`, `limit`.  
-- [ ] Search matches name and city.  
-- [ ] Pagination metadata included.  
-- [ ] Soft‑deleted courses excluded.
+- [x] GET `/courses` supports `search`, `country`, `page`, `limit`.  
+- [x] Search matches name and city.  
+- [x] Pagination metadata included.  
+- [x] Soft‑deleted courses excluded.
 
 ### Dependencies
 - Courses table  
@@ -170,10 +170,10 @@ So that outdated or incorrect courses can be removed without losing historical r
 **Target Date:** **15 July 2026**
 
 ### Acceptance Criteria
-- [ ] DELETE `/courses/:id` sets `deleted_at`.  
-- [ ] Deleted courses excluded from search.  
-- [ ] Rounds referencing the course remain intact.  
-- [ ] Deletion logged.
+- [x] DELETE `/courses/:id` sets `deleted_at`.  
+- [x] Deleted courses excluded from search.  
+- [x] Rounds referencing the course remain intact.  
+- [x] Deletion logged.
 
 ### Dependencies
 - Courses table  
@@ -193,10 +193,10 @@ So that users can browse available courses.
 **Target Date:** **20 July 2026**
 
 ### Acceptance Criteria
-- [ ] `/courses` shows paginated list.  
-- [ ] Search + filters (country).  
-- [ ] Clicking a course opens detail page.  
-- [ ] Tailwind styling consistent with design system.
+- [x] `/courses` shows paginated list.  
+- [x] Search + filters (country).  
+- [x] Clicking a course opens detail page.  
+- [x] Tailwind styling consistent with design system.
 
 ### Dependencies
 - Course search API  
@@ -216,10 +216,10 @@ So that users can view course information and available tee sets.
 **Target Date:** **25 July 2026**
 
 ### Acceptance Criteria
-- [ ] `/courses/:id` shows course details.  
-- [ ] Lists tee configurations with rating/slope.  
-- [ ] Links to configuration detail/edit pages.  
-- [ ] Responsive layout.
+- [x] `/courses/:id` shows course details.  
+- [x] Lists tee configurations with rating/slope.  
+- [x] Links to configuration detail/edit pages.  
+- [x] Responsive layout.
 
 ### Dependencies
 - Course detail API  
