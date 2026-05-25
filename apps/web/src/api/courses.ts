@@ -50,6 +50,33 @@ export interface CoursesListResponse {
   };
 }
 
+interface RawCoursesListResponse {
+  data?: Course[];
+  courses?: Course[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    pages?: number;
+    totalPages?: number;
+  };
+}
+
+export function normalizeCoursesListResponse(payload: unknown): CoursesListResponse {
+  const raw = (payload ?? {}) as RawCoursesListResponse;
+  const rawPagination = raw.pagination ?? {};
+
+  return {
+    data: Array.isArray(raw.data) ? raw.data : Array.isArray(raw.courses) ? raw.courses : [],
+    pagination: {
+      page: rawPagination.page ?? 1,
+      limit: rawPagination.limit ?? 10,
+      total: rawPagination.total ?? 0,
+      pages: rawPagination.pages ?? rawPagination.totalPages ?? 1,
+    },
+  };
+}
+
 export const coursesApi = {
   list: (page = 1, limit = 10, search?: string, country?: string) => {
     const params = new URLSearchParams({
@@ -58,7 +85,10 @@ export const coursesApi = {
     });
     if (search) params.append('search', search);
     if (country) params.append('country', country);
-    return api.get<CoursesListResponse>(`/courses?${params.toString()}`);
+    return api.get<unknown>(`/courses?${params.toString()}`).then((response) => ({
+      ...response,
+      data: normalizeCoursesListResponse(response.data),
+    }));
   },
 
   get: (courseId: string) => api.get<Course>(`/courses/${courseId}`),
