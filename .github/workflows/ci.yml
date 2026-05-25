@@ -142,8 +142,9 @@ jobs:
             "$NPM_BIN" run build --if-present
             cp -a dist/. src/
 
-            # Install web dependencies separately to avoid OOM during a single large npm ci.
-            cd "$APP_DIR" && "$NPM_BIN" install --workspace packages/types --workspace apps/web --include=dev --no-audit --no-fund
+            # Install web dependencies separately and scope install to apps/web only.
+            # packages/types was installed in the API step and remains available as a workspace link.
+            cd "$APP_DIR" && npm_config_jobs=1 "$NPM_BIN" install --workspace apps/web --include=dev --no-audit --no-fund
             cd "$APP_DIR/apps/web"
             BUILD_ID="$BUILD_ID" "$NPM_BIN" run build --if-present
 
