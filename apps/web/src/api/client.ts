@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../lib/authStorage';
 import { showErrorToast } from '../lib/toast';
+import { reportClientError } from '../lib/errorReporting';
 
 const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3005/api';
 
@@ -45,12 +46,28 @@ api.interceptors.response.use(
         clearTokens();
         authFailureHandler?.();
         showErrorToast('Session expired', 'Your session expired. Please sign in again.');
+        reportClientError({
+          source: 'api_client',
+          message: 'Session refresh failed',
+          code: 'session_refresh_failed',
+          statusCode: error.response?.status,
+          path: originalRequest.url,
+          userAgent: navigator.userAgent,
+        });
       }
     }
 
     if (error.code !== 'ERR_CANCELED') {
       const apiError = normalizeApiError(error);
       showErrorToast('Request failed', apiError.message);
+      reportClientError({
+        source: 'api_client',
+        message: apiError.message,
+        code: apiError.code,
+        statusCode: apiError.status,
+        path: originalRequest?.url,
+        userAgent: navigator.userAgent,
+      });
     }
 
     return Promise.reject(error);

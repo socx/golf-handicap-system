@@ -249,7 +249,7 @@ So that the app gracefully handles unexpected failures.
 - [x] Error boundary wraps main app.  
 - [x] Friendly error screen displayed.  
 - [x] API errors surfaced via toast notifications.  
-- [ ] Logging to backend (optional).
+- [x] Logging to backend (optional).
 
 ### Dependencies
 - API client  

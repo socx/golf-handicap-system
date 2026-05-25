@@ -11,6 +11,7 @@ import { handleLogout } from './routes/auth/logout';
 import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes/auth/passwordReset';
 import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
+import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleCreatePlayer, handleDeletePlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
@@ -160,6 +161,11 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
       return;
     }
 
+    if (method === 'POST' && (pathname === '/client-errors' || pathname === '/api/client-errors')) {
+      await handleReportClientError(req, res, requestId);
+      return;
+    }
+
     // ── Admin ─────────────────────────────────────────────────────────────
     if (method === 'GET' && (pathname === '/api/admin/status' || pathname === '/admin/status')) {
       await handleAdminStatus(req, res);
@@ -284,6 +290,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     sendJson(res, 200, { message: 'ghs-api running', health: '/health', apiHealth: '/api/health' });
   } catch (error) {
+    console.error('[app] unhandled request error:', error);
     sendJson(res, 500, { error: 'internal_error', message: (error as Error).message });
   }
 });

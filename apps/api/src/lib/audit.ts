@@ -60,3 +60,45 @@ export async function logAuthAuditEvent({
     }),
   );
 }
+
+export async function logApplicationEvent({
+  requestId,
+  event,
+  ipAddress,
+  metadata,
+  userId,
+  actorUserId,
+}: {
+  requestId: string;
+  event: string;
+  ipAddress: string;
+  metadata?: Record<string, unknown>;
+  userId?: string | null;
+  actorUserId?: string | null;
+}): Promise<void> {
+  const safeMetadata = metadata || {};
+
+  try {
+    await dbPool.query(
+      `INSERT INTO audit_logs (event_type, user_id, actor_user_id, ip_address, metadata)
+       VALUES ($1, $2, $3, $4, $5::jsonb)`,
+      [event, userId || null, actorUserId || null, ipAddress, JSON.stringify(safeMetadata)],
+    );
+  } catch (error) {
+    console.warn('[audit] failed to persist application event:', (error as Error).message);
+  }
+
+  console.log(
+    JSON.stringify({
+      level: 'warn',
+      event,
+      service: 'ghs-api',
+      requestId,
+      userId: userId || null,
+      actorUserId: actorUserId || null,
+      ipAddress,
+      metadata: safeMetadata,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
