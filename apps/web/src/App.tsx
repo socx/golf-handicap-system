@@ -26,6 +26,9 @@ const ComponentPreviewPage = lazy(async () =>
   import('./pages/ComponentPreviewPage').then((m) => ({ default: m.ComponentPreviewPage }))
 );
 
+const CoursesPage = lazy(async () => import('./pages/CoursesPage'));
+const CourseDetailPage = lazy(async () => import('./pages/CourseDetailPage'));
+
 function AppRoutes() {
   return (
     <Routes>
@@ -47,10 +50,8 @@ function AppRoutes() {
           path="/players"
           element={<SectionPlaceholderPage title="Players" description="Player roster and account management is queued for the next implementation story." />}
         />
-        <Route
-          path="/courses"
-          element={<SectionPlaceholderPage title="Courses" description="Course setup, tees, and rating administration will be implemented in course-focused stories." />}
-        />
+        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/courses/:courseId" element={<CourseDetailPage />} />
         <Route
           path="/rounds"
           element={<SectionPlaceholderPage title="Rounds" description="Round entry, validation, and processing workflows will be delivered incrementally." />}
