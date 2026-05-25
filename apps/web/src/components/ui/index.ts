@@ -52,3 +52,11 @@ export type { PaginationProps } from './Pagination';
 // PlayerSelector
 export { PlayerSelector } from './PlayerSelector';
 export type { PlayerSelectorProps } from './PlayerSelector';
+
+// CourseSelector
+export { CourseSelector } from './CourseSelector';
+export type { CourseSelectorProps } from './CourseSelector';
+
+// TeeConfigurationSelector
+export { TeeConfigurationSelector } from './TeeConfigurationSelector';
+export type { TeeConfigurationSelectorProps } from './TeeConfigurationSelector';
