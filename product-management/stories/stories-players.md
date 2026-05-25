@@ -193,14 +193,20 @@ So that admins can download player data for reporting or migration.
 **Target Date:** **23 June 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/players/export?format=csv|json`.  
-- [ ] Includes all visible fields.  
-- [ ] Respects filters (club, country, search).  
-- [ ] Excludes soft‑deleted players unless explicitly included.
+- [x] GET `/players/export?format=csv|json`.  
+- [x] Includes all visible fields.  
+- [x] Respects filters (club, country, search).  
+- [x] Excludes soft‑deleted players unless explicitly included.
 
 ### Dependencies
 - Player search  
 - RBAC
+
+### Implementation Notes
+- Added `GET /api/players/export` and `GET /players/export` with `format=json|csv` validation and admin RBAC enforcement.
+- Export uses shared player filter parsing (`search`, `club`, `country`) so behavior matches list/search semantics.
+- Soft-deleted players are excluded by default and can be explicitly included with `include_deleted=true` (also supports `includeDeleted=true`).
+- Added e2e coverage in `apps/api/test/players-export.e2e.test.mjs` for auth protection, filter behavior, JSON payload fields, CSV output, and soft-delete handling.
 
 ---
 

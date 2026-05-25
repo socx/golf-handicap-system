@@ -28,6 +28,13 @@ interface ValidationIssue {
   message: string;
 }
 
+interface PlayerFilters {
+  search: string;
+  club: string;
+  country: string;
+  includeDeleted: boolean;
+}
+
 const VALID_GENDERS: Gender[] = ['male', 'female', 'other', 'prefer_not_to_say'];
 
 function isUuid(value: string): boolean {
@@ -267,6 +274,92 @@ function parsePagination(requestUrl: URL): { page: number; limit: number; offset
   return { page, limit, offset };
 }
 
+function parseBooleanQueryParam(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+function parsePlayerFilters(requestUrl: URL): PlayerFilters {
+  const search = (requestUrl.searchParams.get('search') || '').trim();
+  const club = (requestUrl.searchParams.get('club') || '').trim();
+  const country = (requestUrl.searchParams.get('country') || '').trim().toUpperCase();
+  const includeDeleted = parseBooleanQueryParam(requestUrl.searchParams.get('include_deleted'))
+    || parseBooleanQueryParam(requestUrl.searchParams.get('includeDeleted'));
+
+  return { search, club, country, includeDeleted };
+}
+
+function buildPlayerWhereClause(filters: PlayerFilters): { whereClause: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (!filters.includeDeleted) {
+    clauses.push('deleted_at IS NULL');
+  }
+
+  if (filters.search) {
+    params.push(`%${filters.search.toLowerCase()}%`);
+    const idx = params.length;
+    clauses.push(`(
+      LOWER(first_name) LIKE $${idx}
+      OR LOWER(last_name) LIKE $${idx}
+      OR LOWER(COALESCE(email, '')) LIKE $${idx}
+    )`);
+  }
+
+  if (filters.club) {
+    params.push(filters.club);
+    clauses.push(`club = $${params.length}`);
+  }
+
+  if (filters.country) {
+    params.push(filters.country);
+    clauses.push(`country = $${params.length}`);
+  }
+
+  return {
+    whereClause: clauses.length > 0 ? clauses.join(' AND ') : '1=1',
+    params,
+  };
+}
+
+function escapeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const raw = String(value);
+  if (/[",\n\r]/.test(raw)) {
+    return `"${raw.replace(/"/g, '""')}"`;
+  }
+  return raw;
+}
+
+function buildPlayersCsv(rows: Player[]): string {
+  const columns = [
+    'id',
+    'first_name',
+    'last_name',
+    'middle_name',
+    'dob',
+    'gender',
+    'club',
+    'email',
+    'country',
+    'handicap_index',
+    'user_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+  ];
+
+  const lines = [columns.join(',')];
+  for (const row of rows) {
+    const values = columns.map((column) => escapeCsvCell(row[column as keyof Player]));
+    lines.push(values.join(','));
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
 export async function handleCreatePlayer(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -421,35 +514,9 @@ export async function handleListPlayers(
     return;
   }
 
-  const search = (requestUrl.searchParams.get('search') || '').trim();
-  const club = (requestUrl.searchParams.get('club') || '').trim();
-  const country = (requestUrl.searchParams.get('country') || '').trim().toUpperCase();
+  const filters = parsePlayerFilters(requestUrl);
   const { page, limit, offset } = parsePagination(requestUrl);
-
-  const clauses: string[] = ['deleted_at IS NULL'];
-  const params: unknown[] = [];
-
-  if (search) {
-    params.push(`%${search.toLowerCase()}%`);
-    const idx = params.length;
-    clauses.push(`(
-      LOWER(first_name) LIKE $${idx}
-      OR LOWER(last_name) LIKE $${idx}
-      OR LOWER(COALESCE(email, '')) LIKE $${idx}
-    )`);
-  }
-
-  if (club) {
-    params.push(club);
-    clauses.push(`club = $${params.length}`);
-  }
-
-  if (country) {
-    params.push(country);
-    clauses.push(`country = $${params.length}`);
-  }
-
-  const whereClause = clauses.join(' AND ');
+  const { whereClause, params } = buildPlayerWhereClause(filters);
 
   try {
     const countResult = await dbPool.query(`SELECT COUNT(*)::int AS total FROM players WHERE ${whereClause}`, params);
@@ -478,14 +545,73 @@ export async function handleListPlayers(
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
       filters: {
-        search,
-        club,
-        country,
+        search: filters.search,
+        club: filters.club,
+        country: filters.country,
       },
     });
   } catch (error) {
     console.error('[players.list] unexpected error:', error);
     sendError(res, 500, 'player_list_failed', 'Unable to retrieve players at this time');
+  }
+}
+
+export async function handleExportPlayers(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  requestUrl: URL,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  const format = (requestUrl.searchParams.get('format') || '').trim().toLowerCase();
+  if (format !== 'csv' && format !== 'json') {
+    sendError(res, 400, 'validation_error', "Query parameter 'format' must be either 'csv' or 'json'");
+    return;
+  }
+
+  const filters = parsePlayerFilters(requestUrl);
+  const { whereClause, params } = buildPlayerWhereClause(filters);
+
+  try {
+    const result = await dbPool.query(
+      `SELECT id, first_name, last_name, middle_name, dob, gender, club, email, country, handicap_index, user_id, created_at, updated_at, deleted_at
+       FROM players
+       WHERE ${whereClause}
+       ORDER BY created_at DESC`,
+      params,
+    );
+
+    const players = result.rows as Player[];
+    if (format === 'json') {
+      sendJson(res, 200, {
+        format,
+        count: players.length,
+        filters: {
+          search: filters.search,
+          club: filters.club,
+          country: filters.country,
+        },
+        includeDeleted: filters.includeDeleted,
+        players,
+      });
+      return;
+    }
+
+    const csv = buildPlayersCsv(players);
+    const fileSuffix = new Date().toISOString().slice(0, 10);
+    res.writeHead(200, {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="players-export-${fileSuffix}.csv"`,
+      'cache-control': 'no-store',
+    });
+    res.end(csv);
+  } catch (error) {
+    console.error('[players.export] unexpected error:', error);
+    sendError(res, 500, 'player_export_failed', 'Unable to export players at this time');
   }
 }
 
