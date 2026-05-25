@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 import type { AuthTokens, JWTClaims, User } from '@ghs/types';
 import { env } from '../config/env';
 import { redisClient, redisState } from './redis';
@@ -71,17 +72,23 @@ export async function ensureRefreshTokenUsable(
 }
 
 export function buildAuthTokens(user: User): AuthTokens {
+  const accessTokenOptions: SignOptions = {
+    expiresIn: env.jwtAccessExpiresIn as SignOptions['expiresIn'],
+  };
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role, tokenType: 'access' },
     env.jwtSecret,
-    { expiresIn: env.jwtAccessExpiresIn } as any,
+    accessTokenOptions,
   );
 
   const refreshJti = crypto.randomUUID();
+  const refreshTokenOptions: SignOptions = {
+    expiresIn: env.jwtRefreshExpiresIn as SignOptions['expiresIn'],
+  };
   const refreshToken = jwt.sign(
     { sub: user.id, role: user.role, tokenType: 'refresh', jti: refreshJti },
     env.jwtSecret,
-    { expiresIn: env.jwtRefreshExpiresIn } as any,
+    refreshTokenOptions,
   );
 
   return { accessToken, refreshToken, expiresIn: env.jwtAccessExpiresIn };

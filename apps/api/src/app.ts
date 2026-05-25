@@ -1,6 +1,5 @@
 import http from 'node:http';
 import { env } from './config/env';
-import { dbPool } from './lib/db';
 import { redisState } from './lib/redis';
 import { sendJson, normalizeRequestId, logRequest, parseUrl } from './lib/http';
 import { getOrSetCache, invalidateCache, buildDashboardSummary, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';

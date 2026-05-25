@@ -7,31 +7,50 @@ export const CourseDetailPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!courseId) {
-      setError('Course ID is missing');
-      return;
-    }
+    if (!courseId) return;
+
+    let cancelled = false;
 
     const fetchCourse = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const response = await coursesApi.get(courseId);
+        if (cancelled) return;
         setCourse(response.data);
+        setError(null);
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to fetch course:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch course');
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchCourse();
+    void fetchCourse();
+
+    return () => {
+      cancelled = true;
+    };
   }, [courseId]);
+
+  const loading = !!courseId && !course && !error;
+
+  if (!courseId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-slate-900">Course Details</h2>
+          <Button variant="secondary" onClick={() => navigate('/courses')}>
+            Back to Courses
+          </Button>
+        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">Course ID is missing</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

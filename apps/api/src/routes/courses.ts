@@ -117,7 +117,7 @@ export async function handleCreateCourse(req: http.IncomingMessage, res: http.Se
   }
 }
 
-export async function handleListCourses(req: http.IncomingMessage, res: http.ServerResponse, requestUrl: URL): Promise<void> {
+export async function handleListCourses(_req: http.IncomingMessage, res: http.ServerResponse, requestUrl: URL): Promise<void> {
   try {
     const page = Math.max(1, parseInt(requestUrl.searchParams.get('page') || '1', 10));
     const limit = Math.max(1, Math.min(100, parseInt(requestUrl.searchParams.get('limit') || '20', 10)));
@@ -156,7 +156,7 @@ export async function handleListCourses(req: http.IncomingMessage, res: http.Ser
   }
 }
 
-export async function handleGetCourse(req: http.IncomingMessage, res: http.ServerResponse, courseId: string): Promise<void> {
+export async function handleGetCourse(_req: http.IncomingMessage, res: http.ServerResponse, courseId: string): Promise<void> {
   try {
     const courseResult = await dbPool.query(`SELECT id, name, address, city, country, phone, email, website, created_at, updated_at FROM courses WHERE id = $1 AND deleted_at IS NULL`, [courseId]);
 
