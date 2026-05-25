@@ -12,7 +12,12 @@ export type AuthAuditEventType =
   | 'auth_password_reset_completed'
   | 'player_user_linked'
   | 'player_user_unlinked'
-  | 'player_deleted';
+  | 'player_deleted'
+  | 'course_created'
+  | 'course_updated'
+  | 'course_deleted'
+  | 'tee_configuration_created'
+  | 'tee_configuration_updated';
 
 export async function logAuthAuditEvent({
   requestId,

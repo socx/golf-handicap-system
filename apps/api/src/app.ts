@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { env } from './config/env';
+import { dbPool } from './lib/db';
 import { redisState } from './lib/redis';
 import { sendJson, normalizeRequestId, logRequest, parseUrl } from './lib/http';
 import { getOrSetCache, invalidateCache, buildDashboardSummary, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';
@@ -13,6 +14,7 @@ import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleCreatePlayer, handleDeletePlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
+import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -37,6 +39,36 @@ function parsePlayerRoute(path: string): { playerId: string; action: 'update' | 
     return { playerId: String(linkMatch[1] || ''), action: 'link-user' };
   }
 
+  return null;
+}
+
+function parseCourseRoute(path: string): { courseId: string; action?: string } | null {
+  const deleteIdsMatch = path.match(/^\/(?:api\/)?courses\/([0-9a-fA-F-]+)$/);
+  if (deleteIdsMatch) {
+    return { courseId: String(deleteIdsMatch[1] || '') };
+  }
+  return null;
+}
+
+function parseTeeConfigurationRoute(path: string): { configId: string; action?: 'holes' } | null {
+  const updateMatch = path.match(/^\/(?:api\/)?configurations\/([0-9a-fA-F-]+)$/);
+  if (updateMatch) {
+    return { configId: String(updateMatch[1] || '') };
+  }
+
+  const holesMatch = path.match(/^\/(?:api\/)?configurations\/([0-9a-fA-F-]+)\/holes$/);
+  if (holesMatch) {
+    return { configId: String(holesMatch[1] || ''), action: 'holes' };
+  }
+
+  return null;
+}
+
+function parseCourseConfigRoute(path: string): { courseId: string; isConfig?: boolean } | null {
+  const match = path.match(/^\/(?:api\/)?courses\/([0-9a-fA-F-]+)\/configurations$/);
+  if (match) {
+    return { courseId: String(match[1] || ''), isConfig: true };
+  }
   return null;
 }
 
@@ -164,6 +196,46 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (playerRoute && method === 'DELETE' && playerRoute.action === 'update') {
       await handleDeletePlayer(req, res, requestId, playerRoute.playerId);
+      return;
+    }
+
+    // ── Courses ───────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/api/courses' || pathname === '/courses')) {
+      await handleCreateCourse(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/courses' || pathname === '/courses')) {
+      await handleListCourses(req, res, requestUrl);
+      return;
+    }
+
+    const courseRoute = parseCourseRoute(pathname);
+    if (courseRoute && method === 'GET') {
+      await handleGetCourse(req, res, courseRoute.courseId);
+      return;
+    }
+
+    if (courseRoute && method === 'PATCH') {
+      await handleUpdateCourse(req, res, courseRoute.courseId);
+      return;
+    }
+
+    if (courseRoute && method === 'DELETE') {
+      await handleDeleteCourse(req, res, courseRoute.courseId);
+      return;
+    }
+
+    // ── Tee Configurations ────────────────────────────────────────────────
+    const courseConfigRoute = parseCourseConfigRoute(pathname);
+    if (courseConfigRoute && method === 'POST') {
+      await handleCreateTeeConfiguration(req, res, courseConfigRoute.courseId);
+      return;
+    }
+
+    const teeConfigRoute = parseTeeConfigurationRoute(pathname);
+    if (teeConfigRoute && method === 'PATCH') {
+      await handleUpdateTeeConfiguration(req, res, teeConfigRoute.configId);
       return;
     }
 
