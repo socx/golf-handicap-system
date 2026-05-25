@@ -1,0 +1,47 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { api } from './client';
+import { normalizePlayersListResponse, playersApi } from './players';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('normalizePlayersListResponse', () => {
+  it('supports payload with players and totalPages', () => {
+    const normalized = normalizePlayersListResponse({
+      players: [{ id: '1', first_name: 'Mia', last_name: 'Turner' }],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+    });
+
+    expect(normalized.players).toHaveLength(1);
+    expect(normalized.players[0]?.id).toBe('1');
+    expect(normalized.pagination).toEqual({ page: 1, limit: 10, total: 1, totalPages: 1 });
+  });
+
+  it('supports payload with data and pages', () => {
+    const normalized = normalizePlayersListResponse({
+      data: [{ id: '2', first_name: 'Noah', last_name: 'Patel' }],
+      pagination: { page: 2, limit: 10, total: 15, pages: 2 },
+    });
+
+    expect(normalized.players).toHaveLength(1);
+    expect(normalized.players[0]?.id).toBe('2');
+    expect(normalized.pagination).toEqual({ page: 2, limit: 10, total: 15, totalPages: 2 });
+  });
+});
+
+describe('playersApi.search', () => {
+  it('returns normalized players for backend payload compatibility', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: [{ id: '3', first_name: 'Ava', last_name: 'Brooks' }],
+        pagination: { page: 1, limit: 10, total: 1, pages: 1 },
+      },
+    } as never);
+
+    const players = await playersApi.search('ava');
+
+    expect(players).toHaveLength(1);
+    expect(players[0]?.id).toBe('3');
+  });
+});
