@@ -24,6 +24,7 @@ const ActivateAccountPage = lazy(async () => {
 });
 
 const DashboardPage = lazy(async () => import('./pages/DashboardPage'));
+const RoundsPage = lazy(async () => import('./pages/RoundsPage'));
 const SectionPlaceholderPage = lazy(async () => import('./pages/SectionPlaceholderPage'));
 const ComponentPreviewPage = lazy(async () =>
   import('./pages/ComponentPreviewPage').then((m) => ({ default: m.ComponentPreviewPage }))
@@ -55,10 +56,7 @@ function AppRoutes() {
         />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
-        <Route
-          path="/rounds"
-          element={<SectionPlaceholderPage title="Rounds" description="Round entry, validation, and processing workflows will be delivered incrementally." />}
-        />
+        <Route path="/rounds" element={<RoundsPage />} />
         <Route
           path="/handicap"
           element={<SectionPlaceholderPage title="Handicap" description="Handicap calculations, history, and trend breakdowns are planned in upcoming stories." />}

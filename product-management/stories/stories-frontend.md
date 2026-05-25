@@ -358,10 +358,10 @@ So that users can access it on phones and tablets.
 **Target Date:** **26 October 2026**
 
 ### Acceptance Criteria
-- [ ] Sidebar collapses into mobile drawer.  
-- [ ] Tables scroll horizontally.  
-- [ ] Forms adapt to small screens.  
-- [ ] Scorecard view optimised for mobile.
+- [x] Sidebar collapses into mobile drawer.  
+- [x] Tables scroll horizontally.  
+- [x] Forms adapt to small screens.  
+- [x] Scorecard view optimised for mobile.
 
 ### Dependencies
 - Global layout  
