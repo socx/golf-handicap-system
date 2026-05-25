@@ -186,6 +186,10 @@ So that the frontend is consistent and maintainable.
 - Tailwind setup  
 - Global layout
 
+### Implementation Notes
+- Added class-driven dark mode variant binding for Tailwind v4 in `apps/web/src/index.css`.
+- Corrected root selector to `:root.dark` so global dark colors apply when the theme toggle sets the `dark` class.
+
 ---
 
 ## 8. Implement player selectors (autocomplete)
