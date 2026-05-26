@@ -107,6 +107,8 @@ So that WHS calculations and scoring summaries are accurate.
 - Round entry API  
 - Tee configuration hole data
 
+---
+
 ### Implementation Notes
 - `apps/api/src/routes/rounds.ts` now computes `net_double_bogey_adjusted` server-side using tee hole `par` + `stroke_index` and rounded `playingHandicap` stroke allocation per hole.
 - Net Double Bogey cap formula implemented as `par + 2 + strokes_received_on_hole`, with support for both handicap and plus-handicap allocation.
