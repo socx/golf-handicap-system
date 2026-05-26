@@ -264,11 +264,11 @@ So that users can easily input round data.
 **Target Date:** **17 August 2026**
 
 ### Acceptance Criteria
-- [ ] Select player + tee configuration.  
-- [ ] Per‑hole grid for strokes, putts, GIR, fairway, sand, penalties.  
-- [ ] Validation errors shown clearly.  
-- [ ] Save triggers POST `/rounds`.  
-- [ ] Success shows toast + redirect to scorecard.
+- [x] Select player + tee configuration.  
+- [x] Per‑hole grid for strokes, putts, GIR, fairway, sand, penalties.  
+- [x] Validation errors shown clearly.  
+- [x] Save triggers POST `/rounds`.  
+- [x] Success shows toast + redirect to scorecard.
 
 ### Dependencies
 - Round entry API  
