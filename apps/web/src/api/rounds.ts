@@ -1,3 +1,31 @@
+export interface RoundListItem extends RoundSummary {
+  courseId: string;
+  courseName: string;
+  teeConfigurationName: string;
+  teeColour: string;
+}
+
+export interface RoundsListPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface RoundsListResponse {
+  rounds: RoundListItem[];
+  pagination: RoundsListPagination;
+}
+
+export interface RoundsListFilters {
+  page?: number;
+  limit?: number;
+  playerId?: string;
+  courseId?: string;
+  teeConfigurationId?: string;
+  from?: string;
+  to?: string;
+}
 import { api } from './client';
 
 export interface HoleScoreInput {
@@ -80,4 +108,15 @@ export const roundsApi = {
   create: (payload: CreateRoundPayload) =>
     api.post<CreateRoundResponse>('/rounds', payload),
   get: (roundId: string) => api.get<RoundDetailResponse>(`/rounds/${roundId}`),
+  list: (filters: RoundsListFilters = {}) => {
+    const params = new URLSearchParams();
+    params.set('page', String(filters.page ?? 1));
+    params.set('limit', String(filters.limit ?? 10));
+    if (filters.playerId) params.set('playerId', filters.playerId);
+    if (filters.courseId) params.set('courseId', filters.courseId);
+    if (filters.teeConfigurationId) params.set('teeConfigurationId', filters.teeConfigurationId);
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+    return api.get<RoundsListResponse>(`/rounds?${params.toString()}`);
+  },
 };

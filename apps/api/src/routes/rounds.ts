@@ -73,6 +73,7 @@ interface RoundListRow extends RoundDetailRow {
 interface RoundListFilters {
   playerId: string;
   courseId: string;
+  teeConfigurationId: string;
   from: string;
   to: string;
 }
@@ -130,6 +131,7 @@ function parseRoundListFilters(requestUrl: URL): RoundListFilters {
   return {
     playerId: (requestUrl.searchParams.get('playerId') || '').trim(),
     courseId: (requestUrl.searchParams.get('courseId') || '').trim(),
+    teeConfigurationId: (requestUrl.searchParams.get('teeConfigurationId') || '').trim(),
     from: (requestUrl.searchParams.get('from') || '').trim(),
     to: (requestUrl.searchParams.get('to') || '').trim(),
   };
@@ -168,6 +170,11 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
     return;
   }
 
+  if (filters.teeConfigurationId && !isUuid(filters.teeConfigurationId)) {
+    sendError(res, 400, 'validation_error', 'teeConfigurationId must be a valid UUID', [{ field: 'teeConfigurationId', message: 'teeConfigurationId must be a valid UUID' }]);
+    return;
+  }
+
   const fromDate = filters.from ? parseDateFilter(filters.from, 'start') : null;
   if (filters.from && !fromDate) {
     sendError(res, 400, 'validation_error', 'from must be a valid ISO date/time or YYYY-MM-DD value', [{ field: 'from', message: 'from must be a valid date filter' }]);
@@ -191,6 +198,11 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
   if (filters.courseId) {
     params.push(filters.courseId);
     clauses.push(`tc.course_id = $${params.length}`);
+  }
+
+  if (filters.teeConfigurationId) {
+    params.push(filters.teeConfigurationId);
+    clauses.push(`r.tee_configuration_id = $${params.length}`);
   }
 
   if (fromDate) {

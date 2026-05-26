@@ -312,10 +312,10 @@ So that users can browse their historical rounds.
 **Target Date:** **27 August 2026**
 
 ### Acceptance Criteria
-- [ ] `/rounds` shows paginated list.  
-- [ ] Filters: date range, course, tee configuration.  
-- [ ] Clicking a round opens scorecard.  
-- [ ] Tailwind styling consistent with design system.
+- [x] `/rounds` shows paginated list.  
+- [x] Filters: date range, course, tee configuration.  
+- [x] Clicking a round opens scorecard.  
+- [x] Tailwind styling consistent with design system.
 
 ### Dependencies
 - Round search API  
