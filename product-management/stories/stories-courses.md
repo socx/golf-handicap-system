@@ -297,4 +297,29 @@ So that admins can bulk‑load course data.
 
 ---
 
+## 12. Frontend: Course create/edit form
+
+**As an admin**  
+I want a form in the frontend to create and edit courses  
+So that I can manage course details manually without using CSV import.
+
+**Size:** M  
+**Estimate:** 3–5 days  
+**Priority:** High  
+**Target Date:** **20 August 2026**
+
+### Acceptance Criteria
+- [ ] `/courses/new` and `/courses/:id/edit` routes are available and accessible from the course list/detail pages.  
+- [ ] Form captures required/optional course fields (name, address, city, country, phone, email, website).  
+- [ ] Client-side validation mirrors API constraints (required name, country format, URL/email format where provided).  
+- [ ] Create mode calls the course creation API and edit mode calls the course update API, with validation/server errors shown clearly.  
+- [ ] Success shows confirmation toast and redirects to the relevant course detail page.
+
+### Dependencies
+- Course creation and update APIs (`POST /courses`, `PATCH /courses/:id`)  
+- Frontend routing  
+- Shared form components / validation utilities
+
+---
+
 # End of stories-courses.md
