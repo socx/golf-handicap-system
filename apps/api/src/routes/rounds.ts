@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { dbPool } from '../lib/db';
-import { readJsonBody, sendError, sendJson } from '../lib/http';
+import { getClientIp, readJsonBody, sendError, sendJson } from '../lib/http';
+import { logApplicationEvent } from '../lib/audit';
 import { verifyAndAuthorize } from '../middleware/auth';
 
 interface ValidationIssue {
@@ -718,4 +719,84 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
     },
     holeScores,
   });
+}
+
+export async function handleDeleteRound(req: http.IncomingMessage, res: http.ServerResponse, roundId: string): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  const requestId = (req.headers['x-request-id'] as string) || '';
+  const clientIp = getClientIp(req);
+
+  try {
+    const deleteResult = await dbPool.query(
+      `UPDATE rounds
+       SET deleted_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, player_id, tee_configuration_id, played_at, score_differential, deleted_at`,
+      [roundId],
+    );
+
+    if (Number(deleteResult.rowCount || 0) === 0) {
+      sendError(res, 404, 'not_found', 'Round not found');
+      return;
+    }
+
+    const deletedRound = deleteResult.rows[0] as {
+      id: string;
+      player_id: string;
+      tee_configuration_id: string;
+      played_at: string;
+      score_differential: number | null;
+      deleted_at: string;
+    };
+
+    await logApplicationEvent({
+      requestId,
+      event: 'round_deleted',
+      ipAddress: clientIp,
+      metadata: {
+        roundId: deletedRound.id,
+        playerId: deletedRound.player_id,
+        actorUserId: authResult.auth.userId,
+        teeConfigurationId: deletedRound.tee_configuration_id,
+        playedAt: deletedRound.played_at,
+        softDeleted: true,
+      },
+    });
+
+    const shouldRequestHandicapRecalculation = deletedRound.score_differential !== null;
+    if (shouldRequestHandicapRecalculation) {
+      await logApplicationEvent({
+        requestId,
+        event: 'handicap_recalculation_requested',
+        ipAddress: clientIp,
+        metadata: {
+          reason: 'round_deleted',
+          roundId: deletedRound.id,
+          playerId: deletedRound.player_id,
+          actorUserId: authResult.auth.userId,
+          scoreDifferential: Number(deletedRound.score_differential),
+        },
+      });
+    }
+
+    sendJson(res, 200, {
+      message: 'Round deleted',
+      round: {
+        id: deletedRound.id,
+        playerId: deletedRound.player_id,
+        teeConfigurationId: deletedRound.tee_configuration_id,
+        playedAt: deletedRound.played_at,
+        deletedAt: deletedRound.deleted_at,
+      },
+      handicapRecalculationRequested: shouldRequestHandicapRecalculation,
+    });
+  } catch (error) {
+    console.error('[rounds.delete] unexpected error:', error);
+    sendError(res, 500, 'round_delete_failed', 'Unable to delete round at this time');
+  }
 }

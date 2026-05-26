@@ -153,6 +153,13 @@ async function createRound(token, payload) {
   return response.json;
 }
 
+async function deleteRound(token, roundId) {
+  return requestJson(`/api/rounds/${roundId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 before(async () => {
   dbPool = new Pool({ connectionString: DATABASE_URL });
 
@@ -685,6 +692,140 @@ test('GET /api/rounds filters by course and excludes soft-deleted rounds with pa
     }
     if (playerTwoId) {
       await dbPool.query('DELETE FROM players WHERE id = $1', [playerTwoId]);
+    }
+  }
+});
+
+test('DELETE /api/rounds/:id soft-deletes round, logs audit events, and excludes it from search', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+  let roundId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-delete`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-delete`);
+    courseId = course.id;
+
+    const config = await createTeeConfig(token, course.id);
+    const created = await createRound(token, {
+      playerId: player.id,
+      teeConfigurationId: config.id,
+      playedAt: '2026-06-10T09:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    roundId = created.round.id;
+
+    await dbPool.query('UPDATE rounds SET score_differential = $2 WHERE id = $1', [roundId, 11.7]);
+
+    const deleteResponse = await deleteRound(token, roundId);
+
+    assert.equal(deleteResponse.status, 200, JSON.stringify(deleteResponse.json));
+    assert.equal(deleteResponse.json.message, 'Round deleted');
+    assert.equal(deleteResponse.json.round.id, roundId);
+    assert.equal(deleteResponse.json.handicapRecalculationRequested, true);
+    assert.ok(deleteResponse.json.round.deletedAt);
+
+    const deletedRoundResult = await dbPool.query('SELECT deleted_at FROM rounds WHERE id = $1', [roundId]);
+    assert.equal(deletedRoundResult.rowCount, 1);
+    assert.ok(deletedRoundResult.rows[0].deleted_at);
+
+    const getResponse = await requestJson(`/api/rounds/${roundId}`, {
+      method: 'GET',
+      token,
+    });
+    assert.equal(getResponse.status, 404);
+
+    const listResponse = await requestJson(`/api/rounds?playerId=${player.id}`, {
+      method: 'GET',
+      token,
+    });
+    assert.equal(listResponse.status, 200, JSON.stringify(listResponse.json));
+    assert.equal(listResponse.json.pagination.total, 0);
+    assert.equal(listResponse.json.rounds.length, 0);
+
+    const auditResponse = await dbPool.query(
+      `SELECT event_type, metadata
+       FROM audit_logs
+       WHERE event_type IN ('round_deleted', 'handicap_recalculation_requested')
+         AND metadata->>'roundId' = $1
+       ORDER BY created_at ASC`,
+      [roundId],
+    );
+
+    assert.deepEqual(
+      auditResponse.rows.map((row) => row.event_type),
+      ['round_deleted', 'handicap_recalculation_requested'],
+    );
+    assert.equal(auditResponse.rows[1].metadata.reason, 'round_deleted');
+  } finally {
+    if (roundId) {
+      await dbPool.query("DELETE FROM audit_logs WHERE event_type IN ('round_deleted', 'handicap_recalculation_requested') AND metadata->>'roundId' = $1", [roundId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('DELETE /api/rounds/:id returns 404 for unknown or already deleted rounds', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+  const unknownRoundId = '00000000-0000-4000-8000-000000000000';
+
+  let playerId = null;
+  let courseId = null;
+  let roundId = null;
+
+  try {
+    const unknownResponse = await deleteRound(token, unknownRoundId);
+    assert.equal(unknownResponse.status, 404);
+    assert.equal(unknownResponse.json.error.code, 'not_found');
+
+    const player = await createPlayer(token, `${suffix}-delete-404`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-delete-404`);
+    courseId = course.id;
+
+    const config = await createTeeConfig(token, course.id);
+    const created = await createRound(token, {
+      playerId: player.id,
+      teeConfigurationId: config.id,
+      playedAt: '2026-06-11T09:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+    roundId = created.round.id;
+
+    const firstDelete = await deleteRound(token, roundId);
+    assert.equal(firstDelete.status, 200, JSON.stringify(firstDelete.json));
+
+    const secondDelete = await deleteRound(token, roundId);
+    assert.equal(secondDelete.status, 404);
+    assert.equal(secondDelete.json.error.code, 'not_found');
+  } finally {
+    if (roundId) {
+      await dbPool.query("DELETE FROM audit_logs WHERE event_type IN ('round_deleted', 'handicap_recalculation_requested') AND metadata->>'roundId' = $1", [roundId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
     }
   }
 });

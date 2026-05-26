@@ -234,15 +234,21 @@ So that incorrect or duplicate rounds can be removed without losing audit histor
 **Target Date:** **07 August 2026**
 
 ### Acceptance Criteria
-- [ ] DELETE `/rounds/:id` sets `deleted_at`.  
-- [ ] Deleted rounds excluded from search.  
-- [ ] Deletion logged.  
-- [ ] Handicap recalculation triggered if needed.
+- [x] DELETE `/rounds/:id` sets `deleted_at`.  
+- [x] Deleted rounds excluded from search.  
+- [x] Deletion logged.  
+- [x] Handicap recalculation triggered if needed.
 
 ### Dependencies
 - Rounds table  
 - Audit logging  
 - Handicap calculation
+
+### Implementation Notes
+- Added `DELETE /api/rounds/:id` with the existing admin authorization model, soft-deleting only active rounds and returning `404` for unknown or already deleted records.
+- Reused the rounds list/query `deleted_at IS NULL` behavior from story 6 so deleted rounds disappear from search and detail reads immediately after deletion.
+- Persisted a `round_deleted` audit event and, when a deleted round had a stored score differential, emitted a `handicap_recalculation_requested` application event to trigger downstream handicap recomputation once the handicap module consumes these events.
+- Added e2e coverage for delete success, audit event persistence, search exclusion, and repeated-delete `404` handling.
 
 ---
 

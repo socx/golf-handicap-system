@@ -15,7 +15,7 @@ import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
-import { handleCreateRound, handleGetRound, handleListRounds } from './routes/rounds';
+import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds } from './routes/rounds';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -275,6 +275,11 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const roundRoute = parseRoundRoute(pathname);
     if (roundRoute && method === 'GET') {
       await handleGetRound(req, res, roundRoute.roundId);
+      return;
+    }
+
+    if (roundRoute && method === 'DELETE') {
+      await handleDeleteRound(req, res, roundRoute.roundId);
       return;
     }
 
