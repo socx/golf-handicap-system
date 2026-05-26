@@ -51,6 +51,17 @@ interface RoundDetailRow {
   updated_at: string;
 }
 
+interface TeeConfigurationMetadataRow {
+  id: string;
+  course_id: string;
+  course_name: string;
+  name: string;
+  tee_colour: string;
+  hole_count: number;
+  course_rating: number | null;
+  slope_rating: number | null;
+}
+
 function getStrokesReceivedOnHole(playingHandicap: number, holeStrokeIndex: number, holeCount: number): number {
   if (holeCount <= 0) return 0;
 
@@ -454,6 +465,29 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
 
   const round = roundResult.rows[0] as RoundDetailRow;
 
+  const teeConfigurationResult = await dbPool.query(
+    `SELECT tc.id,
+            tc.course_id,
+            c.name AS course_name,
+            tc.name,
+            tc.tee_colour,
+            tc.hole_count,
+            tc.course_rating,
+            tc.slope_rating
+     FROM tee_configurations tc
+     INNER JOIN courses c ON c.id = tc.course_id
+     WHERE tc.id = $1 AND tc.deleted_at IS NULL AND c.deleted_at IS NULL
+     LIMIT 1`,
+    [round.tee_configuration_id],
+  );
+
+  if (Number(teeConfigurationResult.rowCount || 0) === 0) {
+    sendError(res, 404, 'not_found', 'Tee configuration not found');
+    return;
+  }
+
+  const teeConfiguration = teeConfigurationResult.rows[0] as TeeConfigurationMetadataRow;
+
   const holeScoresResult = await dbPool.query(
     `SELECT id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at
      FROM hole_scores
@@ -499,6 +533,16 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
       },
       createdAt: round.created_at,
       updatedAt: round.updated_at,
+    },
+    teeConfiguration: {
+      id: teeConfiguration.id,
+      courseId: teeConfiguration.course_id,
+      courseName: teeConfiguration.course_name,
+      name: teeConfiguration.name,
+      teeColour: teeConfiguration.tee_colour,
+      holeCount: teeConfiguration.hole_count,
+      courseRating: teeConfiguration.course_rating === null ? null : Number(teeConfiguration.course_rating),
+      slopeRating: teeConfiguration.slope_rating === null ? null : Number(teeConfiguration.slope_rating),
     },
     holeScores,
   });

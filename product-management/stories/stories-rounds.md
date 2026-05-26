@@ -162,14 +162,24 @@ So that the frontend can display a complete scorecard.
 **Target Date:** **02 August 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/rounds/:id` returns round + hole_scores.  
-- [ ] Includes aggregates and flags.  
-- [ ] Includes tee configuration metadata.  
-- [ ] Returns 404 for deleted or missing rounds.
+- [x] GET `/rounds/:id` returns round + hole_scores.  
+- [x] Includes aggregates and flags.  
+- [x] Includes tee configuration metadata.  
+- [x] Returns 404 for deleted or missing rounds.
 
 ### Dependencies
 - Rounds & hole_scores tables  
 - Aggregation logic
+
+### Implementation Notes
+- Implemented round detail retrieval in `apps/api/src/routes/rounds.ts` via `handleGetRound` for `GET /api/rounds/:id` (also `/rounds/:id`).
+- Response includes:
+	- Round core fields
+	- Aggregates and flags (`grossScore`, `adjustedGrossScore`, totals, tournament/9-hole flags)
+	- Tee configuration metadata (`id`, `courseId`, `courseName`, `name`, `teeColour`, `holeCount`, `courseRating`, `slopeRating`)
+	- Ordered per-hole `holeScores`
+- Returns `404 not_found` for missing/deleted rounds and when referenced tee configuration metadata is unavailable.
+- Extended e2e coverage in `apps/api/test/rounds-create.e2e.test.mjs` to assert tee metadata presence in round detail responses.
 
 ---
 

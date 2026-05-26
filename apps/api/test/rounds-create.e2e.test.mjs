@@ -478,6 +478,12 @@ test('GET /api/rounds/:id returns round aggregates and hole scores', async () =>
     assert.equal(getResponse.json.round.grossScore, createResponse.json.round.grossScore);
     assert.equal(getResponse.json.round.adjustedGrossScore, createResponse.json.round.adjustedGrossScore);
     assert.deepEqual(getResponse.json.round.totals, createResponse.json.round.totals);
+    assert.equal(getResponse.json.teeConfiguration.id, config.id);
+    assert.equal(getResponse.json.teeConfiguration.courseId, course.id);
+    assert.equal(getResponse.json.teeConfiguration.courseName, course.name);
+    assert.equal(getResponse.json.teeConfiguration.name, 'Members');
+    assert.equal(getResponse.json.teeConfiguration.teeColour, 'White');
+    assert.equal(getResponse.json.teeConfiguration.holeCount, 9);
     assert.equal(getResponse.json.holeScores.length, 9);
     assert.equal(getResponse.json.holeScores[0].holeNumber, 1);
     assert.equal(getResponse.json.holeScores[8].holeNumber, 9);
