@@ -59,6 +59,15 @@ async function cleanupCourse(courseId, token) {
   await requestJson(`/api/courses/${courseId}`, { method: 'DELETE', token });
 }
 
+function buildNineHoles() {
+  return Array.from({ length: 9 }, (_, idx) => ({
+    holeNumber: idx + 1,
+    distanceYards: 300 + idx * 10,
+    par: idx % 3 === 0 ? 5 : 4,
+    strokeIndex: idx + 1,
+  }));
+}
+
 before(async () => {
   apiProcess = spawn('node', ['--import', 'tsx', 'apps/api/src/index.ts'], {
     cwd: ROOT_DIR,
@@ -218,6 +227,77 @@ test('courses flow 2: create, verify, update partial fields, verify only intende
     assert.equal(getAfter.json.city, 'Updated City');
     assert.equal(getAfter.json.phone, '+1-555-9999');
     assert.equal(getAfter.json.website, null);
+  } finally {
+    await cleanupCourse(courseId, token);
+  }
+});
+
+test('courses flow 3: tee configuration hole stroke indexes can be swapped in one update', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  const createCourseResp = await requestJson('/api/courses', {
+    method: 'POST',
+    token,
+    body: {
+      name: `E2E Flow3 ${suffix}`,
+      city: 'Swap City',
+      country: 'GB',
+    },
+  });
+
+  assert.equal(createCourseResp.status, 201);
+  const courseId = createCourseResp.json.id;
+
+  try {
+    const createConfigResp = await requestJson(`/api/courses/${courseId}/configurations`, {
+      method: 'POST',
+      token,
+      body: {
+        name: 'Members',
+        teeColour: 'White',
+        holes: buildNineHoles(),
+      },
+    });
+
+    assert.equal(createConfigResp.status, 201, JSON.stringify(createConfigResp.json));
+
+    const configId = createConfigResp.json.id;
+    const hole1 = createConfigResp.json.holes.find((h) => h.holeNumber === 1);
+    const hole2 = createConfigResp.json.holes.find((h) => h.holeNumber === 2);
+
+    assert.ok(hole1);
+    assert.ok(hole2);
+    assert.equal(hole1.strokeIndex, 1);
+    assert.equal(hole2.strokeIndex, 2);
+
+    const swapResp = await requestJson(`/api/configurations/${configId}`, {
+      method: 'PATCH',
+      token,
+      body: {
+        holes: [
+          { id: hole1.id, strokeIndex: 2 },
+          { id: hole2.id, strokeIndex: 1 },
+        ],
+      },
+    });
+
+    assert.equal(swapResp.status, 200, JSON.stringify(swapResp.json));
+
+    const swapped1 = swapResp.json.holes.find((h) => h.id === hole1.id);
+    const swapped2 = swapResp.json.holes.find((h) => h.id === hole2.id);
+    assert.equal(swapped1.stroke_index, 2);
+    assert.equal(swapped2.stroke_index, 1);
+
+    const getCourseResp = await requestJson(`/api/courses/${courseId}`);
+    assert.equal(getCourseResp.status, 200);
+    const cfg = (getCourseResp.json.teeConfigurations || []).find((c) => c.id === configId);
+    assert.ok(cfg);
+
+    const courseHole1 = cfg.holes.find((h) => h.holeNumber === 1);
+    const courseHole2 = cfg.holes.find((h) => h.holeNumber === 2);
+    assert.equal(courseHole1.strokeIndex, 2);
+    assert.equal(courseHole2.strokeIndex, 1);
   } finally {
     await cleanupCourse(courseId, token);
   }

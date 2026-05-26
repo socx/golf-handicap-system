@@ -505,6 +505,8 @@ export async function handleUpdateTeeConfiguration(req: http.IncomingMessage, re
       const client = await dbPool.connect();
       try {
         await client.query('BEGIN');
+        // Allow temporary uniqueness collisions while swapping hole/stroke indexes.
+        await client.query('SET CONSTRAINTS ALL DEFERRED');
 
         const configResult = await client.query(`SELECT id FROM tee_configurations WHERE id = $1 AND deleted_at IS NULL`, [configId]);
         if (configResult.rows.length === 0) {
