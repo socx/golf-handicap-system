@@ -309,16 +309,33 @@ So that I can manage course details manually without using CSV import.
 **Target Date:** **20 August 2026**
 
 ### Acceptance Criteria
-- [ ] `/courses/new` and `/courses/:id/edit` routes are available and accessible from the course list/detail pages.  
-- [ ] Form captures required/optional course fields (name, address, city, country, phone, email, website).  
-- [ ] Client-side validation mirrors API constraints (required name, country format, URL/email format where provided).  
-- [ ] Create mode calls the course creation API and edit mode calls the course update API, with validation/server errors shown clearly.  
-- [ ] Success shows confirmation toast and redirects to the relevant course detail page.
+- [x] `/courses/new` and `/courses/:id/edit` routes are available and accessible from the course list/detail pages.  
+- [x] Form captures required/optional course fields (name, address, city, country, phone, email, website).  
+- [x] Client-side validation mirrors API constraints (required name, country format, URL/email format where provided).  
+- [x] Create mode calls the course creation API and edit mode calls the course update API, with validation/server errors shown clearly.  
+- [x] Success shows confirmation toast and redirects to the relevant course detail page.
 
 ### Dependencies
 - Course creation and update APIs (`POST /courses`, `PATCH /courses/:id`)  
 - Frontend routing  
 - Shared form components / validation utilities
+
+### Implementation Notes
+- Added a shared create/edit page at `apps/web/src/pages/CourseFormPage.tsx` with mode-based loading and submit behavior.
+- Added routes in `apps/web/src/App.tsx`:
+	- `/courses/new`
+	- `/courses/:courseId/edit`
+- Extended `coursesApi` in `apps/web/src/api/courses.ts` with:
+	- `create(payload)`
+	- `update(courseId, payload)`
+- Updated navigation entry points:
+	- `apps/web/src/pages/CoursesPage.tsx` includes a Create Course action.
+	- `apps/web/src/pages/CourseDetailPage.tsx` includes an Edit Course action.
+- Validation covers required name, 2-letter country code, email format, and website URL format.
+- Successful create/update actions show success toasts and redirect to the relevant course detail page.
+- Added tests:
+	- `apps/web/src/test/CourseFormPage.test.tsx` (create, edit, validation)
+	- Extended `apps/web/src/api/courses.test.ts` for create/update API helpers.
 
 ---
 

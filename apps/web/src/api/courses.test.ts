@@ -117,6 +117,54 @@ describe('coursesApi.get', () => {
   });
 });
 
+describe('coursesApi.create and coursesApi.update', () => {
+  it('calls create endpoint and normalizes response payload', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        id: 'course-10',
+        name: 'New Course',
+        country: 'GB',
+        createdAt: '2026-08-20T00:00:00.000Z',
+        updatedAt: '2026-08-20T00:00:00.000Z',
+      },
+    } as never);
+
+    const response = await coursesApi.create({
+      name: 'New Course',
+      country: 'GB',
+    });
+
+    expect(postSpy).toHaveBeenCalledWith('/courses', {
+      name: 'New Course',
+      country: 'GB',
+    });
+    expect(response.data.created_at).toBe('2026-08-20T00:00:00.000Z');
+  });
+
+  it('calls update endpoint and normalizes response payload', async () => {
+    const patchSpy = vi.spyOn(api, 'patch').mockResolvedValue({
+      data: {
+        id: 'course-10',
+        name: 'Updated Course',
+        country: 'US',
+        createdAt: '2026-08-20T00:00:00.000Z',
+        updatedAt: '2026-08-21T00:00:00.000Z',
+      },
+    } as never);
+
+    const response = await coursesApi.update('course-10', {
+      name: 'Updated Course',
+      country: 'US',
+    });
+
+    expect(patchSpy).toHaveBeenCalledWith('/courses/course-10', {
+      name: 'Updated Course',
+      country: 'US',
+    });
+    expect(response.data.updated_at).toBe('2026-08-21T00:00:00.000Z');
+  });
+});
+
 describe('tee configuration API helpers', () => {
   it('calls create configuration endpoint', async () => {
     const postSpy = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 'cfg-1' } } as never);

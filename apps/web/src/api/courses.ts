@@ -68,6 +68,16 @@ export interface Course {
   tee_configurations?: TeeConfigurationDetail[];
 }
 
+export interface CourseUpsertPayload {
+  name?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+}
+
 export interface CoursesListResponse {
   data: Course[];
   pagination: {
@@ -224,6 +234,14 @@ export const coursesApi = {
   },
 
   get: (courseId: string) => api.get<unknown>(`/courses/${courseId}`).then((response) => ({
+    ...response,
+    data: normalizeCourse(response.data),
+  })),
+  create: (payload: CourseUpsertPayload) => api.post<unknown>('/courses', payload).then((response) => ({
+    ...response,
+    data: normalizeCourse(response.data),
+  })),
+  update: (courseId: string, payload: CourseUpsertPayload) => api.patch<unknown>(`/courses/${courseId}`, payload).then((response) => ({
     ...response,
     data: normalizeCourse(response.data),
   })),

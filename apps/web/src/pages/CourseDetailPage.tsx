@@ -113,6 +113,9 @@ export const CourseDetailPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate(`/courses/${course.id}/edit`)}>
+            Edit Course
+          </Button>
           <Button variant="secondary" onClick={() => navigate(`/courses/${course.id}/configurations/new`)}>
             Add Tee Configuration
           </Button>
