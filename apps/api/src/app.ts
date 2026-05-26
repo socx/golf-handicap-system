@@ -15,7 +15,7 @@ import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
-import { handleCreateRound } from './routes/rounds';
+import { handleCreateRound, handleGetRound } from './routes/rounds';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -71,6 +71,12 @@ function parseCourseConfigRoute(path: string): { courseId: string; isConfig?: bo
     return { courseId: String(match[1] || ''), isConfig: true };
   }
   return null;
+}
+
+function parseRoundRoute(path: string): { roundId: string } | null {
+  const match = path.match(/^\/(?:api\/)?rounds\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { roundId: String(match[1] || '') };
 }
 
 const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -258,6 +264,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     // ── Rounds ────────────────────────────────────────────────────────────
     if (method === 'POST' && (pathname === '/api/rounds' || pathname === '/rounds')) {
       await handleCreateRound(req, res);
+      return;
+    }
+
+    const roundRoute = parseRoundRoute(pathname);
+    if (roundRoute && method === 'GET') {
+      await handleGetRound(req, res, roundRoute.roundId);
       return;
     }
 

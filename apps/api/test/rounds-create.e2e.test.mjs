@@ -434,3 +434,75 @@ test('POST /api/rounds supports 18-hole net double bogey with plus handicap edge
     }
   }
 });
+
+test('GET /api/rounds/:id returns round aggregates and hole scores', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+  let createdRoundId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-get`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-get`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, courseId, buildNineHolesUniform());
+    const holeScores = buildNineHoleScores();
+
+    const createResponse = await requestJson('/api/rounds', {
+      method: 'POST',
+      token,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: new Date().toISOString(),
+        playingHandicap: 12.4,
+        holeScores,
+      },
+    });
+
+    assert.equal(createResponse.status, 201, JSON.stringify(createResponse.json));
+    createdRoundId = createResponse.json.round.id;
+
+    const getResponse = await requestJson(`/api/rounds/${createdRoundId}`, {
+      method: 'GET',
+      token,
+    });
+
+    assert.equal(getResponse.status, 200, JSON.stringify(getResponse.json));
+    assert.equal(getResponse.json.round.id, createdRoundId);
+    assert.equal(getResponse.json.round.grossScore, createResponse.json.round.grossScore);
+    assert.equal(getResponse.json.round.adjustedGrossScore, createResponse.json.round.adjustedGrossScore);
+    assert.deepEqual(getResponse.json.round.totals, createResponse.json.round.totals);
+    assert.equal(getResponse.json.holeScores.length, 9);
+    assert.equal(getResponse.json.holeScores[0].holeNumber, 1);
+    assert.equal(getResponse.json.holeScores[8].holeNumber, 9);
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('GET /api/rounds/:id returns 404 for unknown rounds', async () => {
+  const token = buildAdminToken();
+  const unknownRoundId = '00000000-0000-4000-8000-000000000000';
+
+  const response = await requestJson(`/api/rounds/${unknownRoundId}`, {
+    method: 'GET',
+    token,
+  });
+
+  assert.equal(response.status, 404);
+  assert.equal(response.json.error.code, 'not_found');
+});

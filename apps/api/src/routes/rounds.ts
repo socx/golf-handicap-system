@@ -32,6 +32,25 @@ interface TeeHoleMetadata {
   stroke_index: number;
 }
 
+interface RoundDetailRow {
+  id: string;
+  player_id: string;
+  tee_configuration_id: string;
+  played_at: string;
+  playing_handicap: number | null;
+  gross_score: number;
+  adjusted_gross_score: number;
+  score_differential: number | null;
+  total_putts: number;
+  total_gir: number;
+  total_fairways_hit: number;
+  total_penalties: number;
+  is_tournament: boolean;
+  is_9_hole: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 function getStrokesReceivedOnHole(playingHandicap: number, holeStrokeIndex: number, holeCount: number): number {
   if (holeCount <= 0) return 0;
 
@@ -408,4 +427,79 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
   } finally {
     client.release();
   }
+}
+
+export async function handleGetRound(req: http.IncomingMessage, res: http.ServerResponse, roundId: string): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  const roundResult = await dbPool.query(
+    `SELECT id, player_id, tee_configuration_id, played_at, playing_handicap,
+            gross_score, adjusted_gross_score, score_differential,
+            total_putts, total_gir, total_fairways_hit, total_penalties,
+            is_tournament, is_9_hole, created_at, updated_at
+     FROM rounds
+     WHERE id = $1 AND deleted_at IS NULL
+     LIMIT 1`,
+    [roundId],
+  );
+
+  if (Number(roundResult.rowCount || 0) === 0) {
+    sendError(res, 404, 'not_found', 'Round not found');
+    return;
+  }
+
+  const round = roundResult.rows[0] as RoundDetailRow;
+
+  const holeScoresResult = await dbPool.query(
+    `SELECT id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at
+     FROM hole_scores
+     WHERE round_id = $1
+     ORDER BY hole_number ASC`,
+    [roundId],
+  );
+
+  const holeScores = holeScoresResult.rows.map((row) => ({
+    id: String(row.id),
+    roundId: String(row.round_id),
+    holeNumber: Number(row.hole_number),
+    strokes: Number(row.strokes),
+    putts: row.putts === null ? null : Number(row.putts),
+    gir: Boolean(row.gir),
+    fairwayHit: row.fairway_hit === null ? null : Boolean(row.fairway_hit),
+    inSand: Boolean(row.in_sand),
+    penalties: Number(row.penalties),
+    netDoubleBogeyAdjusted: Number(row.net_double_bogey_adjusted),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }));
+
+  sendJson(res, 200, {
+    round: {
+      id: round.id,
+      playerId: round.player_id,
+      teeConfigurationId: round.tee_configuration_id,
+      playedAt: round.played_at,
+      playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),
+      grossScore: round.gross_score,
+      adjustedGrossScore: round.adjusted_gross_score,
+      scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
+      totals: {
+        putts: round.total_putts,
+        gir: round.total_gir,
+        fairwaysHit: round.total_fairways_hit,
+        penalties: round.total_penalties,
+      },
+      flags: {
+        isTournament: round.is_tournament,
+        is9Hole: round.is_9_hole,
+      },
+      createdAt: round.created_at,
+      updatedAt: round.updated_at,
+    },
+    holeScores,
+  });
 }

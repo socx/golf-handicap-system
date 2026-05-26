@@ -131,14 +131,22 @@ So that the system can display totals and feed WHS calculations.
 **Target Date:** **31 July 2026**
 
 ### Acceptance Criteria
-- [ ] Compute totals: gross score, adjusted gross score, putts, GIR count, fairways hit, penalties.  
-- [ ] Store aggregates in `rounds` table.  
-- [ ] Aggregates returned in round detail API.  
-- [ ] Unit tests included.
+- [x] Compute totals: gross score, adjusted gross score, putts, GIR count, fairways hit, penalties.  
+- [x] Store aggregates in `rounds` table.  
+- [x] Aggregates returned in round detail API.  
+- [x] Unit tests included.
 
 ### Dependencies
 - Net Double Bogey logic  
 - Round entry API
+
+### Implementation Notes
+- Aggregates are computed during round creation in `apps/api/src/routes/rounds.ts` from submitted hole scores and persisted to the `rounds` table (`gross_score`, `adjusted_gross_score`, `total_putts`, `total_gir`, `total_fairways_hit`, `total_penalties`).
+- Added round detail handler `handleGetRound` in `apps/api/src/routes/rounds.ts` and route wiring in `apps/api/src/app.ts` for `GET /api/rounds/:id` (also supports `/rounds/:id`).
+- Round detail response now includes persisted aggregate totals and hole scores, enabling downstream scorecard and WHS-related summary reads from stored values.
+- Extended e2e coverage in `apps/api/test/rounds-create.e2e.test.mjs`:
+	- `GET /api/rounds/:id returns round aggregates and hole scores`
+	- `GET /api/rounds/:id returns 404 for unknown rounds`
 
 ---
 
