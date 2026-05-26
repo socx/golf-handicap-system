@@ -12,12 +12,12 @@ CREATE TABLE IF NOT EXISTS tee_configurations (
   deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_tee_configurations_course_id ON tee_configurations(course_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_tee_configurations_deleted_at ON tee_configurations(deleted_at);
-CREATE INDEX idx_tee_configurations_created_at ON tee_configurations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tee_configurations_course_id ON tee_configurations(course_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tee_configurations_deleted_at ON tee_configurations(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_tee_configurations_created_at ON tee_configurations(created_at DESC);
 
 -- Unique constraint on course_id + tee_colour (only for active records)
-CREATE UNIQUE INDEX idx_tee_configurations_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tee_configurations_unique
   ON tee_configurations (course_id, LOWER(tee_colour))
   WHERE deleted_at IS NULL;
 
@@ -34,10 +34,10 @@ CREATE TABLE IF NOT EXISTS holes (
 );
 
 -- Unique constraints per configuration
-CREATE UNIQUE INDEX idx_holes_config_number_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_holes_config_number_unique
   ON holes (tee_configuration_id, hole_number);
 
-CREATE UNIQUE INDEX idx_holes_config_stroke_index_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_holes_config_stroke_index_unique
   ON holes (tee_configuration_id, stroke_index);
 
-CREATE INDEX idx_holes_tee_config_id ON holes(tee_configuration_id);
+CREATE INDEX IF NOT EXISTS idx_holes_tee_config_id ON holes(tee_configuration_id);

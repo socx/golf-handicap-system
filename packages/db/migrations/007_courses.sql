@@ -14,12 +14,12 @@ CREATE TABLE IF NOT EXISTS courses (
 );
 
 -- Unique constraint on name per country (only for active records)
-CREATE UNIQUE INDEX idx_courses_name_country_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_courses_name_country_unique
   ON courses (LOWER(name), country)
   WHERE deleted_at IS NULL;
 
 -- Indexes for search and filtering
-CREATE INDEX idx_courses_city ON courses(city) WHERE deleted_at IS NULL;
-CREATE INDEX idx_courses_country ON courses(country) WHERE deleted_at IS NULL;
-CREATE INDEX idx_courses_deleted_at ON courses(deleted_at);
-CREATE INDEX idx_courses_created_at ON courses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_courses_city ON courses(city) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_courses_country ON courses(country) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_courses_deleted_at ON courses(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_courses_created_at ON courses(created_at DESC);
