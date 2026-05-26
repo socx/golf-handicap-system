@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Select, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui';
 
 interface ScorecardRow {
@@ -44,11 +45,19 @@ const scorecards: ScorecardRow[] = [
 export const RoundsPage: React.FC = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Rounds</h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Enter and review scorecards with a mobile-first view for tablets and phones.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Rounds</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Enter and review scorecards with a mobile-first view for tablets and phones.
+          </p>
+        </div>
+        <Link
+          to="/rounds/new"
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:bg-teal-500 dark:hover:bg-teal-400"
+        >
+          + Enter round
+        </Link>
       </div>
 
       <Card>
