@@ -59,7 +59,25 @@ export interface CreateRoundResponse {
   }>;
 }
 
+export interface RoundDetailTeeConfiguration {
+  id: string;
+  courseId: string;
+  courseName: string;
+  name: string;
+  teeColour: string;
+  holeCount: number;
+  courseRating: number | null;
+  slopeRating: number | null;
+}
+
+export interface RoundDetailResponse {
+  round: RoundSummary;
+  teeConfiguration: RoundDetailTeeConfiguration;
+  holeScores: CreateRoundResponse['holeScores'];
+}
+
 export const roundsApi = {
   create: (payload: CreateRoundPayload) =>
     api.post<CreateRoundResponse>('/rounds', payload),
+  get: (roundId: string) => api.get<RoundDetailResponse>(`/rounds/${roundId}`),
 };

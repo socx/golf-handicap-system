@@ -289,10 +289,10 @@ So that users can review round details and per‑hole performance.
 **Target Date:** **22 August 2026**
 
 ### Acceptance Criteria
-- [ ] `/rounds/:id` shows per‑hole grid.  
-- [ ] Shows totals (gross, adjusted, putts, GIR, FIR, penalties).  
-- [ ] Shows tee configuration metadata.  
-- [ ] Responsive layout.
+- [x] `/rounds/:id` shows per‑hole grid.  
+- [x] Shows totals (gross, adjusted, putts, GIR, FIR, penalties).  
+- [x] Shows tee configuration metadata.  
+- [x] Responsive layout.
 
 ### Dependencies
 - Round detail API  

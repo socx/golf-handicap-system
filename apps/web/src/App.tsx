@@ -37,6 +37,7 @@ const CourseTeeConfigEditorPage = lazy(async () => import('./pages/CourseTeeConf
 const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
+const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
 
 function AppRoutes() {
   return (
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="/courses/:courseId/configurations/:configId/edit" element={<CourseTeeConfigEditorPage />} />
         <Route path="/rounds" element={<RoundsPage />} />
         <Route path="/rounds/new" element={<RoundEntryPage />} />
+        <Route path="/rounds/:roundId" element={<RoundScorecardPage />} />
         <Route
           path="/handicap"
           element={<SectionPlaceholderPage title="Handicap" description="Handicap calculations, history, and trend breakdowns are planned in upcoming stories." />}
