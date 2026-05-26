@@ -53,6 +53,24 @@ function buildNineHoles() {
   }));
 }
 
+function buildNineHolesUniform() {
+  return Array.from({ length: 9 }, (_, idx) => ({
+    holeNumber: idx + 1,
+    distanceYards: 300 + idx * 10,
+    par: 4,
+    strokeIndex: idx + 1,
+  }));
+}
+
+function buildEighteenHolesUniform() {
+  return Array.from({ length: 18 }, (_, idx) => ({
+    holeNumber: idx + 1,
+    distanceYards: 320 + idx * 5,
+    par: 4,
+    strokeIndex: idx + 1,
+  }));
+}
+
 function buildNineHoleScores() {
   return Array.from({ length: 9 }, (_, idx) => ({
     holeNumber: idx + 1,
@@ -108,13 +126,17 @@ async function createCourse(token, suffix) {
 }
 
 async function createTeeConfig(token, courseId) {
+  return createTeeConfigWithHoles(token, courseId, buildNineHoles());
+}
+
+async function createTeeConfigWithHoles(token, courseId, holes) {
   const response = await requestJson(`/api/courses/${courseId}/configurations`, {
     method: 'POST',
     token,
     body: {
       name: 'Members',
       teeColour: 'White',
-      holes: buildNineHoles(),
+      holes,
     },
   });
   assert.equal(response.status, 201, JSON.stringify(response.json));
@@ -282,6 +304,124 @@ test('POST /api/rounds stores round + hole scores transactionally and returns to
 
     const dbHoleScores = await dbPool.query('SELECT COUNT(*)::int AS total FROM hole_scores WHERE round_id = $1', [roundId]);
     assert.equal(dbHoleScores.rows[0].total, 9);
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('POST /api/rounds computes net double bogey adjusted scores for 9-hole rounds', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-ndb9`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-ndb9`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, courseId, buildNineHolesUniform());
+
+    const holeScores = Array.from({ length: 9 }, (_, idx) => ({
+      holeNumber: idx + 1,
+      strokes: 10,
+      putts: 2,
+      gir: false,
+      fairwayHit: false,
+      inSand: false,
+      penalties: 0,
+      // Ensure server ignores any client-provided adjusted value.
+      netDoubleBogeyAdjusted: 1,
+    }));
+
+    const response = await requestJson('/api/rounds', {
+      method: 'POST',
+      token,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: new Date().toISOString(),
+        playingHandicap: 12.4,
+        holeScores,
+      },
+    });
+
+    assert.equal(response.status, 201, JSON.stringify(response.json));
+
+    const expectedAdjustedByHole = [8, 8, 8, 7, 7, 7, 7, 7, 7];
+    const adjustedFromResponse = response.json.holeScores.map((row) => row.netDoubleBogeyAdjusted);
+    assert.deepEqual(adjustedFromResponse, expectedAdjustedByHole);
+    assert.equal(response.json.round.adjustedGrossScore, expectedAdjustedByHole.reduce((sum, n) => sum + n, 0));
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('POST /api/rounds supports 18-hole net double bogey with plus handicap edge case', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-ndb18`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-ndb18`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, courseId, buildEighteenHolesUniform());
+
+    const holeScores = Array.from({ length: 18 }, (_, idx) => ({
+      holeNumber: idx + 1,
+      strokes: 7,
+      putts: 2,
+      gir: false,
+      fairwayHit: false,
+      inSand: false,
+      penalties: 0,
+    }));
+
+    const response = await requestJson('/api/rounds', {
+      method: 'POST',
+      token,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: new Date().toISOString(),
+        playingHandicap: -2,
+        holeScores,
+      },
+    });
+
+    assert.equal(response.status, 201, JSON.stringify(response.json));
+    assert.equal(response.json.round.flags.is9Hole, false);
+
+    const adjustedByHole = response.json.holeScores.map((row) => row.netDoubleBogeyAdjusted);
+    assert.equal(adjustedByHole[16], 5); // SI 17
+    assert.equal(adjustedByHole[17], 5); // SI 18
+    assert.ok(adjustedByHole.slice(0, 16).every((value) => value === 6));
+    assert.equal(response.json.round.adjustedGrossScore, 106);
   } finally {
     if (playerId) {
       await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);

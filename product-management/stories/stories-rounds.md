@@ -98,14 +98,22 @@ So that WHS calculations and scoring summaries are accurate.
 **Target Date:** **29 July 2026**
 
 ### Acceptance Criteria
-- [ ] For each hole, compute Net Double Bogey using stroke index + playing handicap.  
-- [ ] Store `net_double_bogey_adjusted` in hole_scores.  
-- [ ] Unit tests cover typical and edge cases.  
-- [ ] Logic supports 9‑hole and 18‑hole rounds.
+- [x] For each hole, compute Net Double Bogey using stroke index + playing handicap.  
+- [x] Store `net_double_bogey_adjusted` in hole_scores.  
+- [x] Unit tests cover typical and edge cases.  
+- [x] Logic supports 9‑hole and 18‑hole rounds.
 
 ### Dependencies
 - Round entry API  
 - Tee configuration hole data
+
+### Implementation Notes
+- `apps/api/src/routes/rounds.ts` now computes `net_double_bogey_adjusted` server-side using tee hole `par` + `stroke_index` and rounded `playingHandicap` stroke allocation per hole.
+- Net Double Bogey cap formula implemented as `par + 2 + strokes_received_on_hole`, with support for both handicap and plus-handicap allocation.
+- Client-provided `netDoubleBogeyAdjusted` input is ignored for persistence; adjusted scores are always derived by server logic.
+- Added e2e coverage in `apps/api/test/rounds-create.e2e.test.mjs` for:
+	- 9-hole typical case (`playingHandicap: 12.4`) with per-hole adjusted caps.
+	- 18-hole edge case for plus handicap (`playingHandicap: -2`).
 
 ---
 

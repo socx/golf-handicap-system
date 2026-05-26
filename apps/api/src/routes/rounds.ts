@@ -16,7 +16,6 @@ interface HoleScoreInput {
   fairway_hit: boolean | null;
   in_sand: boolean;
   penalties: number;
-  net_double_bogey_adjusted: number;
 }
 
 interface CreateRoundInput {
@@ -25,6 +24,42 @@ interface CreateRoundInput {
   played_at: string;
   playing_handicap: number | null;
   hole_scores: HoleScoreInput[];
+}
+
+interface TeeHoleMetadata {
+  hole_number: number;
+  par: number;
+  stroke_index: number;
+}
+
+function getStrokesReceivedOnHole(playingHandicap: number, holeStrokeIndex: number, holeCount: number): number {
+  if (holeCount <= 0) return 0;
+
+  if (playingHandicap >= 0) {
+    const base = Math.floor(playingHandicap / holeCount);
+    const remainder = playingHandicap % holeCount;
+    return base + (holeStrokeIndex <= remainder ? 1 : 0);
+  }
+
+  const abs = Math.abs(playingHandicap);
+  const base = -Math.floor(abs / holeCount);
+  const remainder = abs % holeCount;
+  if (remainder === 0) return base;
+
+  // Plus handicap players give back strokes starting at the easiest holes.
+  const easiestStrokeIndexThreshold = holeCount - remainder;
+  return base + (holeStrokeIndex > easiestStrokeIndexThreshold ? -1 : 0);
+}
+
+function computeNetDoubleBogeyAdjustedScore(
+  strokes: number,
+  playingHandicap: number,
+  hole: TeeHoleMetadata,
+  holeCount: number,
+): number {
+  const strokesReceived = getStrokesReceivedOnHole(playingHandicap, hole.stroke_index, holeCount);
+  const netDoubleBogeyCap = Math.max(1, hole.par + 2 + strokesReceived);
+  return Math.min(strokes, netDoubleBogeyCap);
 }
 
 function isUuid(value: string): boolean {
@@ -87,7 +122,6 @@ function validateCreateRoundPayload(payload: Record<string, unknown>): { errors:
       const gir = hole.gir === undefined ? false : Boolean(hole.gir);
       const fairwayHit = hole.fairwayHit === undefined || hole.fairwayHit === null ? null : Boolean(hole.fairwayHit);
       const inSand = hole.inSand === undefined ? false : Boolean(hole.inSand);
-      const netDoubleBogeyAdjusted = hole.netDoubleBogeyAdjusted === undefined ? strokes : Number(hole.netDoubleBogeyAdjusted);
 
       if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
         errors.push({ field: `holeScores[${index}].holeNumber`, message: 'holeNumber must be an integer between 1 and 18' });
@@ -105,13 +139,6 @@ function validateCreateRoundPayload(payload: Record<string, unknown>): { errors:
         errors.push({ field: `holeScores[${index}].penalties`, message: 'penalties must be an integer >= 0' });
       }
 
-      if (!Number.isInteger(netDoubleBogeyAdjusted) || netDoubleBogeyAdjusted < 0) {
-        errors.push({
-          field: `holeScores[${index}].netDoubleBogeyAdjusted`,
-          message: 'netDoubleBogeyAdjusted must be an integer >= 0',
-        });
-      }
-
       holeScores.push({
         hole_number: holeNumber,
         strokes,
@@ -120,7 +147,6 @@ function validateCreateRoundPayload(payload: Record<string, unknown>): { errors:
         fairway_hit: fairwayHit,
         in_sand: inSand,
         penalties,
-        net_double_bogey_adjusted: netDoubleBogeyAdjusted,
       });
     }
 
@@ -190,18 +216,78 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
     return;
   }
 
+  const holeMetadataResult = await dbPool.query(
+    `SELECT hole_number, par, stroke_index
+     FROM holes
+     WHERE tee_configuration_id = $1
+     ORDER BY hole_number ASC`,
+    [value.tee_configuration_id],
+  );
+
+  if (Number(holeMetadataResult.rowCount || 0) !== config.hole_count) {
+    sendError(
+      res,
+      400,
+      'validation_error',
+      'Tee configuration hole metadata is incomplete',
+      [{ field: 'teeConfigurationId', message: 'Tee configuration must include complete hole metadata' }],
+    );
+    return;
+  }
+
+  const holesByNumber = new Map<number, TeeHoleMetadata>();
+  for (const row of holeMetadataResult.rows) {
+    const hole = row as TeeHoleMetadata;
+    holesByNumber.set(hole.hole_number, hole);
+  }
+
+  const playingHandicapForAdjustment = Math.round(value.playing_handicap ?? 0);
+  const computedHoleScores = value.hole_scores.map((hole) => {
+    const metadata = holesByNumber.get(hole.hole_number);
+    if (!metadata) {
+      return {
+        ...hole,
+        net_double_bogey_adjusted: hole.strokes,
+        invalidHole: true,
+      };
+    }
+
+    return {
+      ...hole,
+      net_double_bogey_adjusted: computeNetDoubleBogeyAdjustedScore(
+        hole.strokes,
+        playingHandicapForAdjustment,
+        metadata,
+        config.hole_count,
+      ),
+      invalidHole: false,
+    };
+  });
+
+  const invalidHole = computedHoleScores.find((hole) => hole.invalidHole);
+  if (invalidHole) {
+    sendError(
+      res,
+      400,
+      'validation_error',
+      'holeScores contains a holeNumber not present in tee configuration',
+      [{ field: 'holeScores', message: 'All holeScores.holeNumber values must exist in tee configuration holes' }],
+    );
+    return;
+  }
+
   const playerResult = await dbPool.query('SELECT id FROM players WHERE id = $1 AND deleted_at IS NULL LIMIT 1', [value.player_id]);
   if (Number(playerResult.rowCount || 0) === 0) {
     sendError(res, 404, 'not_found', 'Player not found');
     return;
   }
 
-  const grossScore = value.hole_scores.reduce((sum, hole) => sum + hole.strokes, 0);
-  const adjustedGrossScore = value.hole_scores.reduce((sum, hole) => sum + hole.net_double_bogey_adjusted, 0);
-  const totalPutts = value.hole_scores.reduce((sum, hole) => sum + (hole.putts || 0), 0);
-  const totalGir = value.hole_scores.reduce((sum, hole) => sum + (hole.gir ? 1 : 0), 0);
-  const totalFairwaysHit = value.hole_scores.reduce((sum, hole) => sum + (hole.fairway_hit ? 1 : 0), 0);
-  const totalPenalties = value.hole_scores.reduce((sum, hole) => sum + hole.penalties, 0);
+  const grossScore = computedHoleScores.reduce((sum, hole) => sum + hole.strokes, 0);
+  const adjustedGrossScore = computedHoleScores.reduce((sum, hole) => sum + hole.net_double_bogey_adjusted, 0);
+  const totalPutts = computedHoleScores.reduce((sum, hole) => sum + (hole.putts || 0), 0);
+  const totalGir = computedHoleScores.reduce((sum, hole) => sum + (hole.gir ? 1 : 0), 0);
+  const totalFairwaysHit = computedHoleScores.reduce((sum, hole) => sum + (hole.fairway_hit ? 1 : 0), 0);
+  const totalPenalties = computedHoleScores.reduce((sum, hole) => sum + hole.penalties, 0);
 
   const client = await dbPool.connect();
   try {
@@ -249,7 +335,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
     };
 
     const holeInsertResults = await Promise.all(
-      value.hole_scores.map((hole) =>
+      computedHoleScores.map((hole) =>
         client.query(
           `INSERT INTO hole_scores
            (round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted)
