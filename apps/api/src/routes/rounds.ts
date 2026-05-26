@@ -62,6 +62,20 @@ interface TeeConfigurationMetadataRow {
   slope_rating: number | null;
 }
 
+interface RoundListRow extends RoundDetailRow {
+  course_id: string | null;
+  course_name: string | null;
+  tee_configuration_name: string | null;
+  tee_colour: string | null;
+}
+
+interface RoundListFilters {
+  playerId: string;
+  courseId: string;
+  from: string;
+  to: string;
+}
+
 function getStrokesReceivedOnHole(playingHandicap: number, holeStrokeIndex: number, holeCount: number): number {
   if (holeCount <= 0) return 0;
 
@@ -100,6 +114,164 @@ function toNumberOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function parsePagination(requestUrl: URL): { page: number; limit: number; offset: number } {
+  const pageRaw = Number(requestUrl.searchParams.get('page') || '1');
+  const limitRaw = Number(requestUrl.searchParams.get('limit') || '20');
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 100) : 20;
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
+function parseRoundListFilters(requestUrl: URL): RoundListFilters {
+  return {
+    playerId: (requestUrl.searchParams.get('playerId') || '').trim(),
+    courseId: (requestUrl.searchParams.get('courseId') || '').trim(),
+    from: (requestUrl.searchParams.get('from') || '').trim(),
+    to: (requestUrl.searchParams.get('to') || '').trim(),
+  };
+}
+
+function parseDateFilter(value: string, boundary: 'start' | 'end'): string | null {
+  if (!value) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const suffix = boundary === 'start' ? 'T00:00:00.000Z' : 'T23:59:59.999Z';
+    return `${value}${suffix}`;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+export async function handleListRounds(req: http.IncomingMessage, res: http.ServerResponse, requestUrl: URL): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  const { page, limit, offset } = parsePagination(requestUrl);
+  const filters = parseRoundListFilters(requestUrl);
+
+  if (filters.playerId && !isUuid(filters.playerId)) {
+    sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
+    return;
+  }
+
+  if (filters.courseId && !isUuid(filters.courseId)) {
+    sendError(res, 400, 'validation_error', 'courseId must be a valid UUID', [{ field: 'courseId', message: 'courseId must be a valid UUID' }]);
+    return;
+  }
+
+  const fromDate = filters.from ? parseDateFilter(filters.from, 'start') : null;
+  if (filters.from && !fromDate) {
+    sendError(res, 400, 'validation_error', 'from must be a valid ISO date/time or YYYY-MM-DD value', [{ field: 'from', message: 'from must be a valid date filter' }]);
+    return;
+  }
+
+  const toDate = filters.to ? parseDateFilter(filters.to, 'end') : null;
+  if (filters.to && !toDate) {
+    sendError(res, 400, 'validation_error', 'to must be a valid ISO date/time or YYYY-MM-DD value', [{ field: 'to', message: 'to must be a valid date filter' }]);
+    return;
+  }
+
+  const clauses = ['r.deleted_at IS NULL'];
+  const params: unknown[] = [];
+
+  if (filters.playerId) {
+    params.push(filters.playerId);
+    clauses.push(`r.player_id = $${params.length}`);
+  }
+
+  if (filters.courseId) {
+    params.push(filters.courseId);
+    clauses.push(`tc.course_id = $${params.length}`);
+  }
+
+  if (fromDate) {
+    params.push(fromDate);
+    clauses.push(`r.played_at >= $${params.length}`);
+  }
+
+  if (toDate) {
+    params.push(toDate);
+    clauses.push(`r.played_at <= $${params.length}`);
+  }
+
+  const whereClause = clauses.join(' AND ');
+
+  const countResult = await dbPool.query(
+    `SELECT COUNT(*)::int AS total
+     FROM rounds r
+     LEFT JOIN tee_configurations tc ON tc.id = r.tee_configuration_id
+     LEFT JOIN courses c ON c.id = tc.course_id
+     WHERE ${whereClause}`,
+    params,
+  );
+  const total = Number(countResult.rows[0]?.total || 0);
+
+  const listParams = [...params, limit, offset];
+  const limitIndex = listParams.length - 1;
+  const offsetIndex = listParams.length;
+
+  const listResult = await dbPool.query(
+    `SELECT r.id, r.player_id, r.tee_configuration_id, r.played_at, r.playing_handicap,
+            r.gross_score, r.adjusted_gross_score, r.score_differential,
+            r.total_putts, r.total_gir, r.total_fairways_hit, r.total_penalties,
+            r.is_tournament, r.is_9_hole, r.created_at, r.updated_at,
+            tc.course_id, c.name AS course_name, tc.name AS tee_configuration_name, tc.tee_colour
+     FROM rounds r
+     LEFT JOIN tee_configurations tc ON tc.id = r.tee_configuration_id
+     LEFT JOIN courses c ON c.id = tc.course_id
+     WHERE ${whereClause}
+     ORDER BY r.played_at DESC, r.created_at DESC
+     LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
+    listParams,
+  );
+
+  const rounds = listResult.rows.map((row) => {
+    const round = row as RoundListRow;
+    return {
+      id: round.id,
+      playerId: round.player_id,
+      teeConfigurationId: round.tee_configuration_id,
+      courseId: round.course_id,
+      courseName: round.course_name,
+      teeConfigurationName: round.tee_configuration_name,
+      teeColour: round.tee_colour,
+      playedAt: round.played_at,
+      playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),
+      grossScore: round.gross_score,
+      adjustedGrossScore: round.adjusted_gross_score,
+      scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
+      totals: {
+        putts: round.total_putts,
+        gir: round.total_gir,
+        fairwaysHit: round.total_fairways_hit,
+        penalties: round.total_penalties,
+      },
+      flags: {
+        isTournament: round.is_tournament,
+        is9Hole: round.is_9_hole,
+      },
+      createdAt: round.created_at,
+      updatedAt: round.updated_at,
+    };
+  });
+
+  sendJson(res, 200, {
+    rounds,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
+  });
 }
 
 function validateCreateRoundPayload(payload: Record<string, unknown>): { errors: ValidationIssue[]; value: CreateRoundInput | null } {

@@ -195,14 +195,30 @@ So that users and admins can find rounds quickly.
 **Target Date:** **05 August 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/rounds` supports: `playerId`, `courseId`, `from`, `to`, `page`, `limit`.  
-- [ ] Pagination metadata included.  
-- [ ] Soft‑deleted rounds excluded.  
-- [ ] Sorting by date (desc) by default.
+- [x] GET `/rounds` supports: `playerId`, `courseId`, `from`, `to`, `page`, `limit`.  
+- [x] Pagination metadata included.  
+- [x] Soft‑deleted rounds excluded.  
+- [x] Sorting by date (desc) by default.
 
 ### Dependencies
 - Rounds table  
 - Player & course APIs
+
+### Implementation Notes
+- Added `handleListRounds` in `apps/api/src/routes/rounds.ts` and route wiring in `apps/api/src/app.ts` for `GET /api/rounds` (also `/rounds`).
+- Supported query filters:
+	- `playerId`
+	- `courseId`
+	- `from`
+	- `to`
+	- `page`
+	- `limit`
+- Search excludes rows where `rounds.deleted_at IS NOT NULL` and orders results by `played_at DESC, created_at DESC`.
+- Response includes pagination metadata: `page`, `limit`, `total`, `totalPages`.
+- Each round list item includes round aggregates/flags plus course and tee summary fields to support downstream UI list rendering.
+- Extended e2e coverage in `apps/api/test/rounds-create.e2e.test.mjs`:
+	- `GET /api/rounds filters by player/date and sorts by playedAt descending`
+	- `GET /api/rounds filters by course and excludes soft-deleted rounds with pagination`
 
 ---
 

@@ -143,6 +143,16 @@ async function createTeeConfigWithHoles(token, courseId, holes) {
   return response.json;
 }
 
+async function createRound(token, payload) {
+  const response = await requestJson('/api/rounds', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+  assert.equal(response.status, 201, JSON.stringify(response.json));
+  return response.json;
+}
+
 before(async () => {
   dbPool = new Pool({ connectionString: DATABASE_URL });
 
@@ -511,4 +521,170 @@ test('GET /api/rounds/:id returns 404 for unknown rounds', async () => {
 
   assert.equal(response.status, 404);
   assert.equal(response.json.error.code, 'not_found');
+});
+
+test('GET /api/rounds filters by player/date and sorts by playedAt descending', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerOneId = null;
+  let playerTwoId = null;
+  let courseOneId = null;
+  let courseTwoId = null;
+
+  try {
+    const playerOne = await createPlayer(token, `${suffix}-search-p1`);
+    playerOneId = playerOne.id;
+    const playerTwo = await createPlayer(token, `${suffix}-search-p2`);
+    playerTwoId = playerTwo.id;
+
+    const courseOne = await createCourse(token, `${suffix}-search-c1`);
+    courseOneId = courseOne.id;
+    const courseTwo = await createCourse(token, `${suffix}-search-c2`);
+    courseTwoId = courseTwo.id;
+
+    const configOne = await createTeeConfig(token, courseOne.id);
+    const configTwo = await createTeeConfig(token, courseTwo.id);
+
+    await createRound(token, {
+      playerId: playerOne.id,
+      teeConfigurationId: configOne.id,
+      playedAt: '2026-05-01T10:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    const roundTwo = await createRound(token, {
+      playerId: playerOne.id,
+      teeConfigurationId: configOne.id,
+      playedAt: '2026-05-03T10:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    const roundThree = await createRound(token, {
+      playerId: playerOne.id,
+      teeConfigurationId: configTwo.id,
+      playedAt: '2026-05-04T10:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    await createRound(token, {
+      playerId: playerTwo.id,
+      teeConfigurationId: configOne.id,
+      playedAt: '2026-05-05T10:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    const response = await requestJson(
+      `/api/rounds?playerId=${playerOne.id}&from=2026-05-02&to=2026-05-04`,
+      { method: 'GET', token },
+    );
+
+    assert.equal(response.status, 200, JSON.stringify(response.json));
+    assert.equal(response.json.pagination.total, 2);
+    assert.equal(response.json.rounds.length, 2);
+    assert.equal(response.json.rounds[0].id, roundThree.round.id);
+    assert.equal(response.json.rounds[1].id, roundTwo.round.id);
+    assert.ok(response.json.rounds.every((round) => round.playerId === playerOne.id));
+  } finally {
+    if (playerOneId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerOneId]);
+    }
+    if (playerTwoId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerTwoId]);
+    }
+    if (courseOneId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseOneId]);
+    }
+    if (courseTwoId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseTwoId]);
+    }
+    if (playerOneId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerOneId]);
+    }
+    if (playerTwoId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerTwoId]);
+    }
+  }
+});
+
+test('GET /api/rounds filters by course and excludes soft-deleted rounds with pagination', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerOneId = null;
+  let playerTwoId = null;
+  let courseOneId = null;
+  let courseTwoId = null;
+
+  try {
+    const playerOne = await createPlayer(token, `${suffix}-page-p1`);
+    playerOneId = playerOne.id;
+    const playerTwo = await createPlayer(token, `${suffix}-page-p2`);
+    playerTwoId = playerTwo.id;
+
+    const courseOne = await createCourse(token, `${suffix}-page-c1`);
+    courseOneId = courseOne.id;
+    const courseTwo = await createCourse(token, `${suffix}-page-c2`);
+    courseTwoId = courseTwo.id;
+
+    const configOne = await createTeeConfig(token, courseOne.id);
+    const configTwo = await createTeeConfig(token, courseTwo.id);
+
+    const roundOne = await createRound(token, {
+      playerId: playerOne.id,
+      teeConfigurationId: configOne.id,
+      playedAt: '2026-05-01T09:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    const roundTwo = await createRound(token, {
+      playerId: playerTwo.id,
+      teeConfigurationId: configOne.id,
+      playedAt: '2026-05-06T09:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    await createRound(token, {
+      playerId: playerOne.id,
+      teeConfigurationId: configTwo.id,
+      playedAt: '2026-05-07T09:00:00.000Z',
+      holeScores: buildNineHoleScores(),
+    });
+
+    await dbPool.query('UPDATE rounds SET deleted_at = NOW() WHERE id = $1', [roundOne.round.id]);
+
+    const pageOne = await requestJson(
+      `/api/rounds?courseId=${courseOne.id}&page=1&limit=1`,
+      { method: 'GET', token },
+    );
+
+    assert.equal(pageOne.status, 200, JSON.stringify(pageOne.json));
+    assert.equal(pageOne.json.pagination.page, 1);
+    assert.equal(pageOne.json.pagination.limit, 1);
+    assert.equal(pageOne.json.pagination.total, 1);
+    assert.equal(pageOne.json.pagination.totalPages, 1);
+    assert.equal(pageOne.json.rounds.length, 1);
+    assert.equal(pageOne.json.rounds[0].id, roundTwo.round.id);
+    assert.equal(pageOne.json.rounds[0].courseId, courseOne.id);
+    assert.equal(pageOne.json.rounds[0].courseName, courseOne.name);
+  } finally {
+    if (playerOneId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerOneId]);
+    }
+    if (playerTwoId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerTwoId]);
+    }
+    if (courseOneId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseOneId]);
+    }
+    if (courseTwoId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseTwoId]);
+    }
+    if (playerOneId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerOneId]);
+    }
+    if (playerTwoId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerTwoId]);
+    }
+  }
 });
