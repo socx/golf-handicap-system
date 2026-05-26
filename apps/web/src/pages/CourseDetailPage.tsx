@@ -222,7 +222,7 @@ export const CourseDetailPage: React.FC = () => {
                           Rating
                         </p>
                         <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
-                          {teeConfig.course_rating.toFixed(1)}
+                          {teeConfig.course_rating}
                         </p>
                       </div>
                       <div>

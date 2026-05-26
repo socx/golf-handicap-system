@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { api } from './client';
-import { coursesApi, normalizeCoursesListResponse } from './courses';
+import { coursesApi, normalizeCourse, normalizeCoursesListResponse } from './courses';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -44,6 +44,76 @@ describe('coursesApi.list', () => {
     expect(response.data.data).toHaveLength(1);
     expect(response.data.data[0]?.id).toBe('3');
     expect(response.data.pagination.pages).toBe(1);
+  });
+});
+
+describe('normalizeCourse', () => {
+  it('normalizes camelCase course detail payload to snake_case fields', () => {
+    const normalized = normalizeCourse({
+      id: 'course-1',
+      name: 'Royal Glen',
+      city: 'St Andrews',
+      country: 'GB',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+      teeConfigurations: [
+        {
+          id: 'cfg-1',
+          courseId: 'course-1',
+          name: 'Members',
+          teeColour: 'White',
+          holeCount: 9,
+          courseRating: 67.2,
+          slopeRating: 121,
+          holes: [
+            {
+              id: 'hole-1',
+              teeConfigurationId: 'cfg-1',
+              holeNumber: 1,
+              distanceYards: 350,
+              par: 4,
+              strokeIndex: 1,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(normalized.tee_configurations).toHaveLength(1);
+    expect(normalized.tee_configurations?.[0]?.tee_colour).toBe('White');
+    expect(normalized.tee_configurations?.[0]?.holes?.[0]?.hole_number).toBe(1);
+    expect(normalized.created_at).toBe('2026-01-01T00:00:00.000Z');
+  });
+});
+
+describe('coursesApi.get', () => {
+  it('normalizes course detail response so tee configurations can be rendered', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        id: 'course-1',
+        name: 'Royal Glen',
+        city: 'St Andrews',
+        country: 'GB',
+        teeConfigurations: [
+          {
+            id: 'cfg-1',
+            courseId: 'course-1',
+            name: 'Members',
+            teeColour: 'White',
+            holeCount: 9,
+            courseRating: 67.2,
+            slopeRating: 121,
+            holes: [],
+          },
+        ],
+      },
+    } as never);
+
+    const response = await coursesApi.get('course-1');
+
+    expect(response.data.tee_configurations).toHaveLength(1);
+    expect(response.data.tee_configurations?.[0]?.name).toBe('Members');
+    expect(response.data.tee_configurations?.[0]?.tee_colour).toBe('White');
   });
 });
 

@@ -90,12 +90,116 @@ interface RawCoursesListResponse {
   };
 }
 
+interface RawHole {
+  id?: string;
+  tee_configuration_id?: string;
+  teeConfigurationId?: string;
+  hole_number?: number;
+  holeNumber?: number;
+  distance_yards?: number;
+  distanceYards?: number;
+  par?: number;
+  stroke_index?: number;
+  strokeIndex?: number;
+}
+
+interface RawTeeConfiguration {
+  id?: string;
+  course_id?: string;
+  courseId?: string;
+  name?: string;
+  tee_colour?: string;
+  teeColour?: string;
+  hole_count?: number;
+  holeCount?: number;
+  course_rating?: number;
+  courseRating?: number;
+  slope_rating?: number;
+  slopeRating?: number;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  holes?: RawHole[];
+}
+
+interface RawCourse {
+  id?: string;
+  name?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  deleted_at?: string | null;
+  deletedAt?: string | null;
+  tee_configurations?: RawTeeConfiguration[];
+  teeConfigurations?: RawTeeConfiguration[];
+}
+
+function normalizeHole(payload: RawHole): Hole {
+  return {
+    id: payload.id ?? '',
+    tee_configuration_id: payload.tee_configuration_id ?? payload.teeConfigurationId ?? '',
+    hole_number: payload.hole_number ?? payload.holeNumber ?? 0,
+    distance_yards: payload.distance_yards ?? payload.distanceYards ?? 0,
+    par: payload.par ?? 0,
+    stroke_index: payload.stroke_index ?? payload.strokeIndex ?? 0,
+  };
+}
+
+function normalizeTeeConfiguration(payload: RawTeeConfiguration): TeeConfigurationDetail {
+  return {
+    id: payload.id ?? '',
+    course_id: payload.course_id ?? payload.courseId ?? '',
+    name: payload.name ?? '',
+    tee_colour: payload.tee_colour ?? payload.teeColour ?? '',
+    hole_count: payload.hole_count ?? payload.holeCount ?? 0,
+    course_rating: payload.course_rating ?? payload.courseRating ?? 0,
+    slope_rating: payload.slope_rating ?? payload.slopeRating ?? 0,
+    created_at: payload.created_at ?? payload.createdAt ?? '',
+    updated_at: payload.updated_at ?? payload.updatedAt ?? '',
+    holes: Array.isArray(payload.holes) ? payload.holes.map(normalizeHole) : [],
+  };
+}
+
+export function normalizeCourse(payload: unknown): Course {
+  const raw = (payload ?? {}) as RawCourse;
+  const teeConfigurations = Array.isArray(raw.tee_configurations)
+    ? raw.tee_configurations
+    : Array.isArray(raw.teeConfigurations)
+      ? raw.teeConfigurations
+      : [];
+
+  return {
+    id: raw.id ?? '',
+    name: raw.name ?? '',
+    address: raw.address ?? '',
+    city: raw.city ?? '',
+    country: raw.country ?? '',
+    phone: raw.phone ?? '',
+    email: raw.email ?? '',
+    website: raw.website ?? '',
+    created_at: raw.created_at ?? raw.createdAt ?? '',
+    updated_at: raw.updated_at ?? raw.updatedAt ?? '',
+    deleted_at: raw.deleted_at ?? raw.deletedAt ?? null,
+    tee_configurations: teeConfigurations.map(normalizeTeeConfiguration),
+  };
+}
+
 export function normalizeCoursesListResponse(payload: unknown): CoursesListResponse {
   const raw = (payload ?? {}) as RawCoursesListResponse;
   const rawPagination = raw.pagination ?? {};
 
+  const rawCourses = Array.isArray(raw.data) ? raw.data : Array.isArray(raw.courses) ? raw.courses : [];
+
   return {
-    data: Array.isArray(raw.data) ? raw.data : Array.isArray(raw.courses) ? raw.courses : [],
+    data: rawCourses.map((course) => normalizeCourse(course)),
     pagination: {
       page: rawPagination.page ?? 1,
       limit: rawPagination.limit ?? 10,
@@ -119,7 +223,10 @@ export const coursesApi = {
     }));
   },
 
-  get: (courseId: string) => api.get<Course>(`/courses/${courseId}`),
+  get: (courseId: string) => api.get<unknown>(`/courses/${courseId}`).then((response) => ({
+    ...response,
+    data: normalizeCourse(response.data),
+  })),
   createConfiguration: (courseId: string, payload: TeeConfigurationCreatePayload) =>
     api.post<TeeConfigurationDetail>(`/courses/${courseId}/configurations`, payload),
   updateConfiguration: (configId: string, payload: TeeConfigurationUpdatePayload) =>
