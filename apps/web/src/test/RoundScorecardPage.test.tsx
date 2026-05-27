@@ -11,6 +11,8 @@ const roundResponse = {
   round: {
     id: 'round-1',
     playerId: 'player-1',
+    playerFirstName: 'John',
+    playerLastName: 'Smith',
     teeConfigurationId: 'tee-1',
     playedAt: '2026-05-26T00:00:00.000Z',
     playingHandicap: 12,
@@ -78,7 +80,7 @@ describe('RoundScorecardPage', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'round-1' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'John Smith - 2026-05-26' })).toBeInTheDocument();
     expect(screen.getByTestId('tee-name')).toHaveTextContent('Blue');
     expect(screen.getByTestId('tee-colour')).toHaveTextContent('Blue');
     expect(screen.getByText('Royal Glen')).toBeInTheDocument();

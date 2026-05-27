@@ -39,6 +39,8 @@ function round(id: string, playedAt: string, teeConfigurationId = 'tee-1') {
   return {
     id,
     playerId: 'player-1',
+    playerFirstName: 'John',
+    playerLastName: 'Smith',
     teeConfigurationId,
     courseId: 'course-1',
     courseName: 'Royal Glen',
@@ -96,11 +98,11 @@ describe('RoundsPage', () => {
     renderPage();
 
     await waitFor(() => expect(roundsApi.list).toHaveBeenCalled());
-    expect(screen.getAllByText('round-1')[0]).toBeInTheDocument();
+  expect(screen.getAllByText('John S. - 2026-05-26')[0]).toBeInTheDocument();
     expect(screen.getByLabelText('Mobile round list')).toHaveClass('md:hidden');
     expect(screen.getByLabelText('Desktop round table')).toHaveClass('hidden', 'md:block');
 
-    fireEvent.click(screen.getAllByText('round-1')[0]);
+  fireEvent.click(screen.getAllByText('John S. - 2026-05-26')[0]);
 
     expect(await screen.findByText('Scorecard route')).toBeInTheDocument();
   });

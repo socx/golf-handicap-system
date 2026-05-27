@@ -1,4 +1,6 @@
 export interface RoundListItem extends RoundSummary {
+  playerFirstName: string;
+  playerLastName: string;
   courseId: string;
   courseName: string;
   teeConfigurationName: string;
@@ -69,6 +71,11 @@ export interface RoundSummary {
   updatedAt: string;
 }
 
+export interface RoundSummaryWithPlayer extends RoundSummary {
+  playerFirstName: string;
+  playerLastName: string;
+}
+
 export interface CreateRoundResponse {
   round: RoundSummary;
   holeScores: Array<{
@@ -99,7 +106,7 @@ export interface RoundDetailTeeConfiguration {
 }
 
 export interface RoundDetailResponse {
-  round: RoundSummary;
+  round: RoundSummaryWithPlayer;
   teeConfiguration: RoundDetailTeeConfiguration;
   holeScores: CreateRoundResponse['holeScores'];
 }

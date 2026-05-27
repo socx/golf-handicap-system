@@ -36,6 +36,8 @@ interface TeeHoleMetadata {
 interface RoundDetailRow {
   id: string;
   player_id: string;
+  player_first_name: string;
+  player_last_name: string;
   tee_configuration_id: string;
   played_at: string;
   playing_handicap: number | null;
@@ -232,12 +234,13 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
   const offsetIndex = listParams.length;
 
   const listResult = await dbPool.query(
-    `SELECT r.id, r.player_id, r.tee_configuration_id, r.played_at, r.playing_handicap,
+    `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
             r.gross_score, r.adjusted_gross_score, r.score_differential,
             r.total_putts, r.total_gir, r.total_fairways_hit, r.total_penalties,
             r.is_tournament, r.is_9_hole, r.created_at, r.updated_at,
             tc.course_id, c.name AS course_name, tc.name AS tee_configuration_name, tc.tee_colour
      FROM rounds r
+     INNER JOIN players p ON p.id = r.player_id
      LEFT JOIN tee_configurations tc ON tc.id = r.tee_configuration_id
      LEFT JOIN courses c ON c.id = tc.course_id
      WHERE ${whereClause}
@@ -251,6 +254,8 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
     return {
       id: round.id,
       playerId: round.player_id,
+      playerFirstName: round.player_first_name,
+      playerLastName: round.player_last_name,
       teeConfigurationId: round.tee_configuration_id,
       courseId: round.course_id,
       courseName: round.course_name,
@@ -633,12 +638,13 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
   }
 
   const roundResult = await dbPool.query(
-    `SELECT id, player_id, tee_configuration_id, played_at, playing_handicap,
+    `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
             gross_score, adjusted_gross_score, score_differential,
             total_putts, total_gir, total_fairways_hit, total_penalties,
-            is_tournament, is_9_hole, created_at, updated_at
-     FROM rounds
-     WHERE id = $1 AND deleted_at IS NULL
+            is_tournament, is_9_hole, r.created_at, r.updated_at
+     FROM rounds r
+     INNER JOIN players p ON p.id = r.player_id
+     WHERE r.id = $1 AND r.deleted_at IS NULL
      LIMIT 1`,
     [roundId],
   );
@@ -700,6 +706,8 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
     round: {
       id: round.id,
       playerId: round.player_id,
+      playerFirstName: round.player_first_name,
+      playerLastName: round.player_last_name,
       teeConfigurationId: round.tee_configuration_id,
       playedAt: round.played_at,
       playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),

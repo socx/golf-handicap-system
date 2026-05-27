@@ -16,6 +16,10 @@ function formatNullableNumber(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : String(value);
 }
 
+function formatPlayerDisplayName(firstName: string, lastName: string): string {
+  return `${firstName} ${lastName}`.trim();
+}
+
 const RoundScorecardPage: React.FC = () => {
   const { roundId } = useParams<{ roundId: string }>();
   const navigate = useNavigate();
@@ -113,10 +117,10 @@ const RoundScorecardPage: React.FC = () => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Scorecard</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">{round.id}</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Played on {formatDate(round.playedAt)} at {teeConfiguration.courseName}
-          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            {formatPlayerDisplayName(round.playerFirstName, round.playerLastName)} - {formatDate(round.playedAt)}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Played at {teeConfiguration.courseName}</p>
         </div>
         <Button variant="secondary" onClick={() => navigate('/rounds')}>
           Back to Rounds

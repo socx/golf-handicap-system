@@ -26,6 +26,11 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
 }
 
+function formatPlayerDisplayName(firstName: string, lastName: string, shortSurname: boolean): string {
+  const surname = shortSurname ? `${lastName.charAt(0).toUpperCase()}.` : lastName;
+  return `${firstName} ${surname}`.trim();
+}
+
 export const RoundsPage: React.FC = () => {
   const [rounds, setRounds] = useState<RoundListItem[] | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -262,11 +267,8 @@ export const RoundsPage: React.FC = () => {
                       to={`/rounds/${round.id}`}
                       className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200"
                     >
-                      {round.id}
+                      {formatPlayerDisplayName(round.playerFirstName, round.playerLastName, true)} - {formatDate(round.playedAt)}
                     </Link>
-                    <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">
-                      {formatDate(round.playedAt)}
-                    </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       {round.courseName} • {round.teeConfigurationName} tee
                     </p>
@@ -308,7 +310,7 @@ export const RoundsPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell>Round</TableHeaderCell>
+                  <TableHeaderCell>Player / Date</TableHeaderCell>
                   <TableHeaderCell>Played</TableHeaderCell>
                   <TableHeaderCell>Course</TableHeaderCell>
                   <TableHeaderCell>Tee</TableHeaderCell>
@@ -323,7 +325,7 @@ export const RoundsPage: React.FC = () => {
                   <TableRow key={round.id}>
                     <TableCell>
                       <Link to={`/rounds/${round.id}`} className="font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
-                        {round.id}
+                        {formatPlayerDisplayName(round.playerFirstName, round.playerLastName, true)} - {formatDate(round.playedAt)}
                       </Link>
                     </TableCell>
                     <TableCell>{formatDate(round.playedAt)}</TableCell>
