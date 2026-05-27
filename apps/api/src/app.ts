@@ -13,6 +13,7 @@ import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
+import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds } from './routes/rounds';
@@ -77,6 +78,12 @@ function parseRoundRoute(path: string): { roundId: string } | null {
   const match = path.match(/^\/(?:api\/)?rounds\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { roundId: String(match[1] || '') };
+}
+
+function parseAdminTeeConfigurationPccRoute(path: string): { configId: string } | null {
+  const match = path.match(/^\/(?:api\/)?admin\/tee-configurations\/([0-9a-fA-F-]+)\/pcc$/);
+  if (!match) return null;
+  return { configId: String(match[1] || '') };
 }
 
 const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -280,6 +287,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (roundRoute && method === 'DELETE') {
       await handleDeleteRound(req, res, roundRoute.roundId);
+      return;
+    }
+
+    const adminTeeConfigurationPccRoute = parseAdminTeeConfigurationPccRoute(pathname);
+    if (adminTeeConfigurationPccRoute && method === 'PATCH') {
+      await handleUpsertDailyPcc(req, res, adminTeeConfigurationPccRoute.configId);
       return;
     }
 

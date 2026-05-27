@@ -498,6 +498,7 @@ test('POST /api/rounds calculates score differential for known WHS-style 18-hole
     assert.equal(response18.status, 201, JSON.stringify(response18.json));
     assert.equal(response18.json.round.adjustedGrossScore, 90);
     assert.equal(response18.json.round.flags.is9Hole, false);
+    assert.equal(response18.json.round.pcc, 0);
     assert.equal(response18.json.round.scoreDifferential, 16.95);
 
     const course9 = await createCourse(token, `${suffix}-diff-9`);
@@ -532,6 +533,7 @@ test('POST /api/rounds calculates score differential for known WHS-style 18-hole
     assert.equal(response9.status, 201, JSON.stringify(response9.json));
     assert.equal(response9.json.round.adjustedGrossScore, 45);
     assert.equal(response9.json.round.flags.is9Hole, true);
+    assert.equal(response9.json.round.pcc, 0);
     assert.equal(response9.json.round.scoreDifferential, 8.475);
   } finally {
     if (playerId) {
@@ -542,6 +544,86 @@ test('POST /api/rounds calculates score differential for known WHS-style 18-hole
     }
     if (course9Id) {
       await dbPool.query('DELETE FROM courses WHERE id = $1', [course9Id]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('PATCH /api/admin/tee-configurations/:id/pcc recalculates stored PCC and backfills round differentials', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+  let roundId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-pcc`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-pcc`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, course.id, buildEighteenHolesUniform(), {
+      courseRating: 72,
+      slopeRating: 120,
+    });
+
+    const createResponse = await requestJson('/api/rounds', {
+      method: 'POST',
+      token,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: '2026-07-03T09:00:00.000Z',
+        playingHandicap: 0,
+        holeScores: Array.from({ length: 18 }, (_, idx) => ({
+          holeNumber: idx + 1,
+          strokes: 5,
+          putts: 2,
+          gir: false,
+          fairwayHit: false,
+          inSand: false,
+          penalties: 0,
+        })),
+      },
+    });
+
+    assert.equal(createResponse.status, 201, JSON.stringify(createResponse.json));
+    roundId = createResponse.json.round.id;
+    assert.equal(createResponse.json.round.pcc, 0);
+    assert.equal(createResponse.json.round.scoreDifferential, 16.95);
+
+    const overrideResponse = await requestJson(`/api/admin/tee-configurations/${config.id}/pcc`, {
+      method: 'PATCH',
+      token,
+      body: {
+        playedOn: '2026-07-03',
+        pcc: 2,
+      },
+    });
+
+    assert.equal(overrideResponse.status, 200, JSON.stringify(overrideResponse.json));
+    assert.equal(overrideResponse.json.dailyPcc.pcc, 2);
+    assert.equal(overrideResponse.json.dailyPcc.source, 'override');
+    assert.equal(overrideResponse.json.updatedRounds, 1);
+
+    const getResponse = await requestJson(`/api/rounds/${roundId}`, {
+      method: 'GET',
+      token,
+    });
+
+    assert.equal(getResponse.status, 200, JSON.stringify(getResponse.json));
+    assert.equal(getResponse.json.round.pcc, 2);
+    assert.equal(getResponse.json.round.scoreDifferential, 15.067);
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
     }
     if (playerId) {
       await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);

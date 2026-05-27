@@ -64,16 +64,23 @@ So that differentials reflect abnormal playing conditions.
 **Target Date:** **24 September 2026**
 
 ### Acceptance Criteria
-- [ ] PCC calculated daily per course/tee configuration.  
-- [ ] PCC values: -1, 0, +1, +2, +3.  
-- [ ] Applied automatically to differential calculation.  
-- [ ] PCC stored in `rounds.pcc`.  
-- [ ] Admin override available.
+- [x] PCC calculated daily per course/tee configuration.  
+- [x] PCC values: -1, 0, +1, +2, +3.  
+- [x] Applied automatically to differential calculation.  
+- [x] PCC stored in `rounds.pcc`.  
+- [x] Admin override available.
 
 ### Dependencies
 - Differential calculation  
 - Rounds table  
 - Admin RBAC
+
+### Implementation Notes
+- Added `rounds.pcc` and `tee_configuration_daily_pcc` in `db/migrations/011_pcc.sql`.
+- Round creation now reuses the daily PCC record for the tee configuration and played date.
+- Admin `PATCH /api/admin/tee-configurations/:configId/pcc` can calculate or override PCC for a given date and backfill affected rounds.
+- The score differential formula now uses the stored PCC value when a round is created or when daily PCC is recalculated.
+- Added API e2e coverage for default PCC storage and admin override backfill behavior in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 

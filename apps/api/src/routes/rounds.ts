@@ -3,6 +3,7 @@ import { dbPool } from '../lib/db';
 import { getClientIp, readJsonBody, sendError, sendJson } from '../lib/http';
 import { logApplicationEvent } from '../lib/audit';
 import { verifyAndAuthorize } from '../middleware/auth';
+import { getOrCreateDailyPcc, getPlayedOnDate } from '../services/pcc';
 
 interface ValidationIssue {
   field: string;
@@ -44,6 +45,7 @@ interface RoundDetailRow {
   gross_score: number;
   adjusted_gross_score: number;
   score_differential: number | null;
+  pcc: number | null;
   total_putts: number;
   total_gir: number;
   total_fairways_hit: number;
@@ -249,7 +251,7 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
 
   const listResult = await dbPool.query(
     `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
-            r.gross_score, r.adjusted_gross_score, r.score_differential,
+            r.gross_score, r.adjusted_gross_score, r.score_differential, r.pcc,
             r.total_putts, r.total_gir, r.total_fairways_hit, r.total_penalties,
             r.is_tournament, r.is_9_hole, r.created_at, r.updated_at,
             tc.course_id, c.name AS course_name, tc.name AS tee_configuration_name, tc.tee_colour
@@ -280,6 +282,7 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
       grossScore: round.gross_score,
       adjustedGrossScore: round.adjusted_gross_score,
       scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
+      pcc: round.pcc === null ? null : Number(round.pcc),
       totals: {
         putts: round.total_putts,
         gir: round.total_gir,
@@ -522,23 +525,24 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
   const totalGir = computedHoleScores.reduce((sum, hole) => sum + (hole.gir ? 1 : 0), 0);
   const totalFairwaysHit = computedHoleScores.reduce((sum, hole) => sum + (hole.fairway_hit ? 1 : 0), 0);
   const totalPenalties = computedHoleScores.reduce((sum, hole) => sum + hole.penalties, 0);
-  const pccAdjustment = 0;
-  const scoreDifferential = computeScoreDifferential(
-    adjustedGrossScore,
-    config.course_rating === null ? null : Number(config.course_rating),
-    config.slope_rating === null ? null : Number(config.slope_rating),
-    pccAdjustment,
-  );
 
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
 
+    const dailyPcc = await getOrCreateDailyPcc(client, value.tee_configuration_id, getPlayedOnDate(value.played_at));
+    const scoreDifferential = computeScoreDifferential(
+      adjustedGrossScore,
+      config.course_rating === null ? null : Number(config.course_rating),
+      config.slope_rating === null ? null : Number(config.slope_rating),
+      dailyPcc.pcc,
+    );
+
     const roundInsert = await client.query(
       `INSERT INTO rounds
-       (player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-       RETURNING id, player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole, created_at, updated_at`,
+       (player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING id, player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole, created_at, updated_at`,
       [
         value.player_id,
         value.tee_configuration_id,
@@ -547,6 +551,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         grossScore,
         adjustedGrossScore,
         scoreDifferential,
+        dailyPcc.pcc,
         totalPutts,
         totalGir,
         totalFairwaysHit,
@@ -565,6 +570,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
       gross_score: number;
       adjusted_gross_score: number;
       score_differential: number | null;
+      pcc: number | null;
       total_putts: number;
       total_gir: number;
       total_fairways_hit: number;
@@ -627,6 +633,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         grossScore: round.gross_score,
         adjustedGrossScore: round.adjusted_gross_score,
         scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
+        pcc: round.pcc === null ? null : Number(round.pcc),
         totals: {
           putts: round.total_putts,
           gir: round.total_gir,
@@ -660,7 +667,7 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
 
   const roundResult = await dbPool.query(
     `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
-            gross_score, adjusted_gross_score, score_differential,
+            gross_score, adjusted_gross_score, score_differential, pcc,
             total_putts, total_gir, total_fairways_hit, total_penalties,
             is_tournament, is_9_hole, r.created_at, r.updated_at
      FROM rounds r
@@ -735,6 +742,7 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
       grossScore: round.gross_score,
       adjustedGrossScore: round.adjusted_gross_score,
       scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
+      pcc: round.pcc === null ? null : Number(round.pcc),
       totals: {
         putts: round.total_putts,
         gir: round.total_gir,
