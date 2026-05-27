@@ -1,6 +1,7 @@
 {
   "name": "@ghs/web",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "dependencies": {
     "@ghs/types": "0.1.0",
