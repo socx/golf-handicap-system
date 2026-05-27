@@ -17,6 +17,7 @@ import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds } from './routes/rounds';
+import { handleCalculateHandicap } from './routes/handicap';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -84,6 +85,12 @@ function parseAdminTeeConfigurationPccRoute(path: string): { configId: string } 
   const match = path.match(/^\/(?:api\/)?admin\/tee-configurations\/([0-9a-fA-F-]+)\/pcc$/);
   if (!match) return null;
   return { configId: String(match[1] || '') };
+}
+
+function parseHandicapCalculateRoute(path: string): { playerId: string } | null {
+  const match = path.match(/^\/(?:api\/)?handicap\/calculate\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { playerId: String(match[1] || '') };
 }
 
 const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -293,6 +300,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const adminTeeConfigurationPccRoute = parseAdminTeeConfigurationPccRoute(pathname);
     if (adminTeeConfigurationPccRoute && method === 'PATCH') {
       await handleUpsertDailyPcc(req, res, adminTeeConfigurationPccRoute.configId);
+      return;
+    }
+
+    const handicapCalculateRoute = parseHandicapCalculateRoute(pathname);
+    if (handicapCalculateRoute && method === 'POST') {
+      await handleCalculateHandicap(req, res, handicapCalculateRoute.playerId);
       return;
     }
 

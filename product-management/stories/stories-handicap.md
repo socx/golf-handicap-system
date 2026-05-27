@@ -96,17 +96,25 @@ So that the correct number of lowest differentials are used.
 **Target Date:** **04 October 2026**
 
 ### Acceptance Criteria
-- [ ] Uses WHS table for number of differentials based on rounds available.  
-- [ ] Selects lowest differentials.  
-- [ ] Applies 0.96 multiplier.  
-- [ ] Truncates to 1 decimal place.  
-- [ ] Supports 9‑hole round pairing rules.  
-- [ ] Fully unit tested.
+- [x] Uses WHS table for number of differentials based on rounds available.  
+- [x] Selects lowest differentials.  
+- [x] Applies 0.96 multiplier.  
+- [x] Truncates to 1 decimal place.  
+- [x] Supports 9‑hole round pairing rules.  
+- [x] Fully unit tested.
 
 ### Dependencies
 - Differential calculation  
 - Rounds table  
 - Handicap_records table
+
+### Implementation Notes
+- Added WHS 3–20 differential selection logic in `apps/api/src/services/handicap.ts`.
+- Implemented 9-hole pairing into 18-hole equivalents before applying WHS selection.
+- Added `POST /api/handicap/calculate/:playerId` in `apps/api/src/routes/handicap.ts` and wired it in `apps/api/src/app.ts`.
+- Calculation applies WHS count table, selects lowest differentials, applies 0.96 multiplier, and truncates to one decimal.
+- Added `handicap_records` schema in `db/migrations/012_handicap_records.sql` and persist calculation results there.
+- Added API e2e coverage for WHS selection/truncation and 9-hole pairing in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 

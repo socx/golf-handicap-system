@@ -1,7 +1,12 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import jwt from 'jsonwebtoken';
+
+const require = createRequire(import.meta.url);
+const { loadEnvFromRoot } = require('../../../scripts/db/load-env');
+loadEnvFromRoot();
 
 const ROOT_DIR = new URL('../../..', import.meta.url).pathname;
 const API_PORT = 3925;
