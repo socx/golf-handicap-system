@@ -441,7 +441,7 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {holes.map((hole, index) => (
-                  <tr key={hole.id || `hole-${index}`}>
+                  <tr key={hole.id || `hole-${index}`} className="transition-colors hover:bg-teal-50 dark:hover:bg-slate-800">
                     <td className="px-2 py-2">
                       <Input
                         aria-label={`Hole ${index + 1} number`}

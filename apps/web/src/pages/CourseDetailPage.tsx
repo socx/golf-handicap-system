@@ -265,7 +265,7 @@ export const CourseDetailPage: React.FC = () => {
                           </thead>
                           <tbody>
                             {teeConfig.holes.slice(0, 9).map((hole) => (
-                              <tr key={hole.id} className="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-900 dark:hover:bg-slate-900/40">
+                              <tr key={hole.id} className="border-b border-slate-100 transition hover:bg-teal-50 dark:border-slate-800 dark:hover:bg-slate-800">
                                 <td className="text-left px-1 py-1 text-slate-900 dark:text-slate-100">
                                   {hole.hole_number}
                                 </td>

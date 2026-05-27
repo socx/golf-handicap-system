@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { coursesApi, type Course } from '../api/courses';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Table, TableHead, TableBody } from '../components/ui/Table';
+import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
 
@@ -116,25 +116,22 @@ export const CoursesPage: React.FC = () => {
         <div className="space-y-4">
           <Table>
             <TableHead>
-              <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 dark:border-slate-800 dark:text-slate-300">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">City</th>
-                <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Action</th>
-              </tr>
+              <TableRow>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>City</TableHeaderCell>
+                <TableHeaderCell>Country</TableHeaderCell>
+                <TableHeaderCell>Phone</TableHeaderCell>
+                <TableHeaderCell>Action</TableHeaderCell>
+              </TableRow>
             </TableHead>
             <TableBody>
               {(courses || []).map((course) => (
-                <tr
-                  key={course.id}
-                  className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-900 dark:hover:bg-slate-900/40"
-                >
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">{course.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.city}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.country}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{course.phone || '—'}</td>
-                  <td className="px-4 py-3">
+                <TableRow key={course.id}>
+                  <TableCell className="font-medium">{course.name}</TableCell>
+                  <TableCell>{course.city}</TableCell>
+                  <TableCell>{course.country}</TableCell>
+                  <TableCell>{course.phone || '—'}</TableCell>
+                  <TableCell>
                     <Button
                       size="sm"
                       variant="secondary"
@@ -143,8 +140,8 @@ export const CoursesPage: React.FC = () => {
                     >
                       View
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>

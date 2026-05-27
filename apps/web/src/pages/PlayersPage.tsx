@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { playersApi, type Player } from '../api/players';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Table, TableBody, TableHead } from '../components/ui/Table';
+import { Table, TableBody, TableHead, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
 
@@ -120,28 +120,28 @@ export const PlayersPage: React.FC = () => {
         <div className="space-y-4">
           <Table>
             <TableHead>
-              <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 dark:border-slate-800 dark:text-slate-300">
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Email</th>
-                <th className="px-4 py-3 text-left">Club</th>
-                <th className="px-4 py-3 text-left">Country</th>
-                <th className="px-4 py-3 text-left">Handicap</th>
-                <th className="px-4 py-3 text-left">Action</th>
-              </tr>
+              <TableRow>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Email</TableHeaderCell>
+                <TableHeaderCell>Club</TableHeaderCell>
+                <TableHeaderCell>Country</TableHeaderCell>
+                <TableHeaderCell>Handicap</TableHeaderCell>
+                <TableHeaderCell>Action</TableHeaderCell>
+              </TableRow>
             </TableHead>
             <TableBody>
               {(players || []).map((player) => (
-                <tr key={player.id} className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-900 dark:hover:bg-slate-900/40">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                <TableRow key={player.id}>
+                  <TableCell className="font-medium">
                     {player.first_name} {player.last_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{player.email || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{player.club || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{player.country}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                  </TableCell>
+                  <TableCell>{player.email || '—'}</TableCell>
+                  <TableCell>{player.club || '—'}</TableCell>
+                  <TableCell>{player.country}</TableCell>
+                  <TableCell>
                     {typeof player.handicap_index === 'number' ? player.handicap_index.toFixed(1) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-2">
                       <Button size="sm" variant="secondary" onClick={() => handleOpenProfile(player.id)} disabled={loading}>
                         View Profile
@@ -150,8 +150,8 @@ export const PlayersPage: React.FC = () => {
                         Edit
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>
