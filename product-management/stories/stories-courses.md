@@ -4,6 +4,62 @@ Parent Epic: #298
 
 ---
 
+## 13. Frontend: Clone tee configuration within a course
+
+**As an admin**
+I want to create a new tee configuration by duplicating an existing configuration from the same course
+So that I can make small adjustments without re-entering all hole data from scratch.
+
+**Size:** M  
+**Estimate:** 3-5 days  
+**Priority:** High  
+**Target Date:** **24 August 2026**
+
+### Acceptance Criteria
+- [ ] From course detail and/or tee configuration editor, admin can choose an existing tee configuration as a clone source.
+- [ ] Clone flow creates a new draft configuration prefilled with:
+	- [ ] Configuration metadata (name, tee colour, ratings, hole count)
+	- [ ] All hole rows (hole number, distance, par, stroke index)
+- [ ] New cloned configuration is associated with the same course only.
+- [ ] Admin can edit any cloned field before save.
+- [ ] Saving a clone creates a new tee configuration record (new id), leaving the source configuration unchanged.
+- [ ] Validation rules remain enforced (hole count consistency, stroke index uniqueness, required metadata).
+- [ ] Success state shows confirmation and redirects to the course detail page.
+
+### Dependencies
+- Existing tee configuration create/edit frontend flow
+- Tee configuration create API
+- Course detail page actions/navigation
+
+---
+
+## 14. Frontend: Delete tee configuration
+
+**As an admin**
+I want to delete a tee configuration from the frontend
+So that obsolete or incorrect tee setups can be removed from active use.
+
+**Size:** M  
+**Estimate:** 3-5 days  
+**Priority:** High  
+**Target Date:** **29 August 2026**
+
+### Acceptance Criteria
+- [ ] Course detail page shows a delete action for each tee configuration.
+- [ ] Delete action requires explicit confirmation before execution.
+- [ ] Frontend calls a tee configuration delete API endpoint.
+- [ ] On success, deleted configuration is removed from UI lists without full page refresh.
+- [ ] Deleted configurations are no longer selectable in round entry flows.
+- [ ] Error responses are surfaced clearly (e.g., configuration in use, permission denied).
+- [ ] Action is restricted to authorised admin users only.
+
+### Dependencies
+- Tee configuration delete backend API (soft delete preferred)
+- Auth/authorisation middleware for admin-only actions
+- Course detail page tee configuration list
+
+---
+
 # Course & Tee Configuration Management — User Stories
 
 This file contains all user stories for the Course & Tee Configuration Management epic, including:
