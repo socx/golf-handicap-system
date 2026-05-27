@@ -154,14 +154,13 @@ const RoundEntryPage: React.FC = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800/60">
           <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">Player &amp; Course</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <PlayerSelector value={player} onChange={setPlayer} label="Player" required />
-            <CourseSelector value={course} onChange={handleCourseChange} label="Course" required />
+            <PlayerSelector value={player} onChange={setPlayer} label="Player" />
+            <CourseSelector value={course} onChange={handleCourseChange} label="Course" />
             <TeeConfigurationSelector
               courseId={course?.id ?? null}
               value={teeConfig}
               onChange={handleTeeConfigurationChange}
               label="Tee configuration"
-              required
             />
             <Input
               label="Date played"
