@@ -3,7 +3,21 @@ import { Link } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { coursesApi, type Course, type TeeConfiguration } from '../api/courses';
 import { roundsApi, type RoundListItem } from '../api/rounds';
-import { Card, CardBody, CardHeader, Input, Pagination, Select, SkeletonTable, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Pagination,
+  Select,
+  SkeletonTable,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../components/ui';
 
 const PAGE_SIZE = 10;
 
@@ -53,11 +67,7 @@ export const RoundsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedCourseId) {
-      setTeeConfigurations([]);
-      setSelectedTeeConfigurationId('');
-      return;
-    }
+    if (!selectedCourseId) return;
 
     let cancelled = false;
 
@@ -146,6 +156,7 @@ export const RoundsPage: React.FC = () => {
   const handleCourseChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCourseId(event.target.value);
     setSelectedTeeConfigurationId('');
+    setTeeConfigurations([]);
     setPage(1);
     setRounds(null);
   };
@@ -237,7 +248,7 @@ export const RoundsPage: React.FC = () => {
         </div>
       )}
 
-      {(roundRows || []).length > 0 ? (
+      {roundRows.length > 0 ? (
         <div className="space-y-4">
           <div className="space-y-3 md:hidden" aria-label="Mobile round list">
             {roundRows.map((round) => (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { type HoleScoreInput, roundsApi } from '../api/rounds';
@@ -64,21 +64,20 @@ const RoundEntryPage: React.FC = () => {
   const [pageError, setPageError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // When tee config changes rebuild hole rows
-  useEffect(() => {
-    if (teeConfig) {
-      const holeCount = teeConfig.hole_count === 9 ? 9 : 18;
-      setHoles(buildDefaultHoles(holeCount));
-    }
-  }, [teeConfig]);
-
   // When course changes reset tee config
   const handleCourseChange = (c: Course | null) => {
     setCourse(c);
     setTeeConfig(null);
+    setHoles(buildDefaultHoles(18));
   };
 
-  function updateHole(index: number, field: keyof HoleRow, value: unknown) {
+  const handleTeeConfigurationChange = (config: TeeConfiguration | null) => {
+    setTeeConfig(config);
+    const holeCount = config?.hole_count === 9 ? 9 : 18;
+    setHoles(buildDefaultHoles(holeCount));
+  };
+
+  function updateHole<K extends keyof HoleRow>(index: number, field: K, value: HoleRow[K]) {
     setHoles((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -160,7 +159,7 @@ const RoundEntryPage: React.FC = () => {
             <TeeConfigurationSelector
               courseId={course?.id ?? null}
               value={teeConfig}
-              onChange={setTeeConfig}
+              onChange={handleTeeConfigurationChange}
               label="Tee configuration"
               required
             />
