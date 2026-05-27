@@ -351,20 +351,31 @@ So that I can make small adjustments without re-entering all hole data from scra
 **Target Date:** **24 August 2026**
 
 ### Acceptance Criteria
-- [ ] From course detail and/or tee configuration editor, admin can choose an existing tee configuration as a clone source.
-- [ ] Clone flow creates a new draft configuration prefilled with:
-	- [ ] Configuration metadata (name, tee colour, ratings, hole count)
-	- [ ] All hole rows (hole number, distance, par, stroke index)
-- [ ] New cloned configuration is associated with the same course only.
-- [ ] Admin can edit any cloned field before save.
-- [ ] Saving a clone creates a new tee configuration record (new id), leaving the source configuration unchanged.
-- [ ] Validation rules remain enforced (hole count consistency, stroke index uniqueness, required metadata).
-- [ ] Success state shows confirmation and redirects to the course detail page.
+- [x] From course detail and/or tee configuration editor, admin can choose an existing tee configuration as a clone source.
+- [x] Clone flow creates a new draft configuration prefilled with:
+	- [x] Configuration metadata (name, tee colour, ratings, hole count)
+	- [x] All hole rows (hole number, distance, par, stroke index)
+- [x] New cloned configuration is associated with the same course only.
+- [x] Admin can edit any cloned field before save.
+- [x] Saving a clone creates a new tee configuration record (new id), leaving the source configuration unchanged.
+- [x] Validation rules remain enforced (hole count consistency, stroke index uniqueness, required metadata).
+- [x] Success state shows confirmation and redirects to the course detail page.
 
 ### Dependencies
 - Existing tee configuration create/edit frontend flow
 - Tee configuration create API
 - Course detail page actions/navigation
+
+### Implementation Notes
+- Added a Duplicate action per tee configuration card in `apps/web/src/pages/CourseDetailPage.tsx`.
+- Duplicate action navigates to create route with a clone source query param:
+	- `/courses/:courseId/configurations/new?cloneFrom=:configId`
+- Extended `apps/web/src/pages/CourseTeeConfigEditorPage.tsx` create mode to read `cloneFrom` and prefill:
+	- Metadata (name, tee colour, ratings, hole count)
+	- Hole rows (number, distance, par, stroke index)
+- Clone source is constrained to tee configurations loaded from the same `courseId`.
+- Save path remains create-only in clone mode, ensuring a new configuration is created and the source remains unchanged.
+- Added test coverage in `apps/web/src/test/CourseTeeConfigEditorPage.test.tsx` for clone prefill and create behavior.
 
 ---
 

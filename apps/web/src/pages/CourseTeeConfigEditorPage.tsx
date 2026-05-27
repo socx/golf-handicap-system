@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import {
   coursesApi,
@@ -99,9 +99,11 @@ function validateForm(metadata: MetadataForm, holes: HoleFormRow[], isEditMode: 
 
 export const CourseTeeConfigEditorPage: React.FC = () => {
   const { courseId, configId } = useParams<{ courseId: string; configId?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const isEditMode = !!configId;
+  const cloneFromConfigId = searchParams.get('cloneFrom');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,6 +157,32 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
                 strokeIndex: hole.stroke_index,
               })),
           );
+        } else if (cloneFromConfigId) {
+          const sourceConfig = (response.data.tee_configurations || []).find((c) => c.id === cloneFromConfigId);
+          if (!sourceConfig) {
+            setPageError('Clone source tee configuration not found for this course.');
+            setLoading(false);
+            return;
+          }
+
+          setMetadata({
+            name: `${sourceConfig.name} (Copy)`,
+            teeColour: sourceConfig.tee_colour,
+            courseRating: sourceConfig.course_rating ?? null,
+            slopeRating: sourceConfig.slope_rating ?? null,
+            holeCount: (sourceConfig.hole_count === 18 ? 18 : 9),
+          });
+          setHoles(
+            (sourceConfig.holes || [])
+              .slice()
+              .sort((a, b) => a.hole_number - b.hole_number)
+              .map((hole) => ({
+                holeNumber: hole.hole_number,
+                distanceYards: hole.distance_yards,
+                par: hole.par,
+                strokeIndex: hole.stroke_index,
+              })),
+          );
         }
 
         setPageError(null);
@@ -171,7 +199,7 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [courseId, configId, isEditMode]);
+  }, [courseId, configId, isEditMode, cloneFromConfigId]);
 
   const title = useMemo(
     () => (isEditMode ? 'Edit Tee Configuration' : 'Create Tee Configuration'),

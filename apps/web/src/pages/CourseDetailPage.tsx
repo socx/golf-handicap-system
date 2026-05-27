@@ -292,13 +292,22 @@ export const CourseDetailPage: React.FC = () => {
                   )}
 
                   <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => navigate(`/courses/${course.id}/configurations/${teeConfig.id}/edit`)}
-                    >
-                      Edit Configuration
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => navigate(`/courses/${course.id}/configurations/${teeConfig.id}/edit`)}
+                      >
+                        Edit Configuration
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => navigate(`/courses/${course.id}/configurations/new?cloneFrom=${teeConfig.id}`)}
+                      >
+                        Duplicate
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -146,4 +146,63 @@ describe('CourseTeeConfigEditorPage', () => {
     expect(screen.getByText('Tee colour is required.')).toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
   });
+
+  it('prefills create mode from clone source and saves as a new configuration', async () => {
+    vi.spyOn(coursesApi, 'get').mockResolvedValue({
+      data: baseCourse({
+        tee_configurations: [
+          {
+            id: 'config-1',
+            course_id: 'course-1',
+            name: 'Competition',
+            tee_colour: 'Blue',
+            hole_count: 9,
+            course_rating: 72.4,
+            slope_rating: 130,
+            created_at: '2026-05-25T00:00:00.000Z',
+            updated_at: '2026-05-25T00:00:00.000Z',
+            holes: Array.from({ length: 9 }, (_, idx) => ({
+              id: `hole-${idx + 1}`,
+              tee_configuration_id: 'config-1',
+              hole_number: idx + 1,
+              distance_yards: 320 + idx,
+              par: 4,
+              stroke_index: idx + 1,
+            })),
+          },
+        ],
+      }),
+    } as never);
+    const createSpy = vi.spyOn(coursesApi, 'createConfiguration').mockResolvedValue({ data: {} } as never);
+    const updateSpy = vi.spyOn(coursesApi, 'updateConfiguration').mockResolvedValue({ data: {} } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/courses/course-1/configurations/new?cloneFrom=config-1']}>
+        <Routes>
+          <Route path="/courses/:courseId/configurations/new" element={<CourseTeeConfigEditorPage />} />
+          <Route path="/courses/:courseId" element={<div>Course detail route</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { name: 'Create Tee Configuration' });
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Competition (Copy)');
+    expect(screen.getByLabelText('Tee Colour')).toHaveValue('Blue');
+    expect(screen.getByLabelText('Hole 1 distance')).toHaveValue(320);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Configuration' }));
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalledWith(
+      'course-1',
+      expect.objectContaining({
+        name: 'Competition (Copy)',
+        teeColour: 'Blue',
+      }),
+    );
+  });
 });
