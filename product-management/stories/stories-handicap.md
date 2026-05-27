@@ -31,16 +31,24 @@ So that each round has a differential used for handicap index.
 **Target Date:** **17 September 2026**
 
 ### Acceptance Criteria
-- [ ] Differential formula implemented:  
+- [x] Differential formula implemented:  
   `113 / slope_rating × (Adjusted Gross Score − Course Rating − PCC Adjustment)`  
-- [ ] Stored in `rounds.score_differential`.  
-- [ ] Supports 9‑hole and 18‑hole rounds.  
-- [ ] Unit tests verify calculations against known WHS examples.
+- [x] Stored in `rounds.score_differential`.  
+- [x] Supports 9‑hole and 18‑hole rounds.  
+- [x] Unit tests verify calculations against known WHS examples.
 
 ### Dependencies
 - Adjusted gross score  
 - Tee configuration ratings  
 - Rounds table
+
+### Implementation Notes
+- Implemented score differential calculation in `apps/api/src/routes/rounds.ts` during round creation.
+- Formula applied as: `113 / slope_rating * (adjusted_gross_score - course_rating - pcc_adjustment)`.
+- Result is stored in `rounds.score_differential` at insert time.
+- Current implementation uses `pcc_adjustment = 0` until story 2 (PCC) is implemented.
+- Differential remains `null` when course rating or slope rating is unavailable.
+- Added known-example API test coverage for both 18-hole and 9-hole rounds in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 

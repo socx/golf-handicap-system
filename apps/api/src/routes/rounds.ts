@@ -110,6 +110,20 @@ function computeNetDoubleBogeyAdjustedScore(
   return Math.min(strokes, netDoubleBogeyCap);
 }
 
+function computeScoreDifferential(
+  adjustedGrossScore: number,
+  courseRating: number | null,
+  slopeRating: number | null,
+  pccAdjustment: number,
+): number | null {
+  if (courseRating === null || slopeRating === null || slopeRating <= 0) {
+    return null;
+  }
+
+  const differential = (113 / slopeRating) * (adjustedGrossScore - courseRating - pccAdjustment);
+  return Number(differential.toFixed(3));
+}
+
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -416,7 +430,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
   const value = validation.value;
 
   const configResult = await dbPool.query(
-    'SELECT id, hole_count FROM tee_configurations WHERE id = $1 AND deleted_at IS NULL LIMIT 1',
+    'SELECT id, hole_count, course_rating, slope_rating FROM tee_configurations WHERE id = $1 AND deleted_at IS NULL LIMIT 1',
     [value.tee_configuration_id],
   );
   if (Number(configResult.rowCount || 0) === 0) {
@@ -424,7 +438,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
     return;
   }
 
-  const config = configResult.rows[0] as { id: string; hole_count: number };
+  const config = configResult.rows[0] as { id: string; hole_count: number; course_rating: number | null; slope_rating: number | null };
   if (value.hole_scores.length !== config.hole_count) {
     sendError(
       res,
@@ -508,6 +522,13 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
   const totalGir = computedHoleScores.reduce((sum, hole) => sum + (hole.gir ? 1 : 0), 0);
   const totalFairwaysHit = computedHoleScores.reduce((sum, hole) => sum + (hole.fairway_hit ? 1 : 0), 0);
   const totalPenalties = computedHoleScores.reduce((sum, hole) => sum + hole.penalties, 0);
+  const pccAdjustment = 0;
+  const scoreDifferential = computeScoreDifferential(
+    adjustedGrossScore,
+    config.course_rating === null ? null : Number(config.course_rating),
+    config.slope_rating === null ? null : Number(config.slope_rating),
+    pccAdjustment,
+  );
 
   const client = await dbPool.connect();
   try {
@@ -525,7 +546,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         value.playing_handicap,
         grossScore,
         adjustedGrossScore,
-        null,
+        scoreDifferential,
         totalPutts,
         totalGir,
         totalFairwaysHit,
