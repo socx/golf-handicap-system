@@ -160,14 +160,22 @@ So that handicap increases are controlled according to WHS rules.
 **Target Date:** **11 October 2026**
 
 ### Acceptance Criteria
-- [ ] Soft cap: limits upward movement beyond 3 strokes.  
-- [ ] Hard cap: absolute limit of 5 strokes above low‑handicap index.  
-- [ ] Low‑handicap index stored and updated.  
-- [ ] Cap effects logged in handicap history.
+- [x] Soft cap: limits upward movement beyond 3 strokes.  
+- [x] Hard cap: absolute limit of 5 strokes above low‑handicap index.  
+- [x] Low‑handicap index stored and updated.  
+- [x] Cap effects logged in handicap history.
 
 ### Dependencies
 - Differential selection  
 - Handicap history table
+
+### Implementation Notes
+- Added `applyWhsCaps` in `apps/api/src/services/handicap.ts` to enforce WHS soft cap (+3 threshold with 50% reduction above threshold) and hard cap (+5 absolute ceiling).
+- Updated `POST /api/handicap/calculate/:playerId` in `apps/api/src/routes/handicap.ts` to apply cap logic after differential selection and before persisting results.
+- Added `low_handicap_index` persistence/update behavior on `players` and included cap metadata in API response.
+- Logged cap effects in `handicap_records.cap_adjustments` (raw vs applied index, soft/hard trigger flags, thresholds, and low-handicap reference value).
+- Added migration `db/migrations/013_player_low_handicap_index.sql` for `players.low_handicap_index`.
+- Added e2e coverage for soft cap and hard cap behavior in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 

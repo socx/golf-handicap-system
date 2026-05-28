@@ -22,6 +22,17 @@ export interface HandicapSelectionResult {
   handicapIndex: number;
 }
 
+export interface CapApplicationResult {
+  rawHandicapIndex: number;
+  appliedHandicapIndex: number;
+  lowHandicapIndex: number;
+  updatedLowHandicapIndex: number;
+  softCapTriggered: boolean;
+  hardCapTriggered: boolean;
+  softCapThreshold: number;
+  hardCapThreshold: number;
+}
+
 export const MINIMUM_ELIGIBLE_HOLES = 54;
 
 const WHS_COUNT_TABLE: Array<{ min: number; max: number; count: number }> = [
@@ -128,4 +139,42 @@ export function calculateHandicapFromDifferentials(rounds: RoundDifferentialRow[
 export function calculateEligibleHoles(rounds: RoundDifferentialRow[]): number {
   const effectiveDifferentials = buildEffectiveDifferentials(rounds);
   return effectiveDifferentials.length * 18;
+}
+
+export function applyWhsCaps(rawHandicapIndex: number, currentLowHandicapIndex: number | null): CapApplicationResult {
+  const lowHandicapIndex = currentLowHandicapIndex === null
+    ? rawHandicapIndex
+    : Math.min(currentLowHandicapIndex, rawHandicapIndex);
+
+  const softCapThreshold = lowHandicapIndex + 3;
+  const hardCapThreshold = lowHandicapIndex + 5;
+
+  let appliedHandicapIndex = rawHandicapIndex;
+  let softCapTriggered = false;
+  let hardCapTriggered = false;
+
+  if (rawHandicapIndex > softCapThreshold) {
+    softCapTriggered = true;
+    const softAdjusted = softCapThreshold + ((rawHandicapIndex - softCapThreshold) / 2);
+    appliedHandicapIndex = softAdjusted;
+  }
+
+  if (appliedHandicapIndex > hardCapThreshold) {
+    hardCapTriggered = true;
+    appliedHandicapIndex = hardCapThreshold;
+  }
+
+  const normalizedAppliedHandicapIndex = toOneDecimalTruncated(appliedHandicapIndex);
+  const updatedLowHandicapIndex = Math.min(lowHandicapIndex, normalizedAppliedHandicapIndex);
+
+  return {
+    rawHandicapIndex,
+    appliedHandicapIndex: normalizedAppliedHandicapIndex,
+    lowHandicapIndex,
+    updatedLowHandicapIndex,
+    softCapTriggered,
+    hardCapTriggered,
+    softCapThreshold,
+    hardCapThreshold,
+  };
 }

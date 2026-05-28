@@ -3,6 +3,7 @@ import { dbPool } from '../lib/db';
 import { sendError, sendJson } from '../lib/http';
 import { verifyAndAuthorize } from '../middleware/auth';
 import {
+  applyWhsCaps,
   calculateEligibleHoles,
   calculateHandicapFromDifferentials,
   MINIMUM_ELIGIBLE_HOLES,
@@ -35,9 +36,26 @@ async function getPlayerRoundDifferentials(playerId: string, options?: { limit?:
   })) as RoundDifferentialRow[];
 }
 
-async function ensurePlayerExists(playerId: string): Promise<boolean> {
-  const playerResult = await dbPool.query('SELECT id FROM players WHERE id = $1 AND deleted_at IS NULL LIMIT 1', [playerId]);
-  return Number(playerResult.rowCount || 0) > 0;
+interface PlayerHandicapRow {
+  id: string;
+  handicap_index: number | null;
+  low_handicap_index: number | null;
+}
+
+async function getPlayerForHandicap(playerId: string): Promise<PlayerHandicapRow | null> {
+  const playerResult = await dbPool.query(
+    'SELECT id, handicap_index, low_handicap_index FROM players WHERE id = $1 AND deleted_at IS NULL LIMIT 1',
+    [playerId],
+  );
+  if (Number(playerResult.rowCount || 0) === 0) {
+    return null;
+  }
+
+  return {
+    id: String(playerResult.rows[0].id),
+    handicap_index: playerResult.rows[0].handicap_index === null ? null : Number(playerResult.rows[0].handicap_index),
+    low_handicap_index: playerResult.rows[0].low_handicap_index === null ? null : Number(playerResult.rows[0].low_handicap_index),
+  };
 }
 
 export async function handleGetHandicapEligibility(
@@ -56,8 +74,8 @@ export async function handleGetHandicapEligibility(
     return;
   }
 
-  const playerExists = await ensurePlayerExists(playerId);
-  if (!playerExists) {
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
     sendError(res, 404, 'not_found', 'Player not found');
     return;
   }
@@ -89,8 +107,8 @@ export async function handleCalculateHandicap(
     return;
   }
 
-  const playerExists = await ensurePlayerExists(playerId);
-  if (!playerExists) {
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
     sendError(res, 404, 'not_found', 'Player not found');
     return;
   }
@@ -126,6 +144,23 @@ export async function handleCalculateHandicap(
   try {
     await client.query('BEGIN');
 
+    const capApplication = applyWhsCaps(
+      selection.handicapIndex,
+      player.low_handicap_index === null ? player.handicap_index : player.low_handicap_index,
+    );
+
+    const capAdjustments = {
+      multiplier: selection.multiplier,
+      method: 'whs_selection_3_20',
+      rawHandicapIndex: capApplication.rawHandicapIndex,
+      appliedHandicapIndex: capApplication.appliedHandicapIndex,
+      softCapTriggered: capApplication.softCapTriggered,
+      hardCapTriggered: capApplication.hardCapTriggered,
+      softCapThreshold: capApplication.softCapThreshold,
+      hardCapThreshold: capApplication.hardCapThreshold,
+      lowHandicapIndex: capApplication.lowHandicapIndex,
+    };
+
     const insertResult = await client.query(
       `INSERT INTO handicap_records
        (player_id, handicap_index, num_differentials, average_differential, differentials_used, rounds_used, pcc_values, cap_adjustments)
@@ -133,21 +168,21 @@ export async function handleCalculateHandicap(
        RETURNING id, calculation_date`,
       [
         playerId,
-        selection.handicapIndex,
+        capApplication.appliedHandicapIndex,
         selection.countUsed,
         selection.averageDifferential,
         JSON.stringify(selection.selected.map((item) => item.value)),
         JSON.stringify(selection.selected.flatMap((item) => item.roundIds)),
         JSON.stringify([]),
-        JSON.stringify({ multiplier: selection.multiplier, method: 'whs_selection_3_20' }),
+        JSON.stringify(capAdjustments),
       ],
     );
 
     await client.query(
       `UPDATE players
-       SET handicap_index = $2, updated_at = NOW()
+       SET handicap_index = $2, low_handicap_index = $3, updated_at = NOW()
        WHERE id = $1`,
-      [playerId, selection.handicapIndex],
+      [playerId, capApplication.appliedHandicapIndex, capApplication.updatedLowHandicapIndex],
     );
 
     await client.query('COMMIT');
@@ -165,7 +200,17 @@ export async function handleCalculateHandicap(
         averageDifferential: selection.averageDifferential,
         multiplier: selection.multiplier,
       },
-      handicapIndex: selection.handicapIndex,
+      handicapIndex: capApplication.appliedHandicapIndex,
+      capAdjustment: {
+        rawHandicapIndex: capApplication.rawHandicapIndex,
+        appliedHandicapIndex: capApplication.appliedHandicapIndex,
+        softCapTriggered: capApplication.softCapTriggered,
+        hardCapTriggered: capApplication.hardCapTriggered,
+        softCapThreshold: capApplication.softCapThreshold,
+        hardCapThreshold: capApplication.hardCapThreshold,
+        lowHandicapIndex: capApplication.lowHandicapIndex,
+      },
+      lowHandicapIndex: capApplication.updatedLowHandicapIndex,
       recordId: String(insertResult.rows[0].id),
       calculatedAt: String(insertResult.rows[0].calculation_date),
     });
