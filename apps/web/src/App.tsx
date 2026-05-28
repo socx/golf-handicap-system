@@ -37,6 +37,7 @@ const CourseTeeConfigEditorPage = lazy(async () => import('./pages/CourseTeeConf
 const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 const PlayerProfilePage = lazy(async () => import('./pages/PlayerProfilePage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
+const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
 
@@ -73,6 +74,7 @@ function AppRoutes() {
           path="/handicap"
           element={<SectionPlaceholderPage title="Handicap" description="Handicap calculations, history, and trend breakdowns are planned in upcoming stories." />}
         />
+        <Route path="/handicap/history/:playerId" element={<HandicapHistoryPage />} />
         <Route
           path="/admin"
           element={<SectionPlaceholderPage title="Admin" description="Administrative controls will expand here as multirole workflows are implemented." />}

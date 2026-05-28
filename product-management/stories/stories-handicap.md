@@ -323,14 +323,23 @@ So that players can visualise their handicap trend over time.
 **Target Date:** **25 October 2026**
 
 ### Acceptance Criteria
-- [ ] Line chart showing index over time.  
-- [ ] Hover shows date + index + rounds used.  
-- [ ] Supports date range filters.  
-- [ ] Responsive layout.
+- [x] Line chart showing index over time.  
+- [x] Hover shows date + index + rounds used.  
+- [x] Supports date range filters.  
+- [x] Responsive layout.
 
 ### Dependencies
 - Handicap history API  
 - Charting library
+
+### Implementation Notes
+- Created `apps/web/src/components/HandicapHistoryChart.tsx` using Recharts (`recharts` npm package).
+- Responsive `LineChart` via `ResponsiveContainer` with custom tooltip showing date, handicap index, and rounds used count.
+- Date range filter form (From/To date inputs + Apply/Reset buttons) calls `getHandicapHistory` with ISO date options.
+- Created `apps/web/src/pages/HandicapHistoryPage.tsx` at route `/handicap/history/:playerId`.
+- Route added to `apps/web/src/App.tsx`.
+- 8 tests added in `apps/web/src/test/HandicapHistoryChart.test.tsx` covering loading, chart render, empty state, error, date filter, and reset.
+- All 58 frontend tests passing, TypeScript compilation clean.
 
 ---
 
