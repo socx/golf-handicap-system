@@ -17,7 +17,7 @@ import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds } from './routes/rounds';
-import { handleCalculateHandicap } from './routes/handicap';
+import { handleCalculateHandicap, handleGetHandicapEligibility } from './routes/handicap';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -89,6 +89,12 @@ function parseAdminTeeConfigurationPccRoute(path: string): { configId: string } 
 
 function parseHandicapCalculateRoute(path: string): { playerId: string } | null {
   const match = path.match(/^\/(?:api\/)?handicap\/calculate\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { playerId: String(match[1] || '') };
+}
+
+function parseHandicapEligibilityRoute(path: string): { playerId: string } | null {
+  const match = path.match(/^\/(?:api\/)?handicap\/eligibility\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { playerId: String(match[1] || '') };
 }
@@ -306,6 +312,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const handicapCalculateRoute = parseHandicapCalculateRoute(pathname);
     if (handicapCalculateRoute && method === 'POST') {
       await handleCalculateHandicap(req, res, handicapCalculateRoute.playerId);
+      return;
+    }
+
+    const handicapEligibilityRoute = parseHandicapEligibilityRoute(pathname);
+    if (handicapEligibilityRoute && method === 'GET') {
+      await handleGetHandicapEligibility(req, res, handicapEligibilityRoute.playerId);
       return;
     }
 

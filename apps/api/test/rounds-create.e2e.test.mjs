@@ -167,6 +167,13 @@ async function deleteRound(token, roundId) {
   });
 }
 
+async function getHandicapEligibility(token, playerId) {
+  return requestJson(`/api/handicap/eligibility/${playerId}`, {
+    method: 'GET',
+    token,
+  });
+}
+
 before(async () => {
   dbPool = new Pool({ connectionString: DATABASE_URL });
 
@@ -1166,6 +1173,152 @@ test('POST /api/handicap/calculate/:playerId supports 9-hole pairing rules', asy
     assert.equal(pairedItems.length, 3);
     assert.ok(pairedItems.every((item) => item.roundIds.length === 2));
     assert.equal(calculateResponse.json.selection.selectedDifferentials.length, 1);
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('GET /api/handicap/eligibility/:playerId returns eligible holes with 9-hole pairing applied', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-eligibility`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-eligibility`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, course.id, buildNineHolesUniform(), {
+      courseRating: 36,
+      slopeRating: 120,
+    });
+
+    const createdRounds = [];
+
+    for (let i = 0; i < 7; i += 1) {
+      const response = await requestJson('/api/rounds', {
+        method: 'POST',
+        token,
+        body: {
+          playerId: player.id,
+          teeConfigurationId: config.id,
+          playedAt: `2026-09-${String(10 + i).padStart(2, '0')}T09:00:00.000Z`,
+          playingHandicap: 0,
+          holeScores: Array.from({ length: 9 }, (_, idx) => ({
+            holeNumber: idx + 1,
+            strokes: 5,
+            putts: 2,
+            gir: false,
+            fairwayHit: false,
+            inSand: false,
+            penalties: 0,
+          })),
+        },
+      });
+
+      assert.equal(response.status, 201, JSON.stringify(response.json));
+      createdRounds.push(response.json.round.id);
+    }
+
+    for (let i = 0; i < createdRounds.length; i += 1) {
+      await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], 8 + i / 10]);
+    }
+
+    const eligibilityResponse = await getHandicapEligibility(token, player.id);
+
+    assert.equal(eligibilityResponse.status, 200, JSON.stringify(eligibilityResponse.json));
+    assert.equal(eligibilityResponse.json.eligibilityStatus, 'eligible');
+    assert.equal(eligibilityResponse.json.totalEligibleHoles, 54);
+    assert.equal(eligibilityResponse.json.minimumRequiredHoles, 54);
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('POST /api/handicap/calculate/:playerId returns insufficient_holes when fewer than 54 eligible holes', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-insufficient-holes`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-insufficient-holes`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, course.id, buildNineHolesUniform(), {
+      courseRating: 36,
+      slopeRating: 120,
+    });
+
+    const createdRounds = [];
+
+    for (let i = 0; i < 5; i += 1) {
+      const response = await requestJson('/api/rounds', {
+        method: 'POST',
+        token,
+        body: {
+          playerId: player.id,
+          teeConfigurationId: config.id,
+          playedAt: `2026-10-${String(10 + i).padStart(2, '0')}T09:00:00.000Z`,
+          playingHandicap: 0,
+          holeScores: Array.from({ length: 9 }, (_, idx) => ({
+            holeNumber: idx + 1,
+            strokes: 5,
+            putts: 2,
+            gir: false,
+            fairwayHit: false,
+            inSand: false,
+            penalties: 0,
+          })),
+        },
+      });
+
+      assert.equal(response.status, 201, JSON.stringify(response.json));
+      createdRounds.push(response.json.round.id);
+    }
+
+    for (let i = 0; i < createdRounds.length; i += 1) {
+      await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], 9 + i / 10]);
+    }
+
+    const calculateResponse = await requestJson(`/api/handicap/calculate/${player.id}`, {
+      method: 'POST',
+      token,
+    });
+
+    assert.equal(calculateResponse.status, 200, JSON.stringify(calculateResponse.json));
+    assert.equal(calculateResponse.json.eligibilityStatus, 'insufficient_holes');
+    assert.equal(calculateResponse.json.totalEligibleHoles, 36);
+    assert.equal(calculateResponse.json.minimumRequiredHoles, 54);
+
+    const historyResult = await dbPool.query('SELECT id FROM handicap_records WHERE player_id = $1', [player.id]);
+    assert.equal(Number(historyResult.rowCount || 0), 0);
   } finally {
     if (playerId) {
       await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);

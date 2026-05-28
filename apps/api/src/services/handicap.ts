@@ -22,6 +22,8 @@ export interface HandicapSelectionResult {
   handicapIndex: number;
 }
 
+export const MINIMUM_ELIGIBLE_HOLES = 54;
+
 const WHS_COUNT_TABLE: Array<{ min: number; max: number; count: number }> = [
   { min: 3, max: 4, count: 1 },
   { min: 5, max: 6, count: 1 },
@@ -121,4 +123,9 @@ export function calculateHandicapFromDifferentials(rounds: RoundDifferentialRow[
     multiplier,
     handicapIndex,
   };
+}
+
+export function calculateEligibleHoles(rounds: RoundDifferentialRow[]): number {
+  const effectiveDifferentials = buildEffectiveDifferentials(rounds);
+  return effectiveDifferentials.length * 18;
 }

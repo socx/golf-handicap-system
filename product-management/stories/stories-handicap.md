@@ -130,14 +130,21 @@ So that players without enough holes are clearly informed.
 **Target Date:** **06 October 2026**
 
 ### Acceptance Criteria
-- [ ] Endpoint `/handicap/eligibility/:playerId` returns total eligible holes.  
-- [ ] If fewer than 54 holes, handicap calculation returns `eligibilityStatus: "insufficient_holes"`.  
-- [ ] 9‑hole rounds combined appropriately.  
-- [ ] Frontend displays clear messaging.
+- [x] Endpoint `/handicap/eligibility/:playerId` returns total eligible holes.  
+- [x] If fewer than 54 holes, handicap calculation returns `eligibilityStatus: "insufficient_holes"`.  
+- [x] 9‑hole rounds combined appropriately.  
+- [x] Frontend displays clear messaging.
 
 ### Dependencies
 - Rounds table  
 - Differential calculation
+
+### Implementation Notes
+- Added `GET /api/handicap/eligibility/:playerId` in `apps/api/src/routes/handicap.ts` and wired it in `apps/api/src/app.ts`.
+- Eligibility now reports `totalEligibleHoles` using effective differentials, where two 9-hole rounds are paired into one 18-hole equivalent and unpaired 9-hole rounds are not counted.
+- `POST /api/handicap/calculate/:playerId` now returns `eligibilityStatus: "insufficient_holes"` when fewer than 54 eligible holes exist.
+- Added shared eligibility constants/helpers in `apps/api/src/services/handicap.ts`.
+- Added e2e coverage for eligibility endpoint behavior and insufficient-hole calculation responses in `apps/api/test/rounds-create.e2e.test.mjs`.
 
 ---
 
