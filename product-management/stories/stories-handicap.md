@@ -191,20 +191,26 @@ So that the frontend can display up‑to‑date handicap information.
 **Target Date:** **13 October 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/handicap/calculate/:playerId` triggers full WHS calculation.  
-- [ ] Returns:  
+- [x] POST `/handicap/calculate/:playerId` triggers full WHS calculation.  
+- [x] Returns:  
   - current index  
   - differentials used  
   - PCC values  
   - cap adjustments  
   - eligibility status  
-- [ ] Updates `players.handicap_index`.  
-- [ ] Creates new record in `handicap_records`.
+- [x] Updates `players.handicap_index`.  
+- [x] Creates new record in `handicap_records`.
 
 ### Dependencies
 - Differential selection  
 - Soft/hard caps  
 - Eligibility check
+
+### Implementation Notes
+- Finalized `POST /api/handicap/calculate/:playerId` response contract in `apps/api/src/routes/handicap.ts` to include `currentIndex`, selected differentials, `pccValues`, cap adjustments, and eligibility status.
+- `pccValues` are now built from selected rounds and persisted into `handicap_records.pcc_values`.
+- Kept cap-adjusted index persistence (`players.handicap_index`) and history creation (`handicap_records`) as part of the endpoint transaction.
+- Added e2e assertions in `apps/api/test/rounds-create.e2e.test.mjs` to validate response fields and persisted `pcc_values`/`cap_adjustments`.
 
 ---
 

@@ -3,6 +3,7 @@ export interface RoundDifferentialRow {
   played_at: string;
   score_differential: number;
   is_9_hole: boolean;
+  pcc: number | null;
 }
 
 export interface EffectiveDifferential {

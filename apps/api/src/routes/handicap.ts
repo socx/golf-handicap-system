@@ -18,7 +18,7 @@ async function getPlayerRoundDifferentials(playerId: string, options?: { limit?:
   const limitClause = typeof options?.limit === 'number' ? 'LIMIT $2' : '';
   const queryParams = typeof options?.limit === 'number' ? [playerId, options.limit] : [playerId];
   const roundsResult = await dbPool.query(
-    `SELECT id, played_at, score_differential, is_9_hole
+    `SELECT id, played_at, score_differential, is_9_hole, pcc
      FROM rounds
      WHERE player_id = $1
        AND deleted_at IS NULL
@@ -33,6 +33,7 @@ async function getPlayerRoundDifferentials(playerId: string, options?: { limit?:
     played_at: String(row.played_at),
     score_differential: Number(row.score_differential),
     is_9_hole: Boolean(row.is_9_hole),
+    pcc: row.pcc === null ? null : Number(row.pcc),
   })) as RoundDifferentialRow[];
 }
 
@@ -144,6 +145,12 @@ export async function handleCalculateHandicap(
   try {
     await client.query('BEGIN');
 
+    const pccByRoundId = new Map(roundDifferentials.map((round) => [round.id, round.pcc]));
+    const pccValues = selection.selected.flatMap((item) => item.roundIds.map((roundId) => ({
+      roundId,
+      pcc: pccByRoundId.get(roundId) ?? 0,
+    })));
+
     const capApplication = applyWhsCaps(
       selection.handicapIndex,
       player.low_handicap_index === null ? player.handicap_index : player.low_handicap_index,
@@ -173,7 +180,7 @@ export async function handleCalculateHandicap(
         selection.averageDifferential,
         JSON.stringify(selection.selected.map((item) => item.value)),
         JSON.stringify(selection.selected.flatMap((item) => item.roundIds)),
-        JSON.stringify([]),
+        JSON.stringify(pccValues),
         JSON.stringify(capAdjustments),
       ],
     );
@@ -200,7 +207,9 @@ export async function handleCalculateHandicap(
         averageDifferential: selection.averageDifferential,
         multiplier: selection.multiplier,
       },
+      currentIndex: capApplication.appliedHandicapIndex,
       handicapIndex: capApplication.appliedHandicapIndex,
+      pccValues,
       capAdjustment: {
         rawHandicapIndex: capApplication.rawHandicapIndex,
         appliedHandicapIndex: capApplication.appliedHandicapIndex,

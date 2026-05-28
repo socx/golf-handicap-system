@@ -1086,14 +1086,25 @@ test('POST /api/handicap/calculate/:playerId applies WHS selection count, lowest
     assert.deepEqual(selectedValues, [7.6, 8.7, 8.9]);
     assert.equal(calculateResponse.json.selection.averageDifferential, 8.4);
     assert.equal(calculateResponse.json.selection.multiplier, 0.96);
+    assert.equal(calculateResponse.json.currentIndex, 8.0);
     assert.equal(calculateResponse.json.handicapIndex, 8.0);
+    assert.equal(calculateResponse.json.eligibilityStatus, 'eligible');
+    assert.equal(Array.isArray(calculateResponse.json.pccValues), true);
+    assert.equal(calculateResponse.json.pccValues.length, 3);
+    assert.ok(calculateResponse.json.pccValues.every((item) => item.pcc === 0));
+    assert.equal(typeof calculateResponse.json.capAdjustment, 'object');
+    assert.equal(typeof calculateResponse.json.capAdjustment.softCapTriggered, 'boolean');
+    assert.equal(typeof calculateResponse.json.capAdjustment.hardCapTriggered, 'boolean');
 
     const historyResult = await dbPool.query(
-      'SELECT handicap_index FROM handicap_records WHERE player_id = $1 ORDER BY calculation_date DESC LIMIT 1',
+      'SELECT handicap_index, pcc_values, cap_adjustments FROM handicap_records WHERE player_id = $1 ORDER BY calculation_date DESC LIMIT 1',
       [player.id],
     );
     assert.equal(Number(historyResult.rowCount || 0), 1);
     assert.equal(Number(historyResult.rows[0].handicap_index), 8.0);
+    assert.equal(Array.isArray(historyResult.rows[0].pcc_values), true);
+    assert.equal(historyResult.rows[0].pcc_values.length, 3);
+    assert.equal(typeof historyResult.rows[0].cap_adjustments, 'object');
   } finally {
     if (playerId) {
       await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
