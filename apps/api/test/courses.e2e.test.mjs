@@ -23,6 +23,15 @@ function buildAdminToken() {
   );
 }
 
+function buildPlayerToken() {
+  const secret = process.env.JWT_SECRET || 'dev-jwt-secret-change-me';
+  return jwt.sign(
+    { sub: '11111111-1111-4111-8111-111111111112', role: 'player', tokenType: 'access' },
+    secret,
+    { expiresIn: '30m' },
+  );
+}
+
 async function requestJson(path, { method = 'GET', token, body } = {}) {
   const headers = { 'content-type': 'application/json' };
   if (token) {
@@ -305,5 +314,64 @@ test('courses flow 3: tee configuration hole stroke indexes can be swapped in on
     assert.equal(courseHole2.strokeIndex, 1);
   } finally {
     await cleanupCourse(courseId, token);
+  }
+});
+
+test('courses flow 4: tee configuration delete is admin-only and removed from course detail', async () => {
+  const adminToken = buildAdminToken();
+  const playerToken = buildPlayerToken();
+  const suffix = Date.now();
+
+  const createCourseResp = await requestJson('/api/courses', {
+    method: 'POST',
+    token: adminToken,
+    body: {
+      name: `E2E Flow4 ${suffix}`,
+      city: 'Delete City',
+      country: 'US',
+    },
+  });
+
+  assert.equal(createCourseResp.status, 201);
+  const courseId = createCourseResp.json.id;
+
+  try {
+    const createConfigResp = await requestJson(`/api/courses/${courseId}/configurations`, {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        name: 'Forward Tees',
+        teeColour: 'Gold',
+        holes: buildNineHoles(),
+      },
+    });
+
+    assert.equal(createConfigResp.status, 201, JSON.stringify(createConfigResp.json));
+    const configId = createConfigResp.json.id;
+
+    const unauthorizedDelete = await requestJson(`/api/configurations/${configId}`, {
+      method: 'DELETE',
+      token: playerToken,
+    });
+
+    assert.equal(unauthorizedDelete.status, 403, JSON.stringify(unauthorizedDelete.json));
+
+    const deleteResp = await requestJson(`/api/configurations/${configId}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+
+    assert.equal(deleteResp.status, 200, JSON.stringify(deleteResp.json));
+    assert.equal(deleteResp.json.message, 'Tee configuration deleted');
+
+    const getCourseResp = await requestJson(`/api/courses/${courseId}`);
+    assert.equal(getCourseResp.status, 200, JSON.stringify(getCourseResp.json));
+    assert.equal(
+      (getCourseResp.json.teeConfigurations || []).some((config) => config.id === configId),
+      false,
+      'deleted configuration should be excluded from course detail',
+    );
+  } finally {
+    await cleanupCourse(courseId, adminToken);
   }
 });

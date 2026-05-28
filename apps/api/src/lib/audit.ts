@@ -17,7 +17,8 @@ export type AuthAuditEventType =
   | 'course_updated'
   | 'course_deleted'
   | 'tee_configuration_created'
-  | 'tee_configuration_updated';
+  | 'tee_configuration_updated'
+  | 'tee_configuration_deleted';
 
 export async function logAuthAuditEvent({
   requestId,

@@ -53,6 +53,12 @@ export interface TeeHoleUpdatePayload {
   strokeIndex?: number;
 }
 
+export interface DeleteTeeConfigurationResponse {
+  message: string;
+  configId: string;
+  courseId: string;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -249,6 +255,8 @@ export const coursesApi = {
     api.post<TeeConfigurationDetail>(`/courses/${courseId}/configurations`, payload),
   updateConfiguration: (configId: string, payload: TeeConfigurationUpdatePayload) =>
     api.patch<TeeConfigurationDetail>(`/configurations/${configId}`, payload),
+  deleteConfiguration: (configId: string) =>
+    api.delete<DeleteTeeConfigurationResponse>(`/configurations/${configId}`),
   updateConfigurationHoles: (configId: string, holes: TeeHoleUpdatePayload[]) =>
     api.patch<{ holes: Hole[] }>(`/configurations/${configId}`, { holes }),
 };

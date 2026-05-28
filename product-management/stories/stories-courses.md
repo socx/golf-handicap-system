@@ -391,17 +391,22 @@ So that obsolete or incorrect tee setups can be removed from active use.
 **Target Date:** **29 August 2026**
 
 ### Acceptance Criteria
-- [ ] Course detail page shows a delete action for each tee configuration.
-- [ ] Delete action requires explicit confirmation before execution.
-- [ ] Frontend calls a tee configuration delete API endpoint.
-- [ ] On success, deleted configuration is removed from UI lists without full page refresh.
-- [ ] Deleted configurations are no longer selectable in round entry flows.
-- [ ] Error responses are surfaced clearly (e.g., configuration in use, permission denied).
-- [ ] Action is restricted to authorised admin users only.
+- [x] Course detail page shows a delete action for each tee configuration.
+- [x] Delete action requires explicit confirmation before execution.
+- [x] Frontend calls a tee configuration delete API endpoint.
+- [x] On success, deleted configuration is removed from UI lists without full page refresh.
+- [x] Deleted configurations are no longer selectable in round entry flows.
+- [x] Error responses are surfaced clearly (e.g., configuration in use, permission denied).
+- [x] Action is restricted to authorised admin users only.
 
 ### Dependencies
 - Tee configuration delete backend API (soft delete preferred)
 - Auth/authorisation middleware for admin-only actions
 - Course detail page tee configuration list
+
+### Implementation Notes
+- Added soft-delete endpoint for tee configurations and wired it into the course detail page.
+- Updated round detail lookup to preserve scorecard access for rounds referencing deleted tee configurations.
+- Added focused API and frontend test coverage for admin-only deletion, confirmation, UI updates, and error handling.
 
 ---

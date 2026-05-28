@@ -201,4 +201,12 @@ describe('tee configuration API helpers', () => {
       holes: [{ id: 'hole-1', par: 5 }],
     });
   });
+
+  it('calls delete configuration endpoint', async () => {
+    const deleteSpy = vi.spyOn(api, 'delete').mockResolvedValue({ data: {} } as never);
+
+    await coursesApi.deleteConfiguration('cfg-2');
+
+    expect(deleteSpy).toHaveBeenCalledWith('/configurations/cfg-2');
+  });
 });

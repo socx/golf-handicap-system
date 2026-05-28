@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesApi, type Course } from '../api/courses';
+import { handleApiError } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
+import { showErrorToast, showSuccessToast } from '../lib/toast';
 import { Button } from '../components/ui/Button';
 import { SkeletonCard, SkeletonForm, SkeletonList, SkeletonTable } from '../components/ui/Skeleton';
 
 export const CourseDetailPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deletingConfigId, setDeletingConfigId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!courseId) return;
@@ -36,6 +41,33 @@ export const CourseDetailPage: React.FC = () => {
   }, [courseId]);
 
   const loading = !!courseId && !course && !error;
+  const isAdmin = role === 'admin';
+
+  const handleDeleteConfiguration = async (configId: string, configName: string) => {
+    const confirmed = window.confirm(`Delete tee configuration \"${configName}\"? This action removes it from active use.`);
+    if (!confirmed) return;
+
+    setDeletingConfigId(configId);
+    setError(null);
+
+    try {
+      await coursesApi.deleteConfiguration(configId);
+      setCourse((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tee_configurations: (prev.tee_configurations || []).filter((config) => config.id !== configId),
+        };
+      });
+      showSuccessToast('Tee configuration deleted', `${configName} has been removed from active use.`);
+    } catch (err) {
+      const message = handleApiError(err);
+      setError(message);
+      showErrorToast('Delete failed', message);
+    } finally {
+      setDeletingConfigId(null);
+    }
+  };
 
   if (!courseId) {
     return (
@@ -307,6 +339,16 @@ export const CourseDetailPage: React.FC = () => {
                       >
                         Duplicate
                       </Button>
+                      {isAdmin ? (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          isLoading={deletingConfigId === teeConfig.id}
+                          onClick={() => void handleDeleteConfiguration(teeConfig.id, teeConfig.name)}
+                        >
+                          Delete Configuration
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 </div>

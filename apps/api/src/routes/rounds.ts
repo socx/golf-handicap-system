@@ -707,7 +707,7 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
             tc.slope_rating
      FROM tee_configurations tc
      INNER JOIN courses c ON c.id = tc.course_id
-     WHERE tc.id = $1 AND tc.deleted_at IS NULL AND c.deleted_at IS NULL
+     WHERE tc.id = $1 AND c.deleted_at IS NULL
      LIMIT 1`,
     [round.tee_configuration_id],
   );

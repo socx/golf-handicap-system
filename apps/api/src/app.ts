@@ -15,7 +15,7 @@ import { handleReportClientError } from './routes/clientErrors';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
-import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
+import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory } from './routes/handicap';
 
@@ -290,6 +290,11 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const teeConfigRoute = parseTeeConfigurationRoute(pathname);
     if (teeConfigRoute && method === 'PATCH') {
       await handleUpdateTeeConfiguration(req, res, teeConfigRoute.configId);
+      return;
+    }
+
+    if (teeConfigRoute && method === 'DELETE') {
+      await handleDeleteTeeConfiguration(req, res, teeConfigRoute.configId);
       return;
     }
 

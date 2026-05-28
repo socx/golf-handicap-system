@@ -629,3 +629,46 @@ export async function handleUpdateTeeConfiguration(req: http.IncomingMessage, re
     sendError(res, 400, 'bad_request', message);
   }
 }
+
+export async function handleDeleteTeeConfiguration(req: http.IncomingMessage, res: http.ServerResponse, configId: string): Promise<void> {
+  try {
+    const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+    if (!authResult.success || !authResult.auth) {
+      sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+      return;
+    }
+
+    const result = await dbPool.query(
+      `UPDATE tee_configurations
+       SET deleted_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, course_id`,
+      [configId],
+    );
+
+    if (result.rows.length === 0) {
+      sendError(res, 404, 'not_found', 'Tee configuration not found');
+      return;
+    }
+
+    const config = result.rows[0] as { id: string; course_id: string };
+    const clientIp = getClientIp(req);
+
+    await logAuthAuditEvent({
+      requestId: (req.headers['x-request-id'] as string) || '',
+      event: 'tee_configuration_deleted',
+      actorUserId: authResult.auth.userId,
+      ipAddress: clientIp,
+      metadata: { configId: config.id, courseId: config.course_id },
+    });
+
+    sendJson(res, 200, {
+      message: 'Tee configuration deleted',
+      configId: config.id,
+      courseId: config.course_id,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to delete tee configuration';
+    sendError(res, 500, 'internal_error', message);
+  }
+}
