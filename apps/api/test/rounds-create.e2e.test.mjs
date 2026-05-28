@@ -1097,7 +1097,7 @@ test('POST /api/handicap/calculate/:playerId applies WHS selection count, lowest
     assert.equal(typeof calculateResponse.json.capAdjustment.hardCapTriggered, 'boolean');
 
     const historyResult = await dbPool.query(
-      'SELECT handicap_index, pcc_values, cap_adjustments FROM handicap_records WHERE player_id = $1 ORDER BY calculation_date DESC LIMIT 1',
+      'SELECT handicap_index, pcc_values, cap_adjustments, rounds_used FROM handicap_records WHERE player_id = $1 ORDER BY calculation_date DESC LIMIT 1',
       [player.id],
     );
     assert.equal(Number(historyResult.rowCount || 0), 1);
@@ -1105,6 +1105,104 @@ test('POST /api/handicap/calculate/:playerId applies WHS selection count, lowest
     assert.equal(Array.isArray(historyResult.rows[0].pcc_values), true);
     assert.equal(historyResult.rows[0].pcc_values.length, 3);
     assert.equal(typeof historyResult.rows[0].cap_adjustments, 'object');
+    assert.equal(Array.isArray(historyResult.rows[0].rounds_used), true);
+    assert.equal(historyResult.rows[0].rounds_used.length, 3);
+    assert.ok(historyResult.rows[0].rounds_used.every((roundId) => typeof roundId === 'string'));
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
+test('handicap_records are queryable by date range and linked to rounds used', async () => {
+  const token = buildAdminToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+
+  try {
+    const player = await createPlayer(token, `${suffix}-history-range`);
+    playerId = player.id;
+
+    const course = await createCourse(token, `${suffix}-history-range`);
+    courseId = course.id;
+
+    const config = await createTeeConfigWithHoles(token, course.id, buildEighteenHolesUniform(), {
+      courseRating: 72,
+      slopeRating: 120,
+    });
+
+    const targetDifferentials = [12.2, 10.1, 9.4, 11.3, 8.5, 13.1, 7.5, 10.4, 9.0, 8.8];
+    const createdRounds = [];
+
+    for (let i = 0; i < targetDifferentials.length; i += 1) {
+      const response = await requestJson('/api/rounds', {
+        method: 'POST',
+        token,
+        body: {
+          playerId: player.id,
+          teeConfigurationId: config.id,
+          playedAt: `2027-01-${String(10 + i).padStart(2, '0')}T09:00:00.000Z`,
+          playingHandicap: 0,
+          holeScores: Array.from({ length: 18 }, (_, idx) => ({
+            holeNumber: idx + 1,
+            strokes: 5,
+            putts: 2,
+            gir: false,
+            fairwayHit: false,
+            inSand: false,
+            penalties: 0,
+          })),
+        },
+      });
+
+      assert.equal(response.status, 201, JSON.stringify(response.json));
+      createdRounds.push(response.json.round.id);
+    }
+
+    for (let i = 0; i < createdRounds.length; i += 1) {
+      await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], targetDifferentials[i]]);
+    }
+
+    const firstCalculation = await requestJson(`/api/handicap/calculate/${player.id}`, {
+      method: 'POST',
+      token,
+    });
+    assert.equal(firstCalculation.status, 200, JSON.stringify(firstCalculation.json));
+
+    const secondCalculation = await requestJson(`/api/handicap/calculate/${player.id}`, {
+      method: 'POST',
+      token,
+    });
+    assert.equal(secondCalculation.status, 200, JSON.stringify(secondCalculation.json));
+
+    await dbPool.query('UPDATE handicap_records SET calculation_date = $2 WHERE id = $1', [firstCalculation.json.recordId, '2027-02-01T12:00:00.000Z']);
+    await dbPool.query('UPDATE handicap_records SET calculation_date = $2 WHERE id = $1', [secondCalculation.json.recordId, '2027-03-01T12:00:00.000Z']);
+
+    const dateRangeResult = await dbPool.query(
+      `SELECT id, rounds_used
+       FROM handicap_records
+       WHERE player_id = $1
+         AND calculation_date >= $2::timestamptz
+         AND calculation_date < $3::timestamptz
+       ORDER BY calculation_date ASC`,
+      [player.id, '2027-02-15T00:00:00.000Z', '2027-03-15T00:00:00.000Z'],
+    );
+
+    assert.equal(Number(dateRangeResult.rowCount || 0), 1);
+    assert.equal(String(dateRangeResult.rows[0].id), String(secondCalculation.json.recordId));
+    assert.equal(Array.isArray(dateRangeResult.rows[0].rounds_used), true);
+    assert.ok(dateRangeResult.rows[0].rounds_used.length > 0);
+    assert.ok(dateRangeResult.rows[0].rounds_used.every((roundId) => typeof roundId === 'string'));
   } finally {
     if (playerId) {
       await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);

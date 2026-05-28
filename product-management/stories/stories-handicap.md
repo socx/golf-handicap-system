@@ -226,13 +226,21 @@ So that players can see how their index has changed over time.
 **Target Date:** **15 October 2026**
 
 ### Acceptance Criteria
-- [ ] `handicap_records` includes: id, player_id, index_value, date, differentials_used, pcc_values, cap_adjustments.  
-- [ ] Linked to rounds used.  
-- [ ] Queryable by date range.
+- [x] `handicap_records` includes: id, player_id, index_value, date, differentials_used, pcc_values, cap_adjustments.  
+- [x] Linked to rounds used.  
+- [x] Queryable by date range.
 
 ### Dependencies
 - Handicap calculation  
 - Rounds table
+
+### Implementation Notes
+- Added `packages/db/migrations/012_handicap_records.sql` so the local migration runner (`scripts/db/migrate.js`) now creates `handicap_records` consistently.
+- Confirmed history records contain rounds linkage via `handicap_records.rounds_used` populated by handicap calculation.
+- Added e2e validation in `apps/api/test/rounds-create.e2e.test.mjs` for:
+  - `rounds_used` linkage in created history records,
+  - date-range querying of `handicap_records` using `calculation_date` filters.
+- Existing `db/migrations/012_handicap_records.sql` remains aligned for deployment-path migrations.
 
 ---
 
