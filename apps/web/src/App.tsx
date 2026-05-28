@@ -35,6 +35,7 @@ const CourseFormPage = lazy(async () => import('./pages/CourseFormPage'));
 const CourseDetailPage = lazy(async () => import('./pages/CourseDetailPage'));
 const CourseTeeConfigEditorPage = lazy(async () => import('./pages/CourseTeeConfigEditorPage'));
 const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
+const PlayerProfilePage = lazy(async () => import('./pages/PlayerProfilePage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
@@ -57,11 +58,8 @@ function AppRoutes() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/players" element={<PlayersPage />} />
+        <Route path="/players/:playerId" element={<PlayerProfilePage />} />
         <Route path="/players/:playerId/edit" element={<PlayerEditPage />} />
-        <Route
-          path="/players/:playerId"
-          element={<SectionPlaceholderPage title="Player Profile" description="Detailed player profile views are scheduled in the next story." />}
-        />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/new" element={<CourseFormPage />} />
         <Route path="/courses/:courseId/edit" element={<CourseFormPage />} />

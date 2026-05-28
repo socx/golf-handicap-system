@@ -1,8 +1,12 @@
 import React from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { HandicapSummaryWidget } from '../components/HandicapSummaryWidget';
 
 const widgetBaseClass = 'rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/60';
 
 export const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,11 +17,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <article className={widgetBaseClass}>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Handicap Summary</p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">Placeholder Widget</h3>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Upcoming work: current handicap, trend, and latest index calculation.</p>
-        </article>
+        {user && <HandicapSummaryWidget playerId={user.id} />}
 
         <article className={widgetBaseClass}>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Recent Rounds</p>

@@ -285,13 +285,29 @@ So that players can quickly see their current index.
 **Target Date:** **20 October 2026**
 
 ### Acceptance Criteria
-- [ ] Shows current index + last update date.  
-- [ ] Shows eligibility status if insufficient holes.  
-- [ ] Links to full handicap history page.
+- [x] Shows current index + last update date.  
+- [x] Shows eligibility status if insufficient holes.  
+- [x] Links to full handicap history page.
 
 ### Dependencies
 - Handicap calculation API  
 - Player profile page
+
+### Implementation Notes
+- Created `HandicapSummaryWidget.tsx` React component that fetches eligibility and history data using the handicap API client.
+- Component accepts a `playerId` prop and displays either the current handicap index (if eligible) or an insufficient holes message with holes remaining.
+- Widget includes a "View History" link to `/handicap/history/:playerId` for full handicap history access.
+- Component features loading and error states with proper Tailwind CSS styling matching the dashboard widget pattern.
+- Added comprehensive test coverage in `HandicapSummaryWidget.test.tsx` with 6 tests covering:
+  - Loading state rendering
+  - Eligible player with handicap index display
+  - Insufficient holes status display
+  - Error state rendering
+  - History link presence and correct href
+  - PropId change triggering data refetch
+- Integrated widget into the Dashboard page and created a new Player Profile page (`PlayerProfilePage.tsx`) that displays the widget alongside player information.
+- Updated App.tsx routing to use the new PlayerProfilePage component for `/players/:playerId` route (previously a placeholder).
+- All tests passing (50/50), TypeScript compilation clean, frontend build successful.
 
 ---
 
