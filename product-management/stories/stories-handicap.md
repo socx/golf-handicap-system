@@ -256,9 +256,17 @@ So that the frontend can display trends.
 **Target Date:** **18 October 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/handicap/history/:playerId` returns list of handicap_records.  
-- [ ] Supports date range filters.  
-- [ ] Includes rounds used for each calculation.
+- [x] GET `/handicap/history/:playerId` returns list of handicap_records.  
+- [x] Supports date range filters.  
+- [x] Includes rounds used for each calculation.
+
+### Implementation Notes
+- Added `handleGetHandicapHistory` handler in `apps/api/src/routes/handicap.ts` that queries handicap_records table.
+- Endpoint supports optional `?from=` and `?to=` query parameters for date range filtering.
+- Returns paginated list with `total` count and `records` array containing id, calculationDate, handicapIndex, numDifferentials, averageDifferential, differentialsUsed, roundsUsed, pccValues, capAdjustments, and createdAt.
+- Added route parsing and wiring in `apps/api/src/app.ts` for GET `/handicap/history/:playerId`.
+- E2E test coverage includes: (1) full history retrieval, (2) date range filtering with 30/60-day backfill test, (3) 404 for unknown player.
+- All 23 e2e tests pass (node --test apps/api/test/rounds-create.e2e.test.mjs).
 
 ### Dependencies
 - Handicap history table

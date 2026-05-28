@@ -231,3 +231,81 @@ export async function handleCalculateHandicap(
     client.release();
   }
 }
+
+export async function handleGetHandicapHistory(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  playerId: string,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  if (!isUuid(playerId)) {
+    sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
+    return;
+  }
+
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
+    sendError(res, 404, 'not_found', 'Player not found');
+    return;
+  }
+
+  const url = new URL(req.url || '/', `http://localhost`);
+  const fromParam = url.searchParams.get('from');
+  const toParam = url.searchParams.get('to');
+
+  const conditions: string[] = ['player_id = $1'];
+  const queryParams: unknown[] = [playerId];
+
+  if (fromParam) {
+    const fromDate = new Date(fromParam);
+    if (isNaN(fromDate.getTime())) {
+      sendError(res, 400, 'validation_error', 'Invalid "from" date', [{ field: 'from', message: 'Must be a valid ISO 8601 date' }]);
+      return;
+    }
+    queryParams.push(fromDate.toISOString());
+    conditions.push(`calculation_date >= $${queryParams.length}`);
+  }
+
+  if (toParam) {
+    const toDate = new Date(toParam);
+    if (isNaN(toDate.getTime())) {
+      sendError(res, 400, 'validation_error', 'Invalid "to" date', [{ field: 'to', message: 'Must be a valid ISO 8601 date' }]);
+      return;
+    }
+    queryParams.push(toDate.toISOString());
+    conditions.push(`calculation_date <= $${queryParams.length}`);
+  }
+
+  const result = await dbPool.query(
+    `SELECT id, calculation_date, handicap_index, num_differentials, average_differential,
+            differentials_used, rounds_used, pcc_values, cap_adjustments, created_at
+     FROM handicap_records
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY calculation_date DESC`,
+    queryParams,
+  );
+
+  const records = result.rows.map((row) => ({
+    id: String(row.id),
+    calculationDate: String(row.calculation_date),
+    handicapIndex: Number(row.handicap_index),
+    numDifferentials: Number(row.num_differentials),
+    averageDifferential: Number(row.average_differential),
+    differentialsUsed: row.differentials_used,
+    roundsUsed: row.rounds_used,
+    pccValues: row.pcc_values,
+    capAdjustments: row.cap_adjustments,
+    createdAt: String(row.created_at),
+  }));
+
+  sendJson(res, 200, {
+    playerId,
+    total: records.length,
+    records,
+  });
+}

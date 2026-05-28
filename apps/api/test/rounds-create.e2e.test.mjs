@@ -1627,3 +1627,121 @@ test('POST /api/handicap/calculate/:playerId applies WHS hard cap and logs cap e
     }
   }
 });
+
+test('GET /api/handicap/history/:playerId returns all records for a player', async () => {
+  const token = buildAdminToken();
+  let playerId = null;
+  let courseId = null;
+  try {
+    const suffix = Date.now();
+    const player = await createPlayer(token, `hist-${suffix}`);
+    playerId = player.id;
+    const course = await createCourse(token, `hist-${suffix}`);
+    courseId = course.id;
+    const config = await createTeeConfigWithHoles(token, course.id, buildEighteenHolesUniform(), { courseRating: 72, slopeRating: 113 });
+
+    for (let i = 0; i < 10; i++) {
+      const r = await requestJson('/api/rounds', {
+        method: 'POST',
+        token,
+        body: {
+          playerId,
+          
+          teeConfigurationId: config.id,
+          playedAt: new Date(Date.now() - i * 86400000).toISOString(),
+          playingHandicap: 10,
+          holeScores: Array.from({ length: 18 }, (_, idx) => ({ holeNumber: idx + 1, strokes: 5, putts: 2, gir: false, fairwayHit: false, inSand: false, penalties: 0 })),
+        },
+      });
+      assert.equal(r.status, 201);
+      await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [r.json.round.id, 12.0]);
+    }
+
+    const calc1 = await requestJson('/api/handicap/calculate/' + playerId, { method: 'POST', token });
+    assert.equal(calc1.status, 200);
+    const calc2 = await requestJson('/api/handicap/calculate/' + playerId, { method: 'POST', token });
+    assert.equal(calc2.status, 200);
+
+    const histRes = await requestJson('/api/handicap/history/' + playerId, { token });
+    assert.equal(histRes.status, 200);
+    assert.equal(histRes.json.playerId, playerId);
+    assert.ok(histRes.json.total >= 2, 'Expected at least 2 records');
+    const rec = histRes.json.records[0];
+    assert.ok(rec.id, 'record should have id');
+    assert.ok(rec.calculationDate, 'record should have calculationDate');
+    assert.ok(typeof rec.handicapIndex === 'number', 'handicapIndex should be a number');
+    assert.ok(Array.isArray(rec.roundsUsed), 'roundsUsed should be an array');
+    assert.ok(rec.roundsUsed.length > 0, 'roundsUsed should be non-empty');
+    assert.ok(Array.isArray(rec.pccValues), 'pccValues should be an array');
+    assert.ok(rec.capAdjustments !== null && typeof rec.capAdjustments === 'object', 'capAdjustments should be an object');
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+    if (courseId) await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+  }
+});
+
+test('GET /api/handicap/history/:playerId supports date range filters', async () => {
+  const token = buildAdminToken();
+  let playerId = null;
+  let courseId = null;
+  try {
+    const suffix = Date.now();
+    const player = await createPlayer(token, `filter-${suffix}`);
+    playerId = player.id;
+    const course = await createCourse(token, `filter-${suffix}`);
+    courseId = course.id;
+    const config = await createTeeConfigWithHoles(token, course.id, buildEighteenHolesUniform(), { courseRating: 72, slopeRating: 113 });
+
+    for (let i = 0; i < 10; i++) {
+      const r = await requestJson('/api/rounds', {
+        method: 'POST',
+        token,
+        body: {
+          playerId,
+          courseId,
+          teeConfigurationId: config.id,
+          playedAt: new Date(Date.now() - i * 86400000).toISOString(),
+          playingHandicap: 10,
+          holeScores: Array.from({ length: 18 }, (_, idx) => ({ holeNumber: idx + 1, strokes: 5, putts: 2, gir: false, fairwayHit: false, inSand: false, penalties: 0 })),
+        },
+      });
+      assert.equal(r.status, 201);
+      await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [r.json.round.id, 12.0]);
+    }
+
+    const calc1 = await requestJson('/api/handicap/calculate/' + playerId, { method: 'POST', token });
+    assert.equal(calc1.status, 200);
+    const record1Id = calc1.json.recordId;
+    const calc2 = await requestJson('/api/handicap/calculate/' + playerId, { method: 'POST', token });
+    assert.equal(calc2.status, 200);
+
+    await dbPool.query("UPDATE handicap_records SET calculation_date = NOW() - INTERVAL '60 days' WHERE id = $1", [record1Id]);
+
+    const from = new Date(Date.now() - 30 * 86400000).toISOString();
+    const filtered = await requestJson('/api/handicap/history/' + playerId + '?from=' + encodeURIComponent(from), { token });
+    assert.equal(filtered.status, 200);
+    assert.equal(filtered.json.total, 1, 'Expected 1 record in last 30 days, got ' + filtered.json.total);
+    assert.notEqual(filtered.json.records[0].id, record1Id, 'Old record should be excluded');
+
+    const all = await requestJson('/api/handicap/history/' + playerId, { token });
+    assert.equal(all.status, 200);
+    assert.ok(all.json.total >= 2, 'Expected both records in full range');
+  } finally {
+    if (playerId) {
+      await dbPool.query('DELETE FROM handicap_records WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+    if (courseId) await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+  }
+});
+
+test('GET /api/handicap/history/:playerId returns 404 for unknown player', async () => {
+  const token = buildAdminToken();
+  const res = await requestJson('/api/handicap/history/00000000-0000-4000-8000-000000000099', { token });
+  assert.equal(res.status, 404);
+});
