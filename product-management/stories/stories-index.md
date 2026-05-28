@@ -37,6 +37,10 @@ Each entry links to the corresponding file using Guided Links.
 - **[stories-internationalisation.md](stories-internationalisation.md)** — i18n, l10n, multi‑language support  
 - **[stories-misc.md](stories-misc.md)** — Enhancements, utilities, polish, extras  
 
+## Technical Debt & Frontend Polish
+
+- **[stories-technical-debt.md](stories-technical-debt.md)** — API framework refactor, icons, motion polish
+
 ---
 
 # Cross‑Epic Navigation

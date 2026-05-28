@@ -22,6 +22,9 @@ This folder contains epic-scoped user story files used as the source of truth fo
 - stories-testing.md
 - stories-analytics.md
 
+## Technical Debt and Frontend Polish
+- stories-technical-debt.md
+
 ## Extensions
 - stories-pwa.md
 - stories-multitenancy.md
