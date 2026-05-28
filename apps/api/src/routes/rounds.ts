@@ -5,6 +5,8 @@ import { logApplicationEvent } from '../lib/audit';
 import { verifyAndAuthorize } from '../middleware/auth';
 import { getOrCreateDailyPcc, getPlayedOnDate } from '../services/pcc';
 
+type RoundStatus = 'pending' | 'approved' | 'rejected';
+
 interface ValidationIssue {
   field: string;
   message: string;
@@ -42,6 +44,8 @@ interface RoundDetailRow {
   tee_configuration_id: string;
   played_at: string;
   playing_handicap: number | null;
+  status: RoundStatus;
+  rejection_reason: string | null;
   gross_score: number;
   adjusted_gross_score: number;
   score_differential: number | null;
@@ -250,8 +254,8 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
   const offsetIndex = listParams.length;
 
   const listResult = await dbPool.query(
-    `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
-            r.gross_score, r.adjusted_gross_score, r.score_differential, r.pcc,
+      `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
+        r.status, r.rejection_reason, r.gross_score, r.adjusted_gross_score, r.score_differential, r.pcc,
             r.total_putts, r.total_gir, r.total_fairways_hit, r.total_penalties,
             r.is_tournament, r.is_9_hole, r.created_at, r.updated_at,
             tc.course_id, c.name AS course_name, tc.name AS tee_configuration_name, tc.tee_colour
@@ -279,6 +283,8 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
       teeColour: round.tee_colour,
       playedAt: round.played_at,
       playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),
+      status: round.status,
+      rejectionReason: round.rejection_reason,
       grossScore: round.gross_score,
       adjustedGrossScore: round.adjusted_gross_score,
       scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
@@ -540,14 +546,15 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
 
     const roundInsert = await client.query(
       `INSERT INTO rounds
-       (player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING id, player_id, tee_configuration_id, played_at, playing_handicap, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole, created_at, updated_at`,
+       (player_id, tee_configuration_id, played_at, playing_handicap, status, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       RETURNING id, player_id, tee_configuration_id, played_at, playing_handicap, status, rejection_reason, gross_score, adjusted_gross_score, score_differential, pcc, total_putts, total_gir, total_fairways_hit, total_penalties, is_tournament, is_9_hole, created_at, updated_at`,
       [
         value.player_id,
         value.tee_configuration_id,
         value.played_at,
         value.playing_handicap,
+        'pending',
         grossScore,
         adjustedGrossScore,
         scoreDifferential,
@@ -567,6 +574,8 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
       tee_configuration_id: string;
       played_at: string;
       playing_handicap: number | null;
+      status: RoundStatus;
+      rejection_reason: string | null;
       gross_score: number;
       adjusted_gross_score: number;
       score_differential: number | null;
@@ -630,6 +639,8 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         teeConfigurationId: round.tee_configuration_id,
         playedAt: round.played_at,
         playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),
+        status: round.status,
+        rejectionReason: round.rejection_reason,
         grossScore: round.gross_score,
         adjustedGrossScore: round.adjusted_gross_score,
         scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
@@ -667,6 +678,7 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
 
   const roundResult = await dbPool.query(
     `SELECT r.id, r.player_id, p.first_name AS player_first_name, p.last_name AS player_last_name, r.tee_configuration_id, r.played_at, r.playing_handicap,
+          r.status, r.rejection_reason,
             gross_score, adjusted_gross_score, score_differential, pcc,
             total_putts, total_gir, total_fairways_hit, total_penalties,
             is_tournament, is_9_hole, r.created_at, r.updated_at
@@ -739,6 +751,8 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
       teeConfigurationId: round.tee_configuration_id,
       playedAt: round.played_at,
       playingHandicap: round.playing_handicap === null ? null : Number(round.playing_handicap),
+      status: round.status,
+      rejectionReason: round.rejection_reason,
       grossScore: round.gross_score,
       adjustedGrossScore: round.adjusted_gross_score,
       scoreDifferential: round.score_differential === null ? null : Number(round.score_differential),
@@ -847,5 +861,185 @@ export async function handleDeleteRound(req: http.IncomingMessage, res: http.Ser
   } catch (error) {
     console.error('[rounds.delete] unexpected error:', error);
     sendError(res, 500, 'round_delete_failed', 'Unable to delete round at this time');
+  }
+}
+
+export async function handleApproveRound(req: http.IncomingMessage, res: http.ServerResponse, roundId: string): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  const clientIp = getClientIp(req);
+
+  try {
+    const result = await dbPool.query(
+      `UPDATE rounds
+       SET status = 'approved', rejection_reason = NULL, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, player_id, tee_configuration_id, played_at, status, rejection_reason, score_differential`,
+      [roundId],
+    );
+
+    if (Number(result.rowCount || 0) === 0) {
+      sendError(res, 404, 'not_found', 'Round not found');
+      return;
+    }
+
+    const approvedRound = result.rows[0] as {
+      id: string;
+      player_id: string;
+      tee_configuration_id: string;
+      played_at: string;
+      status: RoundStatus;
+      rejection_reason: string | null;
+      score_differential: number | null;
+    };
+
+    await logApplicationEvent({
+      requestId: (req.headers['x-request-id'] as string) || '',
+      event: 'round_approved',
+      ipAddress: clientIp,
+      metadata: {
+        roundId: approvedRound.id,
+        playerId: approvedRound.player_id,
+        teeConfigurationId: approvedRound.tee_configuration_id,
+        playedAt: approvedRound.played_at,
+        actorUserId: authResult.auth.userId,
+      },
+    });
+
+    const shouldRequestHandicapRecalculation = approvedRound.score_differential !== null;
+    if (shouldRequestHandicapRecalculation) {
+      await logApplicationEvent({
+        requestId: (req.headers['x-request-id'] as string) || '',
+        event: 'handicap_recalculation_requested',
+        ipAddress: clientIp,
+        metadata: {
+          reason: 'round_approved',
+          roundId: approvedRound.id,
+          playerId: approvedRound.player_id,
+          actorUserId: authResult.auth.userId,
+          scoreDifferential: Number(approvedRound.score_differential),
+        },
+      });
+    }
+
+    sendJson(res, 200, {
+      message: 'Round approved',
+      round: {
+        id: approvedRound.id,
+        playerId: approvedRound.player_id,
+        teeConfigurationId: approvedRound.tee_configuration_id,
+        playedAt: approvedRound.played_at,
+        status: approvedRound.status,
+        rejectionReason: approvedRound.rejection_reason,
+      },
+      handicapRecalculationRequested: shouldRequestHandicapRecalculation,
+    });
+  } catch (error) {
+    console.error('[rounds.approve] unexpected error:', error);
+    sendError(res, 500, 'round_approval_failed', 'Unable to approve round at this time');
+  }
+}
+
+export async function handleRejectRound(req: http.IncomingMessage, res: http.ServerResponse, roundId: string): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(req);
+  } catch (error) {
+    sendError(res, 400, 'invalid_json', (error as Error).message);
+    return;
+  }
+
+  const rejectionReason = typeof payload.rejectionReason === 'string'
+    ? payload.rejectionReason.trim()
+    : typeof payload.reason === 'string'
+      ? payload.reason.trim()
+      : '';
+
+  if (!rejectionReason) {
+    sendError(res, 400, 'validation_error', 'rejectionReason is required', [{ field: 'rejectionReason', message: 'rejectionReason is required' }]);
+    return;
+  }
+
+  const clientIp = getClientIp(req);
+
+  try {
+    const result = await dbPool.query(
+      `UPDATE rounds
+       SET status = 'rejected', rejection_reason = $2, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, player_id, tee_configuration_id, played_at, status, rejection_reason, score_differential`,
+      [roundId, rejectionReason],
+    );
+
+    if (Number(result.rowCount || 0) === 0) {
+      sendError(res, 404, 'not_found', 'Round not found');
+      return;
+    }
+
+    const rejectedRound = result.rows[0] as {
+      id: string;
+      player_id: string;
+      tee_configuration_id: string;
+      played_at: string;
+      status: RoundStatus;
+      rejection_reason: string | null;
+      score_differential: number | null;
+    };
+
+    await logApplicationEvent({
+      requestId: (req.headers['x-request-id'] as string) || '',
+      event: 'round_rejected',
+      ipAddress: clientIp,
+      metadata: {
+        roundId: rejectedRound.id,
+        playerId: rejectedRound.player_id,
+        teeConfigurationId: rejectedRound.tee_configuration_id,
+        playedAt: rejectedRound.played_at,
+        reason: rejectedRound.rejection_reason,
+        actorUserId: authResult.auth.userId,
+      },
+    });
+
+    const shouldRequestHandicapRecalculation = rejectedRound.score_differential !== null;
+    if (shouldRequestHandicapRecalculation) {
+      await logApplicationEvent({
+        requestId: (req.headers['x-request-id'] as string) || '',
+        event: 'handicap_recalculation_requested',
+        ipAddress: clientIp,
+        metadata: {
+          reason: 'round_rejected',
+          roundId: rejectedRound.id,
+          playerId: rejectedRound.player_id,
+          actorUserId: authResult.auth.userId,
+          scoreDifferential: Number(rejectedRound.score_differential),
+        },
+      });
+    }
+
+    sendJson(res, 200, {
+      message: 'Round rejected',
+      round: {
+        id: rejectedRound.id,
+        playerId: rejectedRound.player_id,
+        teeConfigurationId: rejectedRound.tee_configuration_id,
+        playedAt: rejectedRound.played_at,
+        status: rejectedRound.status,
+        rejectionReason: rejectedRound.rejection_reason,
+      },
+      handicapRecalculationRequested: shouldRequestHandicapRecalculation,
+    });
+  } catch (error) {
+    console.error('[rounds.reject] unexpected error:', error);
+    sendError(res, 500, 'round_rejection_failed', 'Unable to reject round at this time');
   }
 }

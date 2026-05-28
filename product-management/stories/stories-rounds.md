@@ -335,16 +335,21 @@ So that admins can validate rounds before they affect handicap.
 **Target Date:** **03 September 2026**
 
 ### Acceptance Criteria
-- [ ] Rounds have `status`: pending, approved, rejected.  
-- [ ] POST `/rounds/:id/approve` and `/reject`.  
-- [ ] Approved rounds included in handicap calculation.  
-- [ ] Rejection reason stored.  
-- [ ] Admin‑only access enforced.
+- [x] Rounds have `status`: pending, approved, rejected.  
+- [x] POST `/rounds/:id/approve` and `/reject`.  
+- [x] Approved rounds included in handicap calculation.  
+- [x] Rejection reason stored.  
+- [x] Admin‑only access enforced.
 
 ### Dependencies
 - Rounds table  
 - RBAC  
 - Handicap calculation
+
+### Implementation Notes
+- Added moderation columns and backfill migration.
+- Added admin-only approve/reject endpoints.
+- Handicap queries now include approved rounds only.
 
 ---
 

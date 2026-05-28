@@ -16,7 +16,7 @@ import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDel
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration } from './routes/courses';
-import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds } from './routes/rounds';
+import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory } from './routes/handicap';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
@@ -79,6 +79,12 @@ function parseRoundRoute(path: string): { roundId: string } | null {
   const match = path.match(/^\/(?:api\/)?rounds\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { roundId: String(match[1] || '') };
+}
+
+function parseRoundModerationRoute(path: string): { roundId: string; action: 'approve' | 'reject' } | null {
+  const match = path.match(/^\/(?:api\/)?rounds\/([0-9a-fA-F-]+)\/(approve|reject)$/);
+  if (!match) return null;
+  return { roundId: String(match[1] || ''), action: String(match[2] || '') as 'approve' | 'reject' };
 }
 
 function parseAdminTeeConfigurationPccRoute(path: string): { configId: string } | null {
@@ -306,6 +312,17 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (roundRoute && method === 'DELETE') {
       await handleDeleteRound(req, res, roundRoute.roundId);
+      return;
+    }
+
+    const roundModerationRoute = parseRoundModerationRoute(pathname);
+    if (roundModerationRoute && method === 'POST' && roundModerationRoute.action === 'approve') {
+      await handleApproveRound(req, res, roundModerationRoute.roundId);
+      return;
+    }
+
+    if (roundModerationRoute && method === 'POST' && roundModerationRoute.action === 'reject') {
+      await handleRejectRound(req, res, roundModerationRoute.roundId);
       return;
     }
 

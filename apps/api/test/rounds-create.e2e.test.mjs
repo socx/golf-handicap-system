@@ -28,6 +28,15 @@ function buildAdminToken() {
   );
 }
 
+function buildPlayerToken() {
+  const secret = process.env.JWT_SECRET || 'dev-jwt-secret-change-me';
+  return jwt.sign(
+    { sub: '11111111-1111-4111-8111-111111111112', role: 'player', tokenType: 'access' },
+    secret,
+    { expiresIn: '30m' },
+  );
+}
+
 async function requestJson(path, { method = 'GET', token, body } = {}) {
   const headers = { 'content-type': 'application/json' };
   if (token) headers.authorization = `Bearer ${token}`;
@@ -157,6 +166,10 @@ async function createRound(token, payload) {
     body: payload,
   });
   assert.equal(response.status, 201, JSON.stringify(response.json));
+
+  const approvalResponse = await approveRound(token, response.json.round.id);
+  assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
+
   return response.json;
 }
 
@@ -164,6 +177,21 @@ async function deleteRound(token, roundId) {
   return requestJson(`/api/rounds/${roundId}`, {
     method: 'DELETE',
     token,
+  });
+}
+
+async function approveRound(token, roundId) {
+  return requestJson(`/api/rounds/${roundId}/approve`, {
+    method: 'POST',
+    token,
+  });
+}
+
+async function rejectRound(token, roundId, rejectionReason) {
+  return requestJson(`/api/rounds/${roundId}/reject`, {
+    method: 'POST',
+    token,
+    body: { rejectionReason },
   });
 }
 
@@ -1021,6 +1049,72 @@ test('DELETE /api/rounds/:id returns 404 for unknown or already deleted rounds',
   }
 });
 
+test('POST /api/rounds/:id/approve and /reject enforce admin-only moderation and store rejection reasons', async () => {
+  const adminToken = buildAdminToken();
+  const playerToken = buildPlayerToken();
+  const suffix = Date.now();
+
+  let playerId = null;
+  let courseId = null;
+  let roundId = null;
+
+  try {
+    const player = await createPlayer(adminToken, `${suffix}-moderation`);
+    playerId = player.id;
+
+    const course = await createCourse(adminToken, `${suffix}-moderation`);
+    courseId = course.id;
+
+    const config = await createTeeConfig(adminToken, course.id);
+    const created = await requestJson('/api/rounds', {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: '2026-07-06T09:00:00.000Z',
+        holeScores: buildNineHoleScores(),
+      },
+    });
+
+    assert.equal(created.status, 201, JSON.stringify(created.json));
+    roundId = created.json.round.id;
+    assert.equal(created.json.round.status, 'pending');
+
+    const unauthorizedApprove = await approveRound(playerToken, roundId);
+    assert.equal(unauthorizedApprove.status, 403);
+    assert.equal(unauthorizedApprove.json.error.code, 'forbidden');
+
+    const approveResponse = await approveRound(adminToken, roundId);
+    assert.equal(approveResponse.status, 200, JSON.stringify(approveResponse.json));
+    assert.equal(approveResponse.json.round.status, 'approved');
+    assert.equal(approveResponse.json.round.rejectionReason, null);
+
+    const rejectResponse = await rejectRound(adminToken, roundId, 'Invalid score card');
+    assert.equal(rejectResponse.status, 200, JSON.stringify(rejectResponse.json));
+    assert.equal(rejectResponse.json.round.status, 'rejected');
+    assert.equal(rejectResponse.json.round.rejectionReason, 'Invalid score card');
+
+    const roundInDb = await dbPool.query('SELECT status, rejection_reason FROM rounds WHERE id = $1', [roundId]);
+    assert.equal(roundInDb.rowCount, 1);
+    assert.equal(roundInDb.rows[0].status, 'rejected');
+    assert.equal(roundInDb.rows[0].rejection_reason, 'Invalid score card');
+  } finally {
+    if (roundId) {
+      await dbPool.query("DELETE FROM audit_logs WHERE event_type IN ('round_approved', 'round_rejected', 'handicap_recalculation_requested') AND metadata->>'roundId' = $1", [roundId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM rounds WHERE player_id = $1', [playerId]);
+    }
+    if (courseId) {
+      await dbPool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    }
+    if (playerId) {
+      await dbPool.query('DELETE FROM players WHERE id = $1', [playerId]);
+    }
+  }
+});
+
 test('POST /api/handicap/calculate/:playerId applies WHS selection count, lowest differentials, 0.96 multiplier, and truncation', async () => {
   const token = buildAdminToken();
   const suffix = Date.now();
@@ -1066,6 +1160,11 @@ test('POST /api/handicap/calculate/:playerId applies WHS selection count, lowest
 
       assert.equal(response.status, 201, JSON.stringify(response.json));
       createdRounds.push(response.json.round.id);
+    }
+
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
     }
 
     for (let i = 0; i < createdRounds.length; i += 1) {
@@ -1169,6 +1268,11 @@ test('handicap_records are queryable by date range and linked to rounds used', a
       createdRounds.push(response.json.round.id);
     }
 
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
+    }
+
     for (let i = 0; i < createdRounds.length; i += 1) {
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], targetDifferentials[i]]);
     }
@@ -1264,6 +1368,11 @@ test('POST /api/handicap/calculate/:playerId supports 9-hole pairing rules', asy
       createdRounds.push(response.json.round.id);
     }
 
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
+    }
+
     for (let i = 0; i < createdRounds.length; i += 1) {
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], nineHoleDifferentials[i]]);
     }
@@ -1342,6 +1451,11 @@ test('GET /api/handicap/eligibility/:playerId returns eligible holes with 9-hole
       createdRounds.push(response.json.round.id);
     }
 
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
+    }
+
     for (let i = 0; i < createdRounds.length; i += 1) {
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], 8 + i / 10]);
     }
@@ -1387,30 +1501,48 @@ test('POST /api/handicap/calculate/:playerId returns insufficient_holes when few
 
     const createdRounds = [];
 
-    for (let i = 0; i < 5; i += 1) {
-      const response = await requestJson('/api/rounds', {
-        method: 'POST',
-        token,
-        body: {
-          playerId: player.id,
-          teeConfigurationId: config.id,
-          playedAt: `2026-10-${String(10 + i).padStart(2, '0')}T09:00:00.000Z`,
-          playingHandicap: 0,
-          holeScores: Array.from({ length: 9 }, (_, idx) => ({
-            holeNumber: idx + 1,
-            strokes: 5,
-            putts: 2,
-            gir: false,
-            fairwayHit: false,
-            inSand: false,
-            penalties: 0,
-          })),
-        },
+    for (let i = 0; i < 4; i += 1) {
+      const response = await createRound(token, {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: `2026-10-${String(10 + i).padStart(2, '0')}T09:00:00.000Z`,
+        playingHandicap: 0,
+        holeScores: Array.from({ length: 9 }, (_, idx) => ({
+          holeNumber: idx + 1,
+          strokes: 5,
+          putts: 2,
+          gir: false,
+          fairwayHit: false,
+          inSand: false,
+          penalties: 0,
+        })),
       });
 
-      assert.equal(response.status, 201, JSON.stringify(response.json));
-      createdRounds.push(response.json.round.id);
+      createdRounds.push(response.round.id);
     }
+
+    const pendingRoundResponse = await requestJson('/api/rounds', {
+      method: 'POST',
+      token,
+      body: {
+        playerId: player.id,
+        teeConfigurationId: config.id,
+        playedAt: '2026-10-14T09:00:00.000Z',
+        playingHandicap: 0,
+        holeScores: Array.from({ length: 9 }, (_, idx) => ({
+          holeNumber: idx + 1,
+          strokes: 5,
+          putts: 2,
+          gir: false,
+          fairwayHit: false,
+          inSand: false,
+          penalties: 0,
+        })),
+      },
+    });
+
+    assert.equal(pendingRoundResponse.status, 201, JSON.stringify(pendingRoundResponse.json));
+    createdRounds.push(pendingRoundResponse.json.round.id);
 
     for (let i = 0; i < createdRounds.length; i += 1) {
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], 9 + i / 10]);
@@ -1489,6 +1621,11 @@ test('POST /api/handicap/calculate/:playerId applies WHS soft cap and stores low
 
       assert.equal(response.status, 201, JSON.stringify(response.json));
       createdRounds.push(response.json.round.id);
+    }
+
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
     }
 
     for (let i = 0; i < createdRounds.length; i += 1) {
@@ -1584,6 +1721,11 @@ test('POST /api/handicap/calculate/:playerId applies WHS hard cap and logs cap e
       createdRounds.push(response.json.round.id);
     }
 
+    for (const roundId of createdRounds) {
+      const approvalResponse = await approveRound(token, roundId);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
+    }
+
     for (let i = 0; i < createdRounds.length; i += 1) {
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [createdRounds[i], targetDifferentials[i]]);
     }
@@ -1654,6 +1796,8 @@ test('GET /api/handicap/history/:playerId returns all records for a player', asy
         },
       });
       assert.equal(r.status, 201);
+      const approvalResponse = await approveRound(token, r.json.round.id);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [r.json.round.id, 12.0]);
     }
 
@@ -1710,6 +1854,8 @@ test('GET /api/handicap/history/:playerId supports date range filters', async ()
         },
       });
       assert.equal(r.status, 201);
+      const approvalResponse = await approveRound(token, r.json.round.id);
+      assert.equal(approvalResponse.status, 200, JSON.stringify(approvalResponse.json));
       await dbPool.query('UPDATE rounds SET score_differential = $2, pcc = 0 WHERE id = $1', [r.json.round.id, 12.0]);
     }
 

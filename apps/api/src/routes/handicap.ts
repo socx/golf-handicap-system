@@ -22,6 +22,7 @@ async function getPlayerRoundDifferentials(playerId: string, options?: { limit?:
      FROM rounds
      WHERE player_id = $1
        AND deleted_at IS NULL
+       AND status = 'approved'
        AND score_differential IS NOT NULL
      ORDER BY played_at DESC, created_at DESC
      ${limitClause}`,
