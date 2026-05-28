@@ -6,6 +6,7 @@ const widgetBaseClass = 'rounded-2xl border border-slate-200 bg-slate-50 p-5 tra
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const playerId = user?.player_id ?? null;
 
   return (
     <div className="space-y-6">
@@ -17,7 +18,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {user && <HandicapSummaryWidget playerId={user.id} />}
+        {playerId && <HandicapSummaryWidget playerId={playerId} />}
 
         <article className={widgetBaseClass}>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Recent Rounds</p>

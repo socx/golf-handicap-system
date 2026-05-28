@@ -1,8 +1,15 @@
 import http from 'node:http';
-import type { User } from '@ghs/types';
 import { sendJson, sendError, getBearerToken } from '../../lib/http';
 import { verifyJwt } from '../../lib/tokens';
 import { dbPool } from '../../lib/db';
+
+interface AuthSessionUser {
+  id: string;
+  email: string;
+  role: 'admin' | 'player' | 'viewer';
+  is_active: boolean;
+  player_id: string | null;
+}
 
 export async function handleMe(
   req: http.IncomingMessage,
@@ -28,13 +35,16 @@ export async function handleMe(
   }
 
   try {
-    const result = await dbPool.query(
-      `SELECT id, email::text AS email, role, is_active
-       FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+    const result = await dbPool.query<AuthSessionUser>(
+      `SELECT u.id, u.email::text AS email, u.role, u.is_active, p.id AS player_id
+       FROM users u
+       LEFT JOIN players p ON p.user_id = u.id AND p.deleted_at IS NULL
+       WHERE u.id = $1 AND u.deleted_at IS NULL
+       LIMIT 1`,
       [claims.sub],
     );
 
-    const user = (result.rows[0] as Pick<User, 'id' | 'email' | 'role' | 'is_active'> | undefined) || null;
+    const user = result.rows[0] ?? null;
     if (!user || !user.is_active) {
       sendError(res, 401, 'unauthorized', 'User not found or inactive');
       return;
