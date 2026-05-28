@@ -29,6 +29,13 @@ interface DateRange {
   to: string;
 }
 
+function buildHistoryOptions(range?: DateRange): { from?: string; to?: string } {
+  const options: { from?: string; to?: string } = {};
+  if (range?.from) options.from = new Date(range.from).toISOString();
+  if (range?.to) options.to = new Date(range.to + 'T23:59:59').toISOString();
+  return options;
+}
+
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -87,10 +94,7 @@ export const HandicapHistoryChart: React.FC<HandicapHistoryChartProps> = ({ play
     setLoading(true);
     setError(null);
     try {
-      const options: { from?: string; to?: string } = {};
-      if (range?.from) options.from = new Date(range.from).toISOString();
-      if (range?.to) options.to = new Date(range.to + 'T23:59:59').toISOString();
-
+      const options = buildHistoryOptions(range);
       const response = await getHandicapHistory(playerId, options);
       setChartData(toChartData(response.records));
     } catch (err) {
@@ -101,8 +105,29 @@ export const HandicapHistoryChart: React.FC<HandicapHistoryChartProps> = ({ play
   };
 
   useEffect(() => {
-    fetchHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+
+    const loadInitialHistory = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await getHandicapHistory(playerId, buildHistoryOptions());
+        if (cancelled) return;
+        setChartData(toChartData(response.records));
+      } catch (err) {
+        if (cancelled) return;
+        setError(handleApiError(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadInitialHistory();
+
+    return () => {
+      cancelled = true;
+    };
   }, [playerId]);
 
   const handleFilterApply = (e: React.FormEvent) => {
