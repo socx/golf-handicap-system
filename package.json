@@ -19,7 +19,13 @@
      "db:create": "node scripts/db/create-db.js",
      "db:migrate": "node scripts/db/migrate.js",
      "db:seed": "node scripts/db/seed.js",
-     "db:setup": "npm run db:create && npm run db:migrate && npm run db:seed"
+     "db:setup": "npm run db:create && npm run db:migrate && npm run db:seed",
+     "db:hard-delete:users": "node scripts/db/hard-delete-users.js",
+     "db:hard-delete:courses": "node scripts/db/hard-delete-courses.js",
+     "db:export:user-bundle": "node scripts/db/export-user-bundle.js",
+     "db:import:user-bundle": "node scripts/db/import-user-bundle.js",
+     "db:export:course-bundle": "node scripts/db/export-course-bundle.js",
+     "db:import:course-bundle": "node scripts/db/import-course-bundle.js"
    },
   "engines": {
     "node": ">=20"
