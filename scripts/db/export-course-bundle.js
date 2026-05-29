@@ -76,30 +76,12 @@ async function main() {
     const teeConfigIds = teeConfigurations.map((row) => row.id);
 
     let holes = [];
-    let rounds = [];
 
     if (teeConfigIds.length > 0) {
       holes = await queryRows(
         client,
         'SELECT * FROM holes WHERE tee_configuration_id = ANY($1::uuid[]) ORDER BY tee_configuration_id ASC, hole_number ASC',
         [teeConfigIds],
-      );
-
-      rounds = await queryRows(
-        client,
-        'SELECT * FROM rounds WHERE tee_configuration_id = ANY($1::uuid[]) ORDER BY played_at ASC, created_at ASC',
-        [teeConfigIds],
-      );
-    }
-
-    const roundIds = rounds.map((row) => row.id);
-
-    let holeScores = [];
-    if (roundIds.length > 0) {
-      holeScores = await queryRows(
-        client,
-        'SELECT * FROM hole_scores WHERE round_id = ANY($1::uuid[]) ORDER BY round_id ASC, hole_number ASC',
-        [roundIds],
       );
     }
 
@@ -112,15 +94,11 @@ async function main() {
         courses: courses.length,
         tee_configurations: teeConfigurations.length,
         holes: holes.length,
-        rounds: rounds.length,
-        hole_scores: holeScores.length,
       },
       data: {
         courses,
         tee_configurations: teeConfigurations,
         holes,
-        rounds,
-        hole_scores: holeScores,
       },
     };
 

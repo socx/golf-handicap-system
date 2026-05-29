@@ -31,8 +31,6 @@ function normalizePayload(raw) {
     courses: Array.isArray(data.courses) ? data.courses : [],
     tee_configurations: Array.isArray(data.tee_configurations) ? data.tee_configurations : [],
     holes: Array.isArray(data.holes) ? data.holes : [],
-    rounds: Array.isArray(data.rounds) ? data.rounds : [],
-    hole_scores: Array.isArray(data.hole_scores) ? data.hole_scores : [],
   };
 }
 
@@ -92,27 +90,6 @@ async function upsertRows(client, tableName, rows, conflictColumn) {
   return inserted;
 }
 
-async function ensurePlayersExist(client, rounds) {
-  if (!rounds || rounds.length === 0) {
-    return;
-  }
-
-  const playerIds = [...new Set(rounds.map((row) => row.player_id).filter(Boolean))];
-  if (playerIds.length === 0) {
-    return;
-  }
-
-  const result = await client.query('SELECT id FROM players WHERE id = ANY($1::uuid[])', [playerIds]);
-  const existing = new Set(result.rows.map((row) => row.id));
-  const missing = playerIds.filter((id) => !existing.has(id));
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Import blocked: destination database is missing ${missing.length} referenced players required by rounds`,
-    );
-  }
-}
-
 async function main() {
   const { input: cliInput } = parseArgs(process.argv.slice(2));
 
@@ -141,13 +118,9 @@ async function main() {
   try {
     await client.query('BEGIN');
 
-    await ensurePlayersExist(client, payload.rounds);
-
     const courses = await upsertRows(client, 'courses', payload.courses, 'id');
     const teeConfigurations = await upsertRows(client, 'tee_configurations', payload.tee_configurations, 'id');
     const holes = await upsertRows(client, 'holes', payload.holes, 'id');
-    const rounds = await upsertRows(client, 'rounds', payload.rounds, 'id');
-    const holeScores = await upsertRows(client, 'hole_scores', payload.hole_scores, 'id');
 
     await client.query('COMMIT');
 
@@ -157,8 +130,6 @@ async function main() {
         courses,
         teeConfigurations,
         holes,
-        rounds,
-        holeScores,
       }),
     );
   } catch (error) {

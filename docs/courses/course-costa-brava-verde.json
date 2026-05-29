@@ -1,14 +1,12 @@
 {
-  "exportedAt": "2026-05-29T17:03:33.225Z",
+  "exportedAt": "2026-05-29T17:34:13.825Z",
   "source": {
     "courseId": "eaacb487-1275-4546-aefe-0a25ddb4533c"
   },
   "counts": {
     "courses": 1,
     "tee_configurations": 1,
-    "holes": 18,
-    "rounds": 0,
-    "hole_scores": 0
+    "holes": 18
   },
   "data": {
     "courses": [
@@ -221,8 +219,6 @@
         "created_at": "2026-05-26T09:52:08.196Z",
         "updated_at": "2026-05-26T13:17:04.170Z"
       }
-    ],
-    "rounds": [],
-    "hole_scores": []
+    ]
   }
 }
