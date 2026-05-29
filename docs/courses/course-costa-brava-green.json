@@ -1,0 +1,228 @@
+{
+  "exportedAt": "2026-05-29T17:03:33.225Z",
+  "source": {
+    "courseId": "eaacb487-1275-4546-aefe-0a25ddb4533c"
+  },
+  "counts": {
+    "courses": 1,
+    "tee_configurations": 1,
+    "holes": 18,
+    "rounds": 0,
+    "hole_scores": 0
+  },
+  "data": {
+    "courses": [
+      {
+        "id": "eaacb487-1275-4546-aefe-0a25ddb4533c",
+        "name": "Golf Costa Brava - Green",
+        "address": "17246 Santa Cristina",
+        "city": "d'Aro",
+        "country": "ES",
+        "phone": "+34 972 83 71 50",
+        "email": null,
+        "website": null,
+        "created_at": "2026-05-25T08:30:04.781Z",
+        "updated_at": "2026-05-25T08:30:04.781Z",
+        "deleted_at": null
+      }
+    ],
+    "tee_configurations": [
+      {
+        "id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "course_id": "eaacb487-1275-4546-aefe-0a25ddb4533c",
+        "name": "Golf Costa Brava - Verde - Blue Tee (Male)",
+        "tee_colour": "Blue",
+        "hole_count": 18,
+        "course_rating": "67.6",
+        "slope_rating": 124,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.157Z",
+        "deleted_at": null
+      }
+    ],
+    "holes": [
+      {
+        "id": "26139f51-8e77-4cf9-9860-1019e51e1f65",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 1,
+        "distance_yards": 279,
+        "par": 4,
+        "stroke_index": 7,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "541e82e6-e07a-4721-96d1-d4e44ea94de9",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 2,
+        "distance_yards": 298,
+        "par": 4,
+        "stroke_index": 13,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "9ffec495-ff07-4cd4-a33c-16acbde861e3",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 3,
+        "distance_yards": 125,
+        "par": 3,
+        "stroke_index": 17,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "5ec64aba-f46c-4603-80c3-e4d54a4cbf29",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 4,
+        "distance_yards": 425,
+        "par": 5,
+        "stroke_index": 3,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "684c62f5-1001-4977-9e9b-dac58480481a",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 5,
+        "distance_yards": 179,
+        "par": 3,
+        "stroke_index": 9,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "aebe45d8-54e0-437d-898c-571cfe158b65",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 6,
+        "distance_yards": 396,
+        "par": 4,
+        "stroke_index": 1,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "d6c4fdbd-8801-42e3-a115-51768b7e0105",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 7,
+        "distance_yards": 319,
+        "par": 4,
+        "stroke_index": 5,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "0a73348d-ee46-42f5-a0ba-7e677cb27ecb",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 8,
+        "distance_yards": 120,
+        "par": 3,
+        "stroke_index": 11,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "d5d2ce09-2eb1-4041-ae74-185579e02807",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 9,
+        "distance_yards": 289,
+        "par": 4,
+        "stroke_index": 15,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "1707b2ea-a233-4b11-9ecf-e16129cffbea",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 10,
+        "distance_yards": 45,
+        "par": 4,
+        "stroke_index": 10,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "4e70f0b1-54fa-4739-bb75-b2c22b9f4e4d",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 11,
+        "distance_yards": 45,
+        "par": 5,
+        "stroke_index": 16,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "da3f6818-9b19-45ab-aaaa-1e69a37db0d0",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 12,
+        "distance_yards": 41,
+        "par": 3,
+        "stroke_index": 8,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "87bcbfb7-a3a7-40f8-8d9c-e63b160a38c8",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 13,
+        "distance_yards": 45,
+        "par": 5,
+        "stroke_index": 14,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "dcdc1bc1-e297-47f3-9798-4e4bb6d48f5b",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 14,
+        "distance_yards": 50,
+        "par": 5,
+        "stroke_index": 2,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "e9dbf816-b407-466c-bc01-beb0c44a4823",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 15,
+        "distance_yards": 45,
+        "par": 3,
+        "stroke_index": 12,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "3919392f-4dcf-40a4-bf11-40710d5c0e42",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 16,
+        "distance_yards": 54,
+        "par": 4,
+        "stroke_index": 4,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "f3a2776e-5b84-4db6-afdc-96c72633fe12",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 17,
+        "distance_yards": 54,
+        "par": 3,
+        "stroke_index": 18,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      },
+      {
+        "id": "65b52784-d463-4094-a70a-01ded7d20110",
+        "tee_configuration_id": "c491f897-afaf-4c0c-9e48-af3a07f828ba",
+        "hole_number": 18,
+        "distance_yards": 42,
+        "par": 4,
+        "stroke_index": 6,
+        "created_at": "2026-05-26T09:52:08.196Z",
+        "updated_at": "2026-05-26T13:17:04.170Z"
+      }
+    ],
+    "rounds": [],
+    "hole_scores": []
+  }
+}

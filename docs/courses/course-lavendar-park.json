@@ -1,0 +1,138 @@
+{
+  "exportedAt": "2026-05-29T16:24:15.271Z",
+  "source": {
+    "courseId": "3ffac780-289e-4219-a70f-be8f464b3e4f"
+  },
+  "counts": {
+    "courses": 1,
+    "tee_configurations": 1,
+    "holes": 9,
+    "rounds": 0,
+    "hole_scores": 0
+  },
+  "data": {
+    "courses": [
+      {
+        "id": "3ffac780-289e-4219-a70f-be8f464b3e4f",
+        "name": "Lavendar Park Golf",
+        "address": "Swinley Rd, Winkfield Row, Ascot SL5 8BD",
+        "city": "Ascot",
+        "country": "GB",
+        "phone": "+441344 893344",
+        "email": null,
+        "website": "http://www.lavenderparkgolf.co.uk/",
+        "created_at": "2026-05-27T20:31:57.906Z",
+        "updated_at": "2026-05-28T20:37:36.457Z",
+        "deleted_at": null
+      }
+    ],
+    "tee_configurations": [
+      {
+        "id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "course_id": "3ffac780-289e-4219-a70f-be8f464b3e4f",
+        "name": "Members",
+        "tee_colour": "White",
+        "hole_count": 9,
+        "course_rating": "36.0",
+        "slope_rating": 120,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.261Z",
+        "deleted_at": null
+      }
+    ],
+    "holes": [
+      {
+        "id": "85fe0578-7af3-4b03-a224-6097938e1657",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 1,
+        "distance_yards": 226,
+        "par": 4,
+        "stroke_index": 1,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "c8f7e933-fd8c-489c-b9e1-e3900d93eea7",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 2,
+        "distance_yards": 135,
+        "par": 3,
+        "stroke_index": 2,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "f0ae2881-62d4-4e0a-98c0-f161b1a44331",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 3,
+        "distance_yards": 107,
+        "par": 3,
+        "stroke_index": 3,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "fd13ef4a-6969-4b67-8b32-b25588102eb6",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 4,
+        "distance_yards": 115,
+        "par": 3,
+        "stroke_index": 4,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "6afecf63-9c17-4689-b49d-05348758c80e",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 5,
+        "distance_yards": 104,
+        "par": 3,
+        "stroke_index": 5,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "4b9600ff-bf34-4f67-8bf1-32a95418bce4",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 6,
+        "distance_yards": 114,
+        "par": 3,
+        "stroke_index": 6,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "7a898492-b42b-4a44-8238-0747ccb270ba",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 7,
+        "distance_yards": 83,
+        "par": 3,
+        "stroke_index": 7,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "46d2fb58-fef5-4d67-a76f-e1af37e235ef",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 8,
+        "distance_yards": 79,
+        "par": 3,
+        "stroke_index": 8,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      },
+      {
+        "id": "6e91c5c1-62c1-4ace-bd3c-fbe42c56f8d5",
+        "tee_configuration_id": "d4d6b93d-02ef-4cd2-9257-68836721db42",
+        "hole_number": 9,
+        "distance_yards": 123,
+        "par": 3,
+        "stroke_index": 9,
+        "created_at": "2026-05-27T20:31:57.912Z",
+        "updated_at": "2026-05-28T20:39:24.274Z"
+      }
+    ],
+    "rounds": [],
+    "hole_scores": []
+  }
+}
