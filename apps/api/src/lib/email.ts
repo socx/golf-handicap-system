@@ -2,8 +2,8 @@ import https from 'node:https';
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-export type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses';
-export type TemplateName = 'password_reset' | 'account_activation';
+export type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses' | 'mock';
+export type TemplateName = 'password_reset' | 'account_activation' | 'handicap_update';
 
 export interface EmailBody {
   text: string;
@@ -22,9 +22,16 @@ interface AccountActivationTemplateData {
   expiresHours: number;
 }
 
+interface HandicapUpdateTemplateData {
+  oldIndex: number | null;
+  newIndex: number;
+  roundsUsed: number;
+}
+
 type TemplateData = {
   password_reset: PasswordResetTemplateData;
   account_activation: AccountActivationTemplateData;
+  handicap_update: HandicapUpdateTemplateData;
 };
 
 export interface SendEmailOptions {
@@ -58,7 +65,7 @@ interface CreateEmailServiceOptions {
 
 function getProvider(): EmailProvider {
   const provider = String(env.emailTransport || '').toLowerCase();
-  if (provider === 'mailpit' || provider === 'smtp' || provider === 'sendgrid' || provider === 'ses') {
+  if (provider === 'mailpit' || provider === 'smtp' || provider === 'sendgrid' || provider === 'ses' || provider === 'mock') {
     return provider;
   }
   return 'smtp';
@@ -112,6 +119,17 @@ export function renderEmailTemplate<T extends TemplateName>(template: T, data: T
         body: {
           text: `Welcome to Golf Handicap System. Activate your account using this link (valid for ${t.expiresHours} hours):\n\n${t.activationUrl}\n\nIf you did not request this account, ignore this email.`,
           html: `<p>Welcome to Golf Handicap System.</p><p>Activate your account using the link below (valid for ${t.expiresHours} hours):</p><p><a href="${t.activationUrl}">${t.activationUrl}</a></p><p>If you did not request this account, ignore this email.</p>`,
+        },
+      };
+    }
+    case 'handicap_update': {
+      const t = data as HandicapUpdateTemplateData;
+      const oldIndexLabel = t.oldIndex === null ? 'N/A' : t.oldIndex.toFixed(1);
+      return {
+        subject: 'Your handicap index has been updated',
+        body: {
+          text: `Your handicap index has changed.\n\nOld index: ${oldIndexLabel}\nNew index: ${t.newIndex.toFixed(1)}\nRounds used: ${t.roundsUsed}\n\nSign in to view your full handicap history.`,
+          html: `<p>Your handicap index has changed.</p><ul><li><strong>Old index:</strong> ${oldIndexLabel}</li><li><strong>New index:</strong> ${t.newIndex.toFixed(1)}</li><li><strong>Rounds used:</strong> ${t.roundsUsed}</li></ul><p>Sign in to view your full handicap history.</p>`,
         },
       };
     }
@@ -204,6 +222,10 @@ export function createEmailService(options: CreateEmailServiceOptions = {}) {
     const normalizedBody = normalizeBody(body);
 
     try {
+      if (provider === 'mock') {
+        return;
+      }
+
       if (provider === 'sendgrid') {
         await sendgridSender({ to, from, subject, body: normalizedBody });
         return;

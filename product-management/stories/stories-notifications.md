@@ -118,17 +118,29 @@ So that players are informed of updates.
 **Target Date:** **02 January 2027**
 
 ### Acceptance Criteria
-- [ ] Triggered after handicap calculation.  
-- [ ] **[Email template](ca://s?q=Explain_email_template_structure)** includes:
+- [x] Triggered after handicap calculation.  
+- [x] **[Email template](ca://s?q=Explain_email_template_structure)** includes:
   - old index  
   - new index  
   - rounds used  
-- [ ] Respects user notification preferences.  
-- [ ] Logged in notification history.
+- [x] Respects user notification preferences.  
+- [x] Logged in notification history.
 
 ### Dependencies
 - **[Handicap calculation](ca://s?q=Explain_handicap_calculation)**  
 - **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)**
+
+### Implementation Notes
+- Added notification dispatch in `apps/api/src/routes/handicap.ts` immediately after successful handicap calculation commit.
+- Notifications are sent only when handicap index changes and when `notification_preferences.handicap_updates_enabled` is true.
+- Added notification history persistence with statuses:
+  - `sent` for delivered/attempted successful notifications
+  - `skipped` when preference is disabled
+  - `failed` when send cannot be attempted/completed
+- Extended email templating in `apps/api/src/lib/email.ts` with `handicap_update` template including old index, new index, and rounds used.
+- Added `mock` email transport mode for deterministic test execution.
+- Added migration `015_notification_history.sql` in both migration trees for `notification_history` table.
+- Added e2e coverage in `apps/api/test/handicap-notifications.e2e.test.mjs` for sent and skipped flows.
 
 ---
 

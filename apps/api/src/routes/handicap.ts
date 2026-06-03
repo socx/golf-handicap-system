@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { dbPool } from '../lib/db';
 import { sendError, sendJson } from '../lib/http';
+import { sendTemplatedEmail } from '../lib/email';
 import { verifyAndAuthorize } from '../middleware/auth';
 import {
   applyWhsCaps,
@@ -44,6 +45,12 @@ interface PlayerHandicapRow {
   low_handicap_index: number | null;
 }
 
+interface HandicapNotificationTarget {
+  user_id: string | null;
+  email: string | null;
+  handicap_updates_enabled: boolean | null;
+}
+
 async function getPlayerForHandicap(playerId: string): Promise<PlayerHandicapRow | null> {
   const playerResult = await dbPool.query(
     'SELECT id, handicap_index, low_handicap_index FROM players WHERE id = $1 AND deleted_at IS NULL LIMIT 1',
@@ -58,6 +65,120 @@ async function getPlayerForHandicap(playerId: string): Promise<PlayerHandicapRow
     handicap_index: playerResult.rows[0].handicap_index === null ? null : Number(playerResult.rows[0].handicap_index),
     low_handicap_index: playerResult.rows[0].low_handicap_index === null ? null : Number(playerResult.rows[0].low_handicap_index),
   };
+}
+
+async function getHandicapNotificationTarget(playerId: string): Promise<HandicapNotificationTarget | null> {
+  const result = await dbPool.query(
+    `SELECT p.user_id, u.email::text AS email, np.handicap_updates_enabled
+     FROM players p
+     LEFT JOIN users u ON u.id = p.user_id AND u.deleted_at IS NULL
+     LEFT JOIN notification_preferences np ON np.user_id = p.user_id
+     WHERE p.id = $1 AND p.deleted_at IS NULL
+     LIMIT 1`,
+    [playerId],
+  );
+
+  if (Number(result.rowCount || 0) === 0) {
+    return null;
+  }
+
+  return {
+    user_id: result.rows[0].user_id ? String(result.rows[0].user_id) : null,
+    email: result.rows[0].email ? String(result.rows[0].email) : null,
+    handicap_updates_enabled: result.rows[0].handicap_updates_enabled === null
+      ? null
+      : Boolean(result.rows[0].handicap_updates_enabled),
+  };
+}
+
+async function logNotificationHistory(params: {
+  userId: string;
+  type: string;
+  payload: Record<string, unknown>;
+  status: 'sent' | 'failed' | 'skipped';
+  sentAt?: string | null;
+}): Promise<void> {
+  await dbPool.query(
+    `INSERT INTO notification_history (user_id, type, payload, sent_at, status)
+     VALUES ($1, $2, $3::jsonb, $4, $5)`,
+    [params.userId, params.type, JSON.stringify(params.payload), params.sentAt || null, params.status],
+  );
+}
+
+async function sendHandicapUpdateNotification(params: {
+  playerId: string;
+  oldIndex: number | null;
+  newIndex: number;
+  roundsUsed: number;
+}): Promise<void> {
+  if (params.oldIndex !== null && params.oldIndex === params.newIndex) {
+    return;
+  }
+
+  const target = await getHandicapNotificationTarget(params.playerId);
+  if (!target || !target.user_id) {
+    return;
+  }
+
+  const payload = {
+    playerId: params.playerId,
+    oldIndex: params.oldIndex,
+    newIndex: params.newIndex,
+    roundsUsed: params.roundsUsed,
+  };
+
+  if (target.handicap_updates_enabled === false) {
+    await logNotificationHistory({
+      userId: target.user_id,
+      type: 'handicap_update',
+      payload: { ...payload, reason: 'preference_disabled' },
+      status: 'skipped',
+      sentAt: null,
+    });
+    return;
+  }
+
+  if (!target.email) {
+    await logNotificationHistory({
+      userId: target.user_id,
+      type: 'handicap_update',
+      payload: { ...payload, reason: 'missing_user_email' },
+      status: 'failed',
+      sentAt: null,
+    });
+    return;
+  }
+
+  try {
+    await sendTemplatedEmail({
+      to: target.email,
+      template: 'handicap_update',
+      data: {
+        oldIndex: params.oldIndex,
+        newIndex: params.newIndex,
+        roundsUsed: params.roundsUsed,
+      },
+    });
+
+    await logNotificationHistory({
+      userId: target.user_id,
+      type: 'handicap_update',
+      payload,
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    await logNotificationHistory({
+      userId: target.user_id,
+      type: 'handicap_update',
+      payload: {
+        ...payload,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      status: 'failed',
+      sentAt: null,
+    });
+  }
 }
 
 export async function handleGetHandicapEligibility(
@@ -194,6 +315,13 @@ export async function handleCalculateHandicap(
     );
 
     await client.query('COMMIT');
+
+    await sendHandicapUpdateNotification({
+      playerId,
+      oldIndex: player.handicap_index,
+      newIndex: capApplication.appliedHandicapIndex,
+      roundsUsed: selection.selected.flatMap((item) => item.roundIds).length,
+    });
 
     sendJson(res, 200, {
       playerId,
