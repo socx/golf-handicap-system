@@ -257,14 +257,22 @@ So that users can view player details and handicap history.
 **Target Date:** **05 July 2026**
 
 ### Acceptance Criteria
-- [ ] `/players/:id` shows full profile.  
-- [ ] Shows handicap index + last update.  
-- [ ] Shows basic stats (round count, last round date).  
-- [ ] Responsive layout.
+- [x] `/players/:id` shows full profile.  
+- [x] Shows handicap index + last update.  
+- [x] Shows basic stats (round count, last round date).  
+- [x] Responsive layout.
 
 ### Dependencies
 - Player detail API  
 - Handicap history API (from Handicap epic)
+
+### Implementation Notes
+- Extended `playersApi.get()` in `apps/web/src/api/players.ts` to consume enriched player detail response fields (`player`, `handicap_summary`, `round_stats`) with backward-safe defaults.
+- Updated `apps/web/src/pages/PlayerProfilePage.tsx` to render a dedicated `Performance Snapshot` panel showing current handicap index, handicap last update date, total rounds recorded, and last round date.
+- Preserved the existing handicap widget and responsive 1/3-column layout so profile details and history remain accessible on desktop and mobile.
+- Updated `apps/web/src/pages/PlayerEditPage.tsx` to use the adjusted `playersApi.get()` response shape.
+- Added frontend tests in `apps/web/src/test/PlayerProfilePage.test.tsx` for enriched profile rendering, fallback values, API call wiring, and error state.
+- Updated `apps/web/src/test/PlayerEditPage.test.tsx` mocks for the new player detail API response shape.
 
 ---
 

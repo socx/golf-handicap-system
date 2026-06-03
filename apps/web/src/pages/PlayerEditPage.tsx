@@ -78,7 +78,8 @@ export const PlayerEditPage: React.FC = () => {
 
     const load = async () => {
       try {
-        const p = await playersApi.get(playerId);
+        const detail = await playersApi.get(playerId);
+        const p = detail.player;
         if (cancelled) return;
         setPlayer(p);
         setValues(playerToFormValues(p));

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { handleApiError } from '../api/client';
-import { playersApi, type Player } from '../api/players';
+import { playersApi, type Player, type PlayerDetail } from '../api/players';
 import { Button } from '../components/ui/Button';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { HandicapSummaryWidget } from '../components/HandicapSummaryWidget';
@@ -11,6 +11,7 @@ export const PlayerProfilePage: React.FC = () => {
   const navigate = useNavigate();
 
   const [player, setPlayer] = useState<Player | null>(null);
+  const [playerDetail, setPlayerDetail] = useState<PlayerDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,9 +20,10 @@ export const PlayerProfilePage: React.FC = () => {
 
     const load = async () => {
       try {
-        const p = await playersApi.get(playerId);
+        const detail = await playersApi.get(playerId);
         if (cancelled) return;
-        setPlayer(p);
+        setPlayer(detail.player);
+        setPlayerDetail(detail);
       } catch (err) {
         if (cancelled) return;
         setLoadError(handleApiError(err));
@@ -99,6 +101,30 @@ export const PlayerProfilePage: React.FC = () => {
     );
   }
 
+  const normalizedHandicap = playerDetail?.handicap_summary.current_handicap_index;
+  const handicapDisplay = normalizedHandicap === null || normalizedHandicap === undefined
+    ? 'N/A'
+    : typeof normalizedHandicap === 'number'
+      ? normalizedHandicap.toFixed(1)
+      : normalizedHandicap;
+
+  const handicapLastUpdate = playerDetail?.handicap_summary.last_handicap_update_date
+    ? new Date(playerDetail.handicap_summary.last_handicap_update_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'N/A';
+
+  const roundCount = playerDetail?.round_stats.round_count ?? 0;
+  const roundLastDate = playerDetail?.round_stats.last_round_date
+    ? new Date(playerDetail.round_stats.last_round_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'N/A';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -158,6 +184,30 @@ export const PlayerProfilePage: React.FC = () => {
                 <p className="mt-1 text-slate-900 dark:text-slate-100">{player.gender}</p>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/60">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Performance Snapshot
+          </p>
+          <div className="mt-4 space-y-3 text-sm">
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Current Handicap Index</p>
+              <p className="mt-1 text-slate-900 dark:text-slate-100">{handicapDisplay}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Last Handicap Update</p>
+              <p className="mt-1 text-slate-900 dark:text-slate-100">{handicapLastUpdate}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Rounds Recorded</p>
+              <p className="mt-1 text-slate-900 dark:text-slate-100">{roundCount}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Last Round Date</p>
+              <p className="mt-1 text-slate-900 dark:text-slate-100">{roundLastDate}</p>
+            </div>
           </div>
         </div>
 

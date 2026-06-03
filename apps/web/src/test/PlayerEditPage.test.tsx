@@ -19,6 +19,18 @@ const mockPlayer = {
   updated_at: '2026-01-01T00:00:00.000Z',
 };
 
+const mockPlayerDetail = {
+  player: mockPlayer,
+  handicap_summary: {
+    current_handicap_index: mockPlayer.handicap_index,
+    last_handicap_update_date: null,
+  },
+  round_stats: {
+    round_count: 0,
+    last_round_date: null,
+  },
+};
+
 function renderEditPage(playerId = 'player-1') {
   return render(
     <MemoryRouter initialEntries={[`/players/${playerId}/edit`]}>
@@ -32,7 +44,7 @@ function renderEditPage(playerId = 'player-1') {
 
 describe('PlayerEditPage', () => {
   it('loads player data and populates form fields', async () => {
-    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayer);
+    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayerDetail);
 
     renderEditPage();
 
@@ -45,7 +57,7 @@ describe('PlayerEditPage', () => {
   });
 
   it('shows validation errors for required fields when submitting empty values', async () => {
-    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayer);
+    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayerDetail);
 
     renderEditPage();
 
@@ -64,7 +76,7 @@ describe('PlayerEditPage', () => {
   });
 
   it('submits PATCH and redirects to /players on success', async () => {
-    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayer);
+    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayerDetail);
     const updateSpy = vi.spyOn(playersApi, 'update').mockResolvedValue({ ...mockPlayer, first_name: 'Updated' });
 
     renderEditPage();
@@ -85,7 +97,7 @@ describe('PlayerEditPage', () => {
   });
 
   it('shows server error message when update fails', async () => {
-    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayer);
+    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayerDetail);
     vi.spyOn(playersApi, 'update').mockRejectedValue(new Error('Duplicate email'));
 
     renderEditPage();
@@ -98,7 +110,7 @@ describe('PlayerEditPage', () => {
   });
 
   it('navigates back to /players when Cancel is clicked', async () => {
-    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayer);
+    vi.spyOn(playersApi, 'get').mockResolvedValue(mockPlayerDetail);
 
     renderEditPage();
 

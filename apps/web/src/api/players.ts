@@ -15,6 +15,18 @@ export interface Player {
   updated_at: string;
 }
 
+export interface PlayerDetail {
+  player: Player;
+  handicap_summary: {
+    current_handicap_index: number | string | null;
+    last_handicap_update_date: string | null;
+  };
+  round_stats: {
+    round_count: number;
+    last_round_date: string | null;
+  };
+}
+
 export interface PlayerUpdatePayload {
   first_name?: string;
   last_name?: string;
@@ -73,9 +85,30 @@ export function normalizePlayersListResponse(payload: unknown): PlayersListRespo
 }
 
 export const playersApi = {
-  get: async (playerId: string): Promise<Player> => {
-    const response = await api.get<{ player: Player }>(`/players/${playerId}`);
-    return response.data.player;
+  get: async (playerId: string): Promise<PlayerDetail> => {
+    const response = await api.get<{
+      player: Player;
+      handicap_summary?: {
+        current_handicap_index?: number | string | null;
+        last_handicap_update_date?: string | null;
+      };
+      round_stats?: {
+        round_count?: number;
+        last_round_date?: string | null;
+      };
+    }>(`/players/${playerId}`);
+
+    return {
+      player: response.data.player,
+      handicap_summary: {
+        current_handicap_index: response.data.handicap_summary?.current_handicap_index ?? response.data.player.handicap_index ?? null,
+        last_handicap_update_date: response.data.handicap_summary?.last_handicap_update_date ?? null,
+      },
+      round_stats: {
+        round_count: response.data.round_stats?.round_count ?? 0,
+        last_round_date: response.data.round_stats?.last_round_date ?? null,
+      },
+    };
   },
   update: async (playerId: string, payload: PlayerUpdatePayload): Promise<Player> => {
     const response = await api.patch<{ player: Player }>(`/players/${playerId}`, payload);
