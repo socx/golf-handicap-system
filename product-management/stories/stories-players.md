@@ -169,15 +169,21 @@ So that the frontend can display player details and current index.
 **Target Date:** **16 June 2026**
 
 ### Acceptance Criteria
-- [ ] GET `/players/:id` returns full profile.  
-- [ ] Includes current handicap index.  
-- [ ] Includes last handicap update date.  
-- [ ] Includes basic stats (round count, last round date).
+- [x] GET `/players/:id` returns full profile.  
+- [x] Includes current handicap index.  
+- [x] Includes last handicap update date.  
+- [x] Includes basic stats (round count, last round date).
 
 ### Dependencies
 - Handicap calculation  
 - Rounds table  
 - Player CRUD
+
+### Implementation Notes
+- Extended `GET /api/players/:id` response to include `handicap_summary` and `round_stats` alongside the existing `player` object.
+- Handicap summary is sourced from the most recent `handicap_records` entry per player, with fallback to the player table `handicap_index` when no records exist.
+- Round stats include active round count (`deleted_at IS NULL`) and latest played date.
+- Added e2e coverage in `apps/api/test/players-detail.e2e.test.mjs` for RBAC and enriched detail response fields.
 
 ---
 

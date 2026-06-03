@@ -23,6 +23,13 @@ interface Player {
   deleted_at: string | null;
 }
 
+interface PlayerDetailRow extends Player {
+  current_handicap_index: number | null;
+  last_handicap_update_date: string | null;
+  round_count: number;
+  last_round_date: string | null;
+}
+
 interface ValidationIssue {
   field: string;
   message: string;
@@ -377,12 +384,65 @@ export async function handleGetPlayer(
   }
 
   try {
-    const player = await fetchPlayerById(playerId);
-    if (!player || player.deleted_at) {
+    const result = await dbPool.query<PlayerDetailRow>(
+      `SELECT p.id, p.first_name, p.last_name, p.middle_name, p.dob, p.gender, p.club, p.email, p.country,
+              p.handicap_index, p.user_id, p.created_at, p.updated_at, p.deleted_at,
+              COALESCE(hr.handicap_index, p.handicap_index) AS current_handicap_index,
+              hr.calculation_date AS last_handicap_update_date,
+              COALESCE(rs.round_count, 0)::int AS round_count,
+              rs.last_round_date
+       FROM players p
+       LEFT JOIN LATERAL (
+         SELECT handicap_index, calculation_date
+         FROM handicap_records
+         WHERE player_id = p.id
+         ORDER BY calculation_date DESC, created_at DESC
+         LIMIT 1
+       ) hr ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS round_count, MAX(played_at) AS last_round_date
+         FROM rounds
+         WHERE player_id = p.id AND deleted_at IS NULL
+       ) rs ON TRUE
+       WHERE p.id = $1
+       LIMIT 1`,
+      [playerId],
+    );
+
+    const detail = result.rows[0] || null;
+    if (!detail || detail.deleted_at) {
       sendError(res, 404, 'not_found', 'Player not found');
       return;
     }
-    sendJson(res, 200, { player });
+
+    const player: Player = {
+      id: detail.id,
+      first_name: detail.first_name,
+      last_name: detail.last_name,
+      middle_name: detail.middle_name,
+      dob: detail.dob,
+      gender: detail.gender,
+      club: detail.club,
+      email: detail.email,
+      country: detail.country,
+      handicap_index: detail.handicap_index,
+      user_id: detail.user_id,
+      created_at: detail.created_at,
+      updated_at: detail.updated_at,
+      deleted_at: detail.deleted_at,
+    };
+
+    sendJson(res, 200, {
+      player,
+      handicap_summary: {
+        current_handicap_index: detail.current_handicap_index,
+        last_handicap_update_date: detail.last_handicap_update_date,
+      },
+      round_stats: {
+        round_count: detail.round_count,
+        last_round_date: detail.last_round_date,
+      },
+    });
   } catch (error) {
     console.error('[players.get] unexpected error:', error);
     sendError(res, 500, 'player_fetch_failed', 'Unable to fetch player at this time');
