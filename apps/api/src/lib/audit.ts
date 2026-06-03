@@ -8,6 +8,7 @@ export type AuthAuditEventType =
   | 'auth_user_activated'
   | 'auth_user_deactivated'
   | 'auth_user_deleted'
+  | 'auth_user_role_updated'
   | 'auth_password_reset_requested'
   | 'auth_password_reset_completed'
   | 'admin_access_allowed'

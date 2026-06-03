@@ -12,7 +12,7 @@ import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes
 import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
-import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete } from './routes/admin/users';
+import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
@@ -27,6 +27,12 @@ function parseUserActivationRoute(path: string): { userId: string; action: 'acti
 
 function parseUserDeleteRoute(path: string): { userId: string } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { userId: String(match[1] || '') };
+}
+
+function parseUserRoleRoute(path: string): { userId: string } | null {
+  const match = path.match(/^\/(?:api\/)?admin\/users\/([0-9a-fA-F-]+)\/role$/);
   if (!match) return null;
   return { userId: String(match[1] || '') };
 }
@@ -213,6 +219,12 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'GET' && (pathname === '/api/admin/users' || pathname === '/admin/users')) {
       await handleListUsers(req, res, requestUrl);
+      return;
+    }
+
+    const userRoleRoute = parseUserRoleRoute(pathname);
+    if (method === 'PATCH' && userRoleRoute) {
+      await handleUpdateUserRole(req, res, requestId, userRoleRoute.userId);
       return;
     }
 

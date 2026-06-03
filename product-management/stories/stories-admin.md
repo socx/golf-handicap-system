@@ -85,12 +85,18 @@ So that admins can promote or restrict access.
 **Target Date:** **28 November 2026**
 
 ### Acceptance Criteria
-- [ ] **[PATCH /admin/users/:id/role](ca://s?q=Explain_update_user_role)** updates role.  
-- [ ] Cannot demote last remaining admin.  
-- [ ] Change logged in audit trail.
+### Acceptance Criteria
+- [x] **[PATCH /admin/users/:id/role](ca://s?q=Explain_update_user_role)** updates role.  
+- [x] Cannot demote last remaining admin.  
+- [x] Change logged in audit trail.
 
-### Dependencies
-- **[Audit logs](ca://s?q=Explain_audit_logs)**  
+
+### Implementation Notes
+- `PATCH /api/admin/users/:id/role` implemented in `apps/api/src/routes/admin/users.ts` (`handleUpdateUserRole`)
+- Last-admin guard counts active, non-deleted admins excluding the target; returns 409 `last_admin_required` if demoting would leave zero admins
+- Emits `auth_user_role_updated` audit event with `old_role`/`new_role` in metadata
+- Route wired in `app.ts` via `parseUserRoleRoute`; requires admin JWT (`verifyAdminAndLog`)
+- E2e tests: `apps/api/test/admin-user-role-update.e2e.test.mjs` (3/3 passing)
 - **[RBAC](ca://s?q=Explain_RBAC)**
 
 ---

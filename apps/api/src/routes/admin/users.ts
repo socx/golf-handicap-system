@@ -1,14 +1,19 @@
 import http from 'node:http';
 import type { User } from '@ghs/types';
-import { sendJson, sendError, getClientIp } from '../../lib/http';
+import { sendJson, sendError, getClientIp, readJsonBody } from '../../lib/http';
 import { dbPool } from '../../lib/db';
 import { logAuthAuditEvent } from '../../lib/audit';
 import { redisState } from '../../lib/redis';
-import { verifyAndAuthorize } from '../../middleware/auth';
-import { verifyAdminAndLog } from '../../middleware/auth';
+import { verifyAndAuthorize, verifyAdminAndLog } from '../../middleware/auth';
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+type UserRole = 'admin' | 'player';
+
+function isUserRole(value: string): value is UserRole {
+  return value === 'admin' || value === 'player';
 }
 
 function parseBooleanQueryParam(value: string | null): boolean {
@@ -255,5 +260,100 @@ export async function handleUserDelete(
   } catch (error) {
     console.error('[users.delete] unexpected error:', error);
     sendError(res, 500, 'user_delete_failed', 'Unable to soft-delete user');
+  }
+}
+
+export async function handleUpdateUserRole(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  requestId: string,
+  userId: string,
+): Promise<void> {
+  const clientIp = getClientIp(req);
+  const authResult = await verifyAdminAndLog(req);
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  if (!isUuid(userId)) {
+    sendError(res, 400, 'validation_error', 'User id must be a valid UUID');
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(req);
+  } catch (error) {
+    sendError(res, 400, 'invalid_json', (error as Error).message);
+    return;
+  }
+
+  const requestedRole = typeof payload.role === 'string' ? payload.role.trim().toLowerCase() : '';
+  if (!isUserRole(requestedRole)) {
+    sendError(res, 400, 'validation_error', "Request body must include role as 'admin' or 'player'");
+    return;
+  }
+
+  try {
+    const currentResult = await dbPool.query<{ id: string; email: string; role: string; is_active: boolean; created_at: string; updated_at: string }>(
+      `SELECT id, email::text AS email, role, is_active, created_at, updated_at
+       FROM users
+       WHERE id = $1 AND deleted_at IS NULL
+       LIMIT 1`,
+      [userId],
+    );
+    const currentUser = (currentResult.rows[0] as User | undefined) || null;
+    if (!currentUser) {
+      sendError(res, 404, 'not_found', 'User not found');
+      return;
+    }
+
+    if (currentUser.role === 'admin' && requestedRole !== 'admin') {
+      const adminCountResult = await dbPool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total
+         FROM users
+          WHERE role = 'admin' AND deleted_at IS NULL AND is_active = TRUE AND id <> $1`,
+        [userId],
+      );
+      const remainingAdmins = Number(adminCountResult.rows[0]?.total || 0);
+      if (remainingAdmins < 1) {
+        sendError(res, 409, 'last_admin_required', 'Cannot demote the last remaining admin');
+        return;
+      }
+    }
+
+    const result = await dbPool.query<User>(
+      `UPDATE users
+       SET role = $2, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, email::text AS email, role, is_active, created_at, updated_at`,
+      [userId, requestedRole],
+    );
+    const updatedUser = (result.rows[0] as User | undefined) || null;
+    if (!updatedUser) {
+      sendError(res, 404, 'not_found', 'User not found');
+      return;
+    }
+
+    await logAuthAuditEvent({
+      requestId,
+      event: 'auth_user_role_updated',
+      userId,
+      actorUserId: authResult.auth.userId,
+      ipAddress: clientIp,
+      metadata: {
+        old_role: currentUser.role,
+        new_role: updatedUser.role,
+      },
+    });
+
+    sendJson(res, 200, {
+      user: updatedUser,
+      message: 'User role updated successfully',
+    });
+  } catch (error) {
+    console.error('[users.role-update] unexpected error:', error);
+    sendError(res, 500, 'role_update_failed', 'Unable to update user role');
   }
 }
