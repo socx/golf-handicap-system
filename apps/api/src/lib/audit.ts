@@ -10,6 +10,8 @@ export type AuthAuditEventType =
   | 'auth_user_deleted'
   | 'auth_password_reset_requested'
   | 'auth_password_reset_completed'
+  | 'admin_access_allowed'
+  | 'admin_access_denied'
   | 'player_user_linked'
   | 'player_user_unlinked'
   | 'player_deleted'

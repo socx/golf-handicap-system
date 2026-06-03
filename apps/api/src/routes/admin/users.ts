@@ -5,6 +5,7 @@ import { dbPool } from '../../lib/db';
 import { logAuthAuditEvent } from '../../lib/audit';
 import { redisState } from '../../lib/redis';
 import { verifyAndAuthorize } from '../../middleware/auth';
+import { verifyAdminAndLog } from '../../middleware/auth';
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -43,7 +44,7 @@ export async function handleAdminStatus(
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = await verifyAdminAndLog(req);
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
