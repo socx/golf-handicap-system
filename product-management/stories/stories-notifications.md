@@ -32,17 +32,36 @@ So that users can control which notifications they receive.
 **Target Date:** **28 December 2026**
 
 ### Acceptance Criteria
-- [ ] **[notification_preferences table](ca://s?q=Explain_notification_preferences_table)** includes:
+- [x] **[notification_preferences table](ca://s?q=Explain_notification_preferences_table)** includes:
   - user_id  
   - handicap_updates_enabled  
   - round_submitted_enabled  
   - round_approved_enabled  
   - marketing_enabled  
-- [ ] Defaults applied for new users.  
-- [ ] Linked to users table.
+- [x] Defaults applied for new users.  
+- [x] Linked to users table.
 
 ### Dependencies
 - **[Users table](ca://s?q=Explain_users_table)**
+
+### Implementation Notes
+- Added migration `014_notification_preferences.sql` in both migration trees:
+  - `packages/db/migrations/014_notification_preferences.sql`
+  - `db/migrations/014_notification_preferences.sql`
+- Created `notification_preferences` table with required columns and defaults:
+  - `handicap_updates_enabled` default `TRUE`
+  - `round_submitted_enabled` default `TRUE`
+  - `round_approved_enabled` default `TRUE`
+  - `marketing_enabled` default `FALSE`
+- Linked preferences to users via `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`.
+- Added migration backfill for existing users without preferences.
+- Added trigger function + trigger to auto-create default preferences on new user insert.
+- Added migration e2e coverage in `apps/api/test/notifications-migrations.e2e.test.mjs` to verify:
+  - table + required columns
+  - defaults
+  - FK presence
+  - backfill behavior
+  - trigger behavior for new users.
 
 ---
 
