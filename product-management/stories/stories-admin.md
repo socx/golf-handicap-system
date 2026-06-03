@@ -55,14 +55,21 @@ So that admins can manage accounts.
 **Target Date:** **27 November 2026**
 
 ### Acceptance Criteria
-- [ ] **[GET /admin/users](ca://s?q=Explain_admin_users_endpoint)** returns paginated list.  
-- [ ] Supports search by email, role, status.  
-- [ ] Excludes soft-deleted users unless `includeDeleted=true`.  
-- [ ] Admin-only access enforced.
+- [x] **[GET /admin/users](ca://s?q=Explain_admin_users_endpoint)** returns paginated list.  
+- [x] Supports search by email, role, status.  
+- [x] Excludes soft-deleted users unless `includeDeleted=true`.  
+- [x] Admin-only access enforced.
 
 ### Dependencies
 - **[Users table](ca://s?q=Explain_users_table)**  
 - **[Admin middleware](ca://s?q=Explain_admin_middleware)**
+
+### Implementation Notes
+- Extended `GET /api/admin/users` to support pagination (`page`, `limit`) with metadata (`total`, `totalPages`).
+- Added filters: `search` (email), `role`, and `status` (`active|inactive`).
+- Preserved soft-delete behavior, excluding deleted users by default and including them when `includeDeleted=true`.
+- Enforced admin-only access through the admin middleware wrapper with audit logging for allowed/denied access attempts.
+- Added E2E coverage in `apps/api/test/admin-users-list.e2e.test.mjs` for pagination, filtering, includeDeleted, and non-admin access rejection.
 
 ---
 

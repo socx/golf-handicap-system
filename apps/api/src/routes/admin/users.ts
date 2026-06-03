@@ -11,27 +11,124 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function parseBooleanQueryParam(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+function parsePagination(requestUrl: URL): { page: number; limit: number; offset: number } {
+  const pageRaw = Number(requestUrl.searchParams.get('page') || '1');
+  const limitRaw = Number(requestUrl.searchParams.get('limit') || '20');
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 100) : 20;
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
+type UserStatusFilter = 'active' | 'inactive' | '';
+
+function parseStatusFilter(value: string | null): UserStatusFilter {
+  if (!value) return '';
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'active' || normalized === 'inactive') return normalized;
+  return '';
+}
+
+function buildUsersWhereClause(filters: {
+  includeDeleted: boolean;
+  search: string;
+  role: string;
+  status: UserStatusFilter;
+}): { whereClause: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (!filters.includeDeleted) {
+    clauses.push('deleted_at IS NULL');
+  }
+
+  if (filters.search) {
+    params.push(`%${filters.search.toLowerCase()}%`);
+    clauses.push(`LOWER(email) LIKE $${params.length}`);
+  }
+
+  if (filters.role) {
+    params.push(filters.role.toLowerCase());
+    clauses.push(`LOWER(role) = $${params.length}`);
+  }
+
+  if (filters.status === 'active') {
+    clauses.push('is_active = TRUE');
+  }
+
+  if (filters.status === 'inactive') {
+    clauses.push('is_active = FALSE');
+  }
+
+  return {
+    whereClause: clauses.length > 0 ? clauses.join(' AND ') : '1=1',
+    params,
+  };
+}
+
 export async function handleListUsers(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   requestUrl: URL,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = await verifyAdminAndLog(req);
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
   }
 
   try {
-    const includeDeleted = requestUrl.searchParams.get('includeDeleted') === 'true';
-    const query = includeDeleted
-      ? 'SELECT id, email, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 10'
-      : 'SELECT id, email, role, is_active, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 10';
-    const result = await dbPool.query(query);
+    const includeDeleted = parseBooleanQueryParam(requestUrl.searchParams.get('includeDeleted'))
+      || parseBooleanQueryParam(requestUrl.searchParams.get('include_deleted'));
+    const search = (requestUrl.searchParams.get('search') || '').trim();
+    const role = (requestUrl.searchParams.get('role') || '').trim();
+    const status = parseStatusFilter(requestUrl.searchParams.get('status'));
+    const { page, limit, offset } = parsePagination(requestUrl);
+
+    const { whereClause, params } = buildUsersWhereClause({ includeDeleted, search, role, status });
+
+    const countResult = await dbPool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM users
+       WHERE ${whereClause}`,
+      params,
+    );
+    const total = Number((countResult.rows[0] as { total: number } | undefined)?.total || 0);
+
+    const listParams = [...params, limit, offset];
+    const limitIndex = params.length + 1;
+    const offsetIndex = params.length + 2;
+
+    const result = await dbPool.query(
+      `SELECT id, email::text AS email, role, is_active, created_at, updated_at, deleted_at
+       FROM users
+       WHERE ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
+      listParams,
+    );
+
     sendJson(res, 200, {
       users: result.rows,
-      total: result.rowCount,
+      total,
       includeDeleted,
+      filters: {
+        search,
+        role,
+        status: status || null,
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+      },
       message: 'Users list retrieved successfully',
     });
   } catch (error) {
