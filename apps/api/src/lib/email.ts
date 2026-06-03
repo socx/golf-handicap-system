@@ -2,13 +2,15 @@ import https from 'node:https';
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses';
-type TemplateName = 'password_reset' | 'account_activation';
+export type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses';
+export type TemplateName = 'password_reset' | 'account_activation';
 
-interface EmailBody {
+export interface EmailBody {
   text: string;
   html?: string;
 }
+
+export type EmailBodyInput = EmailBody | string;
 
 interface PasswordResetTemplateData {
   resetUrl: string;
@@ -25,7 +27,7 @@ type TemplateData = {
   account_activation: AccountActivationTemplateData;
 };
 
-interface SendEmailOptions {
+export interface SendEmailOptions {
   from?: string;
 }
 
@@ -34,6 +36,24 @@ interface SendTemplatedEmailParams<T extends TemplateName> {
   template: T;
   data: TemplateData[T];
   from?: string;
+}
+
+interface EmailSenderInput {
+  to: string;
+  from: string;
+  subject: string;
+  body: EmailBody;
+}
+
+interface EmailLogger {
+  error: (message: string, metadata: Record<string, unknown>) => void;
+}
+
+interface CreateEmailServiceOptions {
+  resolveProvider?: () => EmailProvider;
+  smtpSender?: (provider: EmailProvider, input: EmailSenderInput) => Promise<void>;
+  sendgridSender?: (input: EmailSenderInput) => Promise<void>;
+  logger?: EmailLogger;
 }
 
 function getProvider(): EmailProvider {
@@ -46,6 +66,13 @@ function getProvider(): EmailProvider {
 
 function buildFromAddress(): string {
   return `"${env.smtpFromName}" <${env.smtpFromEmail}>`;
+}
+
+function normalizeBody(body: EmailBodyInput): EmailBody {
+  if (typeof body === 'string') {
+    return { text: body };
+  }
+  return body;
 }
 
 function createSmtpTransport(provider: EmailProvider) {
@@ -66,7 +93,7 @@ function createSmtpTransport(provider: EmailProvider) {
   });
 }
 
-function renderTemplate<T extends TemplateName>(template: T, data: TemplateData[T]): { subject: string; body: EmailBody } {
+export function renderEmailTemplate<T extends TemplateName>(template: T, data: TemplateData[T]): { subject: string; body: EmailBody } {
   switch (template) {
     case 'password_reset': {
       const t = data as PasswordResetTemplateData;
@@ -96,7 +123,7 @@ function renderTemplate<T extends TemplateName>(template: T, data: TemplateData[
   }
 }
 
-function sendViaSendGrid(params: { to: string; from: string; subject: string; body: EmailBody }): Promise<void> {
+function sendViaSendGrid(params: EmailSenderInput): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!env.sendgridApiKey) {
       reject(new Error('SENDGRID_API_KEY is required when EMAIL_TRANSPORT=sendgrid'));
@@ -145,39 +172,75 @@ function sendViaSendGrid(params: { to: string; from: string; subject: string; bo
   });
 }
 
-export async function sendEmail(to: string, subject: string, body: EmailBody, options: SendEmailOptions = {}): Promise<void> {
-  const provider = getProvider();
-  const from = options.from || buildFromAddress();
+async function sendViaSmtp(provider: EmailProvider, input: EmailSenderInput): Promise<void> {
+  const transport = createSmtpTransport(provider);
+  await transport.sendMail({
+    from: input.from,
+    to: input.to,
+    subject: input.subject,
+    text: input.body.text,
+    html: input.body.html,
+  });
+}
 
-  try {
-    if (provider === 'sendgrid') {
-      await sendViaSendGrid({ to, from, subject, body });
-      return;
+export function createEmailService(options: CreateEmailServiceOptions = {}) {
+  const resolveProvider = options.resolveProvider || getProvider;
+  const smtpSender = options.smtpSender || sendViaSmtp;
+  const sendgridSender = options.sendgridSender || sendViaSendGrid;
+  const logger = options.logger || {
+    error: (message: string, metadata: Record<string, unknown>) => {
+      console.error(message, metadata);
+    },
+  };
+
+  const sendEmailInternal = async (
+    to: string,
+    subject: string,
+    body: EmailBodyInput,
+    sendOptions: SendEmailOptions = {},
+  ): Promise<void> => {
+    const provider = resolveProvider();
+    const from = sendOptions.from || buildFromAddress();
+    const normalizedBody = normalizeBody(body);
+
+    try {
+      if (provider === 'sendgrid') {
+        await sendgridSender({ to, from, subject, body: normalizedBody });
+        return;
+      }
+
+      // SES mode is supported through SMTP credentials.
+      await smtpSender(provider, { to, from, subject, body: normalizedBody });
+    } catch (error) {
+      logger.error('[email.send] failed', {
+        provider,
+        to,
+        subject,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
+  };
 
-    // SES mode is supported through SMTP credentials.
-    const transport = createSmtpTransport(provider);
-    await transport.sendMail({
-      from,
-      to,
-      subject,
-      text: body.text,
-      html: body.html,
-    });
-  } catch (error) {
-    console.error('[email.send] failed', {
-      provider,
-      to,
-      subject,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+  const sendTemplatedEmailInternal = async <T extends TemplateName>(params: SendTemplatedEmailParams<T>): Promise<void> => {
+    const rendered = renderEmailTemplate(params.template, params.data);
+    await sendEmailInternal(params.to, rendered.subject, rendered.body, { from: params.from });
+  };
+
+  return {
+    sendEmail: sendEmailInternal,
+    sendTemplatedEmail: sendTemplatedEmailInternal,
+  };
+}
+
+const emailService = createEmailService();
+
+export async function sendEmail(to: string, subject: string, body: EmailBodyInput, options: SendEmailOptions = {}): Promise<void> {
+  await emailService.sendEmail(to, subject, body, options);
 }
 
 export async function sendTemplatedEmail<T extends TemplateName>(params: SendTemplatedEmailParams<T>): Promise<void> {
-  const rendered = renderTemplate(params.template, params.data);
-  await sendEmail(params.to, rendered.subject, rendered.body, { from: params.from });
+  await emailService.sendTemplatedEmail(params);
 }
 
 export function getFromAddress(): string {

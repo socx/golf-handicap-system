@@ -77,16 +77,32 @@ So that the system can send emails through a unified interface.
 **Target Date:** **30 December 2026**
 
 ### Acceptance Criteria
-- [ ] **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)** supports:
+- [x] **[Email delivery module](ca://s?q=Explain_email_delivery_module_design)** supports:
   - sendEmail(to, subject, body)
   - templating
   - error handling  
-- [ ] Supports provider abstraction (SendGrid, SES, SMTP).  
-- [ ] Logs failures.
+- [x] Supports provider abstraction (SendGrid, SES, SMTP).  
+- [x] Logs failures.
 
 ### Dependencies
 - **[Notification preferences](ca://s?q=Explain_notification_preferences_table)**  
 - Email provider credentials
+
+### Implementation Notes
+- Refactored `apps/api/src/lib/email.ts` into an explicit email service wrapper via `createEmailService()` while preserving existing public exports (`sendEmail`, `sendTemplatedEmail`).
+- Wrapper now supports `sendEmail(to, subject, body)` where `body` can be plain text (`string`) or structured `{ text, html }`.
+- Added reusable `renderEmailTemplate()` helper for template rendering.
+- Provider abstraction is explicit and testable:
+  - SendGrid route via dedicated sender
+  - SES and SMTP route via SMTP sender abstraction
+  - Mailpit supported through SMTP transport selection
+- Error handling logs structured failure metadata and rethrows to caller.
+- Added focused coverage in `apps/api/test/email-wrapper.e2e.test.mjs` for:
+  - sendEmail wrapper signature
+  - templating path
+  - provider abstraction (SendGrid/SES/SMTP)
+  - failure logging + rethrow behavior
+  - template render helper output.
 
 ---
 
