@@ -143,15 +143,23 @@ So that admins can validate scoring before handicap updates.
 **Target Date:** **02 December 2026**
 
 ### Acceptance Criteria
-- [ ] **[POST /admin/rounds/:id/approve](ca://s?q=Explain_approve_round)**  
-- [ ] **[POST /admin/rounds/:id/reject](ca://s?q=Explain_reject_round)**  
-- [ ] Rejection requires reason.  
-- [ ] Approved rounds trigger handicap recalculation.  
-- [ ] Logged in audit trail.
+- [x] **[POST /admin/rounds/:id/approve](ca://s?q=Explain_approve_round)**  
+- [x] **[POST /admin/rounds/:id/reject](ca://s?q=Explain_reject_round)**  
+- [x] Rejection requires reason.  
+- [x] Approved rounds trigger handicap recalculation.  
+- [x] Logged in audit trail.
 
 ### Dependencies
 - **[Handicap calculation](ca://s?q=Explain_handicap_calculation)**  
 - **[Audit logs](ca://s?q=Explain_audit_logs)**
+
+### Implementation Notes
+- `POST /api/admin/rounds/:id/approve` and `POST /api/admin/rounds/:id/reject` are supported via route parsing in `apps/api/src/app.ts`.
+- Existing moderation handlers in `apps/api/src/routes/rounds.ts` are reused, enforcing admin-only access and writing audit events.
+- Reject endpoint validates `rejectionReason` and returns `400 validation_error` when missing.
+- Approve flow emits `round_approved` and conditionally emits `handicap_recalculation_requested` when `score_differential` exists.
+- Reject flow emits `round_rejected` and conditionally emits `handicap_recalculation_requested` when `score_differential` exists.
+- Added dedicated e2e coverage in `apps/api/test/admin-rounds-moderation.e2e.test.mjs`.
 
 ---
 

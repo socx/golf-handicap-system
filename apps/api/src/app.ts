@@ -89,7 +89,7 @@ function parseRoundRoute(path: string): { roundId: string } | null {
 }
 
 function parseRoundModerationRoute(path: string): { roundId: string; action: 'approve' | 'reject' } | null {
-  const match = path.match(/^\/(?:api\/)?rounds\/([0-9a-fA-F-]+)\/(approve|reject)$/);
+  const match = path.match(/^\/(?:api\/)?(?:admin\/)?rounds\/([0-9a-fA-F-]+)\/(approve|reject)$/);
   if (!match) return null;
   return { roundId: String(match[1] || ''), action: String(match[2] || '') as 'approve' | 'reject' };
 }
