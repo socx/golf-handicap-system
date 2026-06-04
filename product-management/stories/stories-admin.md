@@ -175,14 +175,23 @@ So that admins can track important system events.
 **Target Date:** **07 December 2026**
 
 ### Acceptance Criteria
-- [ ] **[GET /admin/audit-logs](ca://s?q=Explain_audit_logs_endpoint)** returns paginated logs.  
-- [ ] Filters: user, event type, date range.  
-- [ ] Includes IP address + timestamp.  
-- [ ] Sensitive data never shown.
+- [x] **[GET /admin/audit-logs](ca://s?q=Explain_audit_logs_endpoint)** returns paginated logs.  
+- [x] Filters: user, event type, date range.  
+- [x] Includes IP address + timestamp.  
+- [x] Sensitive data never shown.
 
 ### Dependencies
 - **[Audit logs table](ca://s?q=Explain_audit_logs)**  
 - **[Admin middleware](ca://s?q=Explain_admin_middleware)**
+
+### Implementation Notes
+- Added `GET /api/admin/audit-logs` endpoint in `apps/api/src/routes/admin/auditLogs.ts`.
+- Wired route in `apps/api/src/app.ts` for both `/api/admin/audit-logs` and `/admin/audit-logs`.
+- Endpoint is admin-only via `verifyAdminAndLog`.
+- Supports pagination (`page`, `limit`) and filters (`userId`, `eventType`, `from`, `to`).
+- Returns `ip_address` and `created_at` for each log entry.
+- Sanitizes metadata recursively to remove sensitive keys (`password`, `token`, `secret`, `authorization`, etc.).
+- Added e2e tests in `apps/api/test/admin-audit-logs.e2e.test.mjs` for pagination/filters, date range, redaction, and non-admin access rejection.
 
 ---
 

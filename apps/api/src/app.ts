@@ -12,6 +12,7 @@ import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes
 import { handleMe } from './routes/auth/me';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
+import { handleListAuditLogs } from './routes/admin/auditLogs';
 import { handleListPendingRounds } from './routes/admin/rounds';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
@@ -225,6 +226,11 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'GET' && (pathname === '/api/admin/rounds/pending' || pathname === '/admin/rounds/pending')) {
       await handleListPendingRounds(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/audit-logs' || pathname === '/admin/audit-logs')) {
+      await handleListAuditLogs(req, res, requestUrl);
       return;
     }
 
