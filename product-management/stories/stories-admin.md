@@ -113,13 +113,21 @@ So that admins can review and approve them.
 **Target Date:** **30 November 2026**
 
 ### Acceptance Criteria
-- [ ] **[GET /admin/rounds/pending](ca://s?q=Explain_pending_rounds_endpoint)** returns list of unapproved rounds.  
-- [ ] Includes player, course, date, gross score.  
-- [ ] Sorted by date (oldest first).
+- [x] **[GET /admin/rounds/pending](ca://s?q=Explain_pending_rounds_endpoint)** returns list of unapproved rounds.  
+- [x] Includes player, course, date, gross score.  
+- [x] Sorted by date (oldest first).
 
 ### Dependencies
 - **[Rounds table](ca://s?q=Explain_rounds_table)**  
 - **[Round approval workflow](ca://s?q=Explain_round_approval_workflow)**
+
+### Implementation Notes
+- Added admin endpoint handler `handleListPendingRounds` in `apps/api/src/routes/admin/rounds.ts`.
+- Wired route in `apps/api/src/app.ts` for `GET /api/admin/rounds/pending` (and `/admin/rounds/pending`).
+- Endpoint is admin-only via `verifyAdminAndLog`.
+- Query returns pending, non-deleted rounds and includes player name, course, played date, and gross score.
+- Results are sorted oldest first by `played_at` ascending.
+- Added e2e coverage in `apps/api/test/admin-rounds-pending.e2e.test.mjs` for payload fields, ordering, and non-admin access rejection.
 
 ---
 
