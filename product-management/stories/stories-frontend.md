@@ -379,4 +379,36 @@ So that users can access it on phones and tablets.
 
 ---
 
+## 16. Implement role-based navigation visibility
+
+**As a user**  
+I want to see only navigation items that I can access  
+So that I am not distracted by admin controls that are unavailable to me.
+
+**Size:** XS  
+**Estimate:** 1 day  
+**Priority:** High  
+**Target Date:** **27 October 2026**
+
+### Acceptance Criteria
+- [x] Only admin users see Admin and Admin Settings navigation items.  
+- [x] Player users see only Player-accessible navigation items.  
+- [x] Navigation items are filtered based on user role.  
+- [x] Navigation updates dynamically when user role changes.  
+- [x] Tests verify role-based filtering logic.  
+- [x] E2E tests verify navigation visibility for different roles.
+
+### Dependencies
+- Authentication state management  
+- Global layout  
+- Admin pages
+
+### Implementation Notes
+- Modified `apps/web/src/components/layout/AppLayout.tsx` to filter navigation items based on user role.
+- Created `getFilteredNavigationItems(role)` helper function that returns role-appropriate navigation items.
+- Added unit tests in `apps/web/src/test/AppLayout.test.tsx` to verify navigation filtering for admin and player roles.
+- Added E2E tests to verify navigation visibility is correct for different user roles.
+
+---
+
 # End of stories-frontend.md

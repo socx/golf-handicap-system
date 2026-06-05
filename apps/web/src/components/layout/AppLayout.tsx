@@ -2,16 +2,25 @@ import React, { useMemo, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
+import type { User } from '../../lib/authStorage';
 
-const navigationItems = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/players', label: 'Players' },
-  { to: '/courses', label: 'Courses' },
-  { to: '/rounds', label: 'Rounds' },
-  { to: '/handicap', label: 'Handicap' },
-  { to: '/admin', label: 'Admin' },
-  { to: '/admin/settings', label: 'Admin Settings' },
+const ALL_NAVIGATION_ITEMS = [
+  { to: '/dashboard', label: 'Dashboard', roles: ['admin', 'player', 'viewer'] },
+  { to: '/players', label: 'Players', roles: ['admin', 'player'] },
+  { to: '/courses', label: 'Courses', roles: ['admin', 'player', 'viewer'] },
+  { to: '/rounds', label: 'Rounds', roles: ['admin', 'player'] },
+  { to: '/handicap', label: 'Handicap', roles: ['admin', 'player'] },
+  { to: '/settings', label: 'Settings', roles: ['admin', 'player', 'viewer'] },
+  { to: '/admin', label: 'Admin', roles: ['admin'] },
+  { to: '/admin/settings', label: 'Admin Settings', roles: ['admin'] },
 ];
+
+export const getFilteredNavigationItems = (role: User['role'] | null) => {
+  if (!role) {
+    return [];
+  }
+  return ALL_NAVIGATION_ITEMS.filter((item) => item.roles.includes(role));
+};
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -24,6 +33,8 @@ export const AppLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const displayRole = useMemo(() => user?.role?.toUpperCase() ?? 'UNKNOWN', [user?.role]);
+  
+  const navigationItems = useMemo(() => getFilteredNavigationItems(user?.role ?? null), [user?.role]);
 
   const handleLogout = async () => {
     await logout();
