@@ -308,4 +308,45 @@ So that admins can update player details.
 
 ---
 
+## 12. Role-based player data scope across players, rounds, and handicap
+
+**As a player**  
+I want to view only my own player profile, rounds, and handicap history  
+So that I can access my personal golfing records without seeing other players' data.
+
+**As an admin**  
+I want to view players, rounds, and handicap data for all players  
+So that I can manage club operations across the full system.
+
+**Size:** M  
+**Estimate:** 2–3 days  
+**Priority:** High  
+**Target Date:** **12 July 2026**
+
+### Acceptance Criteria
+- [x] Player users can call players endpoints only for their own linked player profile.  
+- [x] Player users can list rounds and fetch round details only for their own rounds.  
+- [x] Player users can read handicap eligibility/history only for their own player profile.  
+- [x] Admin users can continue to access players, rounds, and handicap data across all players.  
+- [x] Players UI routes/pages clearly reflect self-only scope while preserving admin workflows.  
+- [x] Automated tests cover both allowed self-access and forbidden cross-player access.
+
+### Dependencies
+- Auth `/auth/me` providing linked `player_id` for logged-in users  
+- Existing players, rounds, and handicap APIs  
+- RBAC middleware
+
+### Implementation Notes
+- Expanded read permissions in API routes to include `player` role for scoped endpoints while preserving `admin` access.
+- Added ownership checks in:
+	- `apps/api/src/routes/players.ts` (`GET /players`, `GET /players/:id`)
+	- `apps/api/src/routes/rounds.ts` (`GET /rounds`, `GET /rounds/:id`)
+	- `apps/api/src/routes/handicap.ts` (`GET /handicap/eligibility/:playerId`, `GET /handicap/history/:playerId`)
+- Ownership validation uses the linked player via `players.user_id = auth.userId`; player requests for other player IDs now return `403 forbidden`.
+- Updated `apps/web/src/pages/PlayersPage.tsx` to present self-service copy and hide edit actions for player role while keeping admin edit controls.
+- Updated `apps/web/src/pages/RoundsPage.tsx` to display role-appropriate copy and table labeling for player self-view.
+- Added focused API and frontend tests covering self-only access for players and full visibility for admins.
+
+---
+
 # End of stories-players.md

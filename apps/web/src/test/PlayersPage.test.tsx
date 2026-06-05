@@ -1,8 +1,22 @@
+// @vitest-environment jsdom
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { playersApi } from '../api/players';
 import PlayersPage from '../pages/PlayersPage';
+
+const authState = vi.hoisted(() => ({
+  user: { role: 'admin' as 'admin' | 'player' | 'viewer', player_id: null as string | null },
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ user: authState.user }),
+}));
+
+beforeEach(() => {
+  authState.user = { role: 'admin', player_id: null };
+});
 
 describe('PlayersPage', () => {
   it('renders paginated players and navigates to player profile route', async () => {
@@ -118,5 +132,50 @@ describe('PlayersPage', () => {
     await waitFor(() => {
       expect(filterInput).toHaveFocus();
     });
+  });
+
+  it('shows self-service controls for player users and hides edit action', async () => {
+    authState.user = { role: 'player', player_id: 'player-self' };
+
+    vi.spyOn(playersApi, 'list').mockResolvedValue({
+      players: [
+        {
+          id: 'player-self',
+          first_name: 'Self',
+          last_name: 'User',
+          middle_name: null,
+          dob: null,
+          gender: null,
+          club: 'My Club',
+          country: 'GB',
+          handicap_index: 10.4,
+          email: 'self@example.com',
+          created_at: '2026-05-25T00:00:00.000Z',
+          updated_at: '2026-05-25T00:00:00.000Z',
+        },
+      ],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/players']}>
+        <Routes>
+          <Route path="/players" element={<PlayersPage />} />
+          <Route path="/players/:playerId" element={<div>Own profile route</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Self User');
+    expect(screen.getByText('Your account is scoped to your own player record.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View My Profile' }));
+    expect(await screen.findByText('Own profile route')).toBeInTheDocument();
   });
 });

@@ -68,6 +68,19 @@ async function getPlayerForHandicap(playerId: string): Promise<PlayerHandicapRow
   };
 }
 
+async function getLinkedPlayerIdForUser(userId: string): Promise<string | null> {
+  const result = await dbPool.query(
+    'SELECT id FROM players WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [userId],
+  );
+
+  if (Number(result.rowCount || 0) === 0) {
+    return null;
+  }
+
+  return String(result.rows[0].id);
+}
+
 async function getHandicapNotificationTarget(playerId: string): Promise<HandicapNotificationTarget | null> {
   const result = await dbPool.query(
     `SELECT p.user_id, u.email::text AS email, np.handicap_updates_enabled
@@ -187,7 +200,7 @@ export async function handleGetHandicapEligibility(
   res: http.ServerResponse,
   playerId: string,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -196,6 +209,19 @@ export async function handleGetHandicapEligibility(
   if (!isUuid(playerId)) {
     sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
     return;
+  }
+
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+
+    if (linkedPlayerId !== playerId) {
+      sendError(res, 403, 'forbidden', 'Players can only access their own handicap eligibility');
+      return;
+    }
   }
 
   const player = await getPlayerForHandicap(playerId);
@@ -367,7 +393,7 @@ export async function handleGetHandicapHistory(
   res: http.ServerResponse,
   playerId: string,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -376,6 +402,19 @@ export async function handleGetHandicapHistory(
   if (!isUuid(playerId)) {
     sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
     return;
+  }
+
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+
+    if (linkedPlayerId !== playerId) {
+      sendError(res, 403, 'forbidden', 'Players can only access their own handicap history');
+      return;
+    }
   }
 
   const player = await getPlayerForHandicap(playerId);

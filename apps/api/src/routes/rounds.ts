@@ -172,8 +172,21 @@ function parseDateFilter(value: string, boundary: 'start' | 'end'): string | nul
   return parsed.toISOString();
 }
 
+async function getLinkedPlayerIdForUser(userId: string): Promise<string | null> {
+  const result = await dbPool.query(
+    'SELECT id FROM players WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [userId],
+  );
+
+  if (Number(result.rowCount || 0) === 0) {
+    return null;
+  }
+
+  return String(result.rows[0].id);
+}
+
 export async function handleListRounds(req: http.IncomingMessage, res: http.ServerResponse, requestUrl: URL): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -214,6 +227,17 @@ export async function handleListRounds(req: http.IncomingMessage, res: http.Serv
 
   if (filters.playerId) {
     params.push(filters.playerId);
+    clauses.push(`r.player_id = $${params.length}`);
+  }
+
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+
+    params.push(linkedPlayerId);
     clauses.push(`r.player_id = $${params.length}`);
   }
 
@@ -670,7 +694,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
 }
 
 export async function handleGetRound(req: http.IncomingMessage, res: http.ServerResponse, roundId: string): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -695,6 +719,19 @@ export async function handleGetRound(req: http.IncomingMessage, res: http.Server
   }
 
   const round = roundResult.rows[0] as RoundDetailRow;
+
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+
+    if (round.player_id !== linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Players can only access their own rounds');
+      return;
+    }
+  }
 
   const teeConfigurationResult = await dbPool.query(
     `SELECT tc.id,

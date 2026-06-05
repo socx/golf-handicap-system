@@ -272,6 +272,19 @@ async function ensureUserExists(userId: string): Promise<boolean> {
   return Number(result.rowCount || 0) > 0;
 }
 
+async function getLinkedPlayerIdForUser(userId: string): Promise<string | null> {
+  const result = await dbPool.query(
+    'SELECT id FROM players WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [userId],
+  );
+
+  if (Number(result.rowCount || 0) === 0) {
+    return null;
+  }
+
+  return String(result.rows[0].id);
+}
+
 function parsePagination(requestUrl: URL): { page: number; limit: number; offset: number } {
   const pageRaw = Number(requestUrl.searchParams.get('page') || '1');
   const limitRaw = Number(requestUrl.searchParams.get('limit') || '20');
@@ -372,7 +385,7 @@ export async function handleGetPlayer(
   res: http.ServerResponse,
   playerId: string,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -381,6 +394,19 @@ export async function handleGetPlayer(
   if (!isUuid(playerId)) {
     sendError(res, 400, 'validation_error', 'Player id must be a valid UUID');
     return;
+  }
+
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+
+    if (linkedPlayerId !== playerId) {
+      sendError(res, 403, 'forbidden', 'Players can only access their own profile');
+      return;
+    }
   }
 
   try {
@@ -597,7 +623,7 @@ export async function handleListPlayers(
   res: http.ServerResponse,
   requestUrl: URL,
 ): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -605,7 +631,20 @@ export async function handleListPlayers(
 
   const filters = parsePlayerFilters(requestUrl);
   const { page, limit, offset } = parsePagination(requestUrl);
-  const { whereClause, params } = buildPlayerWhereClause(filters);
+  const { whereClause: baseWhereClause, params } = buildPlayerWhereClause(filters);
+
+  const clauses = [baseWhereClause];
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+    params.push(linkedPlayerId);
+    clauses.push(`id = $${params.length}`);
+  }
+
+  const whereClause = clauses.join(' AND ');
 
   try {
     const countResult = await dbPool.query(`SELECT COUNT(*)::int AS total FROM players WHERE ${whereClause}`, params);

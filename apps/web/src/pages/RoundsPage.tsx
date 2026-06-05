@@ -18,6 +18,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '../components/ui';
+import { useAuth } from '../hooks/useAuth';
 
 const PAGE_SIZE = 10;
 
@@ -32,6 +33,8 @@ function formatPlayerDisplayName(firstName: string, lastName: string, shortSurna
 }
 
 export const RoundsPage: React.FC = () => {
+  const { user } = useAuth();
+  const isPlayer = user?.role === 'player';
   const [rounds, setRounds] = useState<RoundListItem[] | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [teeConfigurations, setTeeConfigurations] = useState<TeeConfiguration[]>([]);
@@ -187,7 +190,9 @@ export const RoundsPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Rounds</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Browse historical rounds, filter by date range, and open scorecards from the list.
+            {isPlayer
+              ? 'Browse your own rounds, filter by date range, and open your scorecards.'
+              : 'Browse historical rounds, filter by date range, and open scorecards from the list.'}
           </p>
         </div>
         <Link
@@ -310,7 +315,7 @@ export const RoundsPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell>Player / Date</TableHeaderCell>
+                  <TableHeaderCell>{isPlayer ? 'Date' : 'Player / Date'}</TableHeaderCell>
                   <TableHeaderCell>Played</TableHeaderCell>
                   <TableHeaderCell>Course</TableHeaderCell>
                   <TableHeaderCell>Tee</TableHeaderCell>
@@ -325,7 +330,9 @@ export const RoundsPage: React.FC = () => {
                   <TableRow key={round.id}>
                     <TableCell>
                       <Link to={`/rounds/${round.id}`} className="font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
-                        {formatPlayerDisplayName(round.playerFirstName, round.playerLastName, true)} - {formatDate(round.playedAt)}
+                        {isPlayer
+                          ? formatDate(round.playedAt)
+                          : `${formatPlayerDisplayName(round.playerFirstName, round.playerLastName, true)} - ${formatDate(round.playedAt)}`}
                       </Link>
                     </TableCell>
                     <TableCell>{formatDate(round.playedAt)}</TableCell>

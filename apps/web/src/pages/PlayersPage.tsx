@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { playersApi, type Player } from '../api/players';
+import { useAuth } from '../hooks/useAuth';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Table, TableBody, TableHead, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
@@ -11,6 +12,8 @@ const PAGE_SIZE = 10;
 
 export const PlayersPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPlayer = user?.role === 'player';
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,12 +94,31 @@ export const PlayersPage: React.FC = () => {
     navigate(`/players/${playerId}`);
   };
 
+  const ownPlayerId = user?.player_id ?? null;
+
+  const handleOpenOwnProfile = () => {
+    if (ownPlayerId) {
+      navigate(`/players/${ownPlayerId}`);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="players-page">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Players</h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Browse player profiles with quick search and filters.</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          {isPlayer ? 'View your player profile and performance details.' : 'Browse player profiles with quick search and filters.'}
+        </p>
       </div>
+
+      {isPlayer ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+          <p className="text-sm text-slate-700 dark:text-slate-300">Your account is scoped to your own player record.</p>
+          <div className="mt-3">
+            <Button onClick={handleOpenOwnProfile} disabled={!ownPlayerId}>View My Profile</Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Input placeholder="Search by name or email..." value={search} onChange={handleSearchChange} />
@@ -146,9 +168,11 @@ export const PlayersPage: React.FC = () => {
                       <Button size="sm" variant="secondary" onClick={() => handleOpenProfile(player.id)} disabled={loading}>
                         View Profile
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => navigate(`/players/${player.id}/edit`)} disabled={loading}>
-                        Edit
-                      </Button>
+                      {!isPlayer ? (
+                        <Button size="sm" variant="secondary" onClick={() => navigate(`/players/${player.id}/edit`)} disabled={loading}>
+                          Edit
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>

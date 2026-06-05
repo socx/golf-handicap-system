@@ -3,10 +3,22 @@
 import './setup';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coursesApi } from '../api/courses';
 import { roundsApi } from '../api/rounds';
 import RoundsPage from '../pages/RoundsPage';
+
+const authState = vi.hoisted(() => ({
+  user: { role: 'admin' as 'admin' | 'player' | 'viewer' },
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ user: authState.user }),
+}));
+
+beforeEach(() => {
+  authState.user = { role: 'admin' };
+});
 
 const course = {
   id: 'course-1',
@@ -174,5 +186,23 @@ describe('RoundsPage', () => {
         }),
       );
     });
+  });
+
+  it('shows player-specific copy when role is player', async () => {
+    authState.user = { role: 'player' };
+
+    vi.spyOn(coursesApi, 'list').mockResolvedValue({
+      data: { data: [course], pagination: { page: 1, limit: 100, total: 1, pages: 1 } },
+    } as never);
+    vi.spyOn(roundsApi, 'list').mockResolvedValue({
+      data: {
+        rounds: [round('round-1', '2026-05-26T00:00:00.000Z')],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      },
+    } as never);
+
+    renderPage();
+
+    expect(await screen.findByText('Browse your own rounds, filter by date range, and open your scorecards.')).toBeInTheDocument();
   });
 });
