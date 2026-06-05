@@ -5,16 +5,27 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { roundsApi } from '../api/rounds';
+import { playersApi } from '../api/players';
 import RoundEntryPage from '../pages/RoundEntryPage';
+
+// Mock auth hook
+const authState = vi.hoisted(() => ({
+  user: { role: 'admin', player_id: null },
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ user: authState.user }),
+}));
 
 // Mock the selector components so tests don't need API calls for player/course/tee lookups.
 // Each mock exposes a data-testid the test can use to simulate selection.
 vi.mock('../components/ui/PlayerSelector', () => ({
-  PlayerSelector: ({ onChange, label }: { onChange: (p: unknown) => void; label?: string }) => (
+  PlayerSelector: ({ onChange, label, disabled }: { onChange: (p: unknown) => void; label?: string; disabled?: boolean }) => (
     <button
       type="button"
       data-testid="player-selector"
       aria-label={label ?? 'Player'}
+      disabled={disabled}
       onClick={() =>
         onChange({ id: 'player-1', givenName: 'Alice', familyName: 'Smith', email: 'a@example.com', handicapIndex: 10 })
       }
@@ -57,6 +68,7 @@ vi.mock('../components/ui/TeeConfigurationSelector', () => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  authState.user = { role: 'admin', player_id: null };
 });
 
 function renderPage() {
@@ -191,5 +203,43 @@ describe('RoundEntryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(await screen.findByText('Rounds list')).toBeInTheDocument();
+  });
+
+  it('preselects and disables player field for player users', async () => {
+    authState.user = { role: 'player', player_id: 'player-self' };
+
+    vi.spyOn(playersApi, 'get').mockResolvedValue({
+      player: {
+        id: 'player-self',
+        first_name: 'John',
+        last_name: 'Player',
+        middle_name: null,
+        dob: null,
+        gender: null,
+        email: 'john@example.com',
+        club: 'My Club',
+        country: 'GB',
+        handicap_index: 12.5,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+      handicap_summary: {
+        current_handicap_index: 12.5,
+        last_handicap_update_date: null,
+      },
+      round_stats: {
+        round_count: 0,
+        last_round_date: null,
+      },
+    } as never);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Your account is scoped to your own player record.')).toBeInTheDocument();
+    });
+
+    const playerSelectorButton = screen.getByTestId('player-selector');
+    expect(playerSelectorButton).toHaveAttribute('disabled');
   });
 });

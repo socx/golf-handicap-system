@@ -377,4 +377,45 @@ So that admins can migrate historical data.
 
 ---
 
+## 13. Player self-service round submission
+
+**As a player**  
+I want to submit my own rounds directly  
+So that I can record my scores without needing admin assistance.
+
+**Size:** S  
+**Estimate:** 1–2 days  
+**Priority:** High  
+**Target Date:** **TBD**
+
+### Acceptance Criteria
+- [x] Player role users can POST to `/rounds` for their own profile only.
+- [x] GET `/rounds` filtered to show player's records only.
+- [x] RoundEntryPage preselects player field for player users.
+- [x] Player field is disabled/greyed-out for player users (cannot change).
+- [x] API enforces ownership: player cannot submit rounds for other players.
+- [x] API returns 403 if player attempts cross-player submission.
+- [x] Admin users retain unrestricted access to all endpoints.
+
+### Dependencies
+- Players table with `user_id` linking
+- useAuth hook providing `user.player_id` and `user.role`
+- RoundEntryPage component
+- Rounds API POST endpoint
+
+### Implementation Notes
+- Modified handleCreateRound to accept `['admin', 'player']` roles with ownership check.
+- Added getLinkedPlayerIdForUser() helper to look up player from JWT user_id (same pattern as players.ts).
+- Frontend RoundEntryPage:
+  - Imports useAuth hook to access user context
+  - On mount: if user.role === 'player' and user.player_id, fetches and preselects player; disables PlayerSelector
+  - Prevents player field state changes for player users
+- Backend validation: denies POST if player_id in payload !== linked player_id for player role
+- E2e tests verify:
+  - Player can submit round for self (200 response)
+  - Player gets 403 when attempting to submit for another player
+  - Admin can submit rounds for any player (unchanged behavior)
+
+---
+
 # End of stories-rounds.md

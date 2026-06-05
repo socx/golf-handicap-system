@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { handleApiError } from '../api/client';
 import { type HoleScoreInput, roundsApi } from '../api/rounds';
+import { playersApi } from '../api/players';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { CourseSelector } from '../components/ui/CourseSelector';
@@ -52,6 +54,8 @@ function validate(
 
 const RoundEntryPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPlayerRole = user?.role === 'player';
 
   const [player, setPlayer] = useState<Player | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
@@ -63,6 +67,23 @@ const RoundEntryPage: React.FC = () => {
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [pageError, setPageError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Auto-load player profile for player users
+  useEffect(() => {
+    if (!isPlayerRole || !user?.player_id) return;
+
+    const loadOwnProfile = async () => {
+      try {
+        const response = await playersApi.get(user.player_id!);
+        setPlayer(response.player);
+      } catch (err) {
+        const msg = handleApiError(err);
+        setPageError(`Failed to load player profile: ${msg}`);
+      }
+    };
+
+    void loadOwnProfile();
+  }, [isPlayerRole, user?.player_id]);
 
   // When course changes reset tee config
   const handleCourseChange = (c: Course | null) => {
@@ -153,8 +174,18 @@ const RoundEntryPage: React.FC = () => {
         {/* Player & course selection */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800/60">
           <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">Player &amp; Course</h3>
+          {isPlayerRole && player && (
+            <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+              Your account is scoped to your own player record.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <PlayerSelector value={player} onChange={setPlayer} label="Player" />
+            <PlayerSelector
+              value={player}
+              onChange={isPlayerRole ? () => {} : setPlayer}
+              label="Player"
+              disabled={isPlayerRole}
+            />
             <CourseSelector value={course} onChange={handleCourseChange} label="Course" />
             <TeeConfigurationSelector
               courseId={course?.id ?? null}

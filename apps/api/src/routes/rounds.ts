@@ -440,7 +440,7 @@ function validateCreateRoundPayload(payload: Record<string, unknown>): { errors:
 }
 
 export async function handleCreateRound(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin', 'player'] });
   if (!authResult.success || !authResult.auth) {
     sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
     return;
@@ -461,6 +461,19 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
   }
 
   const value = validation.value;
+
+  // Enforce ownership: players can only submit rounds for themselves
+  if (authResult.auth.role === 'player') {
+    const linkedPlayerId = await getLinkedPlayerIdForUser(authResult.auth.userId);
+    if (!linkedPlayerId) {
+      sendError(res, 403, 'forbidden', 'Player user is not linked to a player profile');
+      return;
+    }
+    if (linkedPlayerId !== value.player_id) {
+      sendError(res, 403, 'forbidden', 'Players can only submit rounds for their own profile');
+      return;
+    }
+  }
 
   const configResult = await dbPool.query(
     'SELECT id, hole_count, course_rating, slope_rating FROM tee_configurations WHERE id = $1 AND deleted_at IS NULL LIMIT 1',
