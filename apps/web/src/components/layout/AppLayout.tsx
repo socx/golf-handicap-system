@@ -10,6 +10,7 @@ const navigationItems = [
   { to: '/rounds', label: 'Rounds' },
   { to: '/handicap', label: 'Handicap' },
   { to: '/admin', label: 'Admin' },
+  { to: '/admin/settings', label: 'Admin Settings' },
 ];
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>

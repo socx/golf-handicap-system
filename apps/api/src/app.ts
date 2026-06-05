@@ -20,6 +20,7 @@ import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
 import { handleListAuditLogs } from './routes/admin/auditLogs';
 import { handleListPendingRounds } from './routes/admin/rounds';
+import { handleGetAdminSettings, handleUpdateAdminSettings } from './routes/admin/settings';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
@@ -263,6 +264,16 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'GET' && (pathname === '/api/admin/audit-logs' || pathname === '/admin/audit-logs')) {
       await handleListAuditLogs(req, res, requestUrl);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/settings' || pathname === '/admin/settings')) {
+      await handleGetAdminSettings(req, res);
+      return;
+    }
+
+    if (method === 'PATCH' && (pathname === '/api/admin/settings' || pathname === '/admin/settings')) {
+      await handleUpdateAdminSettings(req, res, requestId);
       return;
     }
 

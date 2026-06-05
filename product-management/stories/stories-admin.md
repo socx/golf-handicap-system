@@ -310,16 +310,28 @@ So that admins can configure global options.
 **Target Date:** **24 December 2026**
 
 ### Acceptance Criteria
-- [ ] Settings include:
+- [x] Settings include:
   - PCC override  
   - Notification settings  
   - Maintenance mode  
-- [ ] Stored in settings table.  
-- [ ] Changes logged.
+- [x] Stored in settings table.  
+- [x] Changes logged.
 
 ### Dependencies
 - **[Settings table](ca://s?q=Explain_settings_table)**  
 - **[Admin middleware](ca://s?q=Explain_admin_middleware)**
+
+### Implementation Notes
+- Added `system_settings` persistence with singleton row semantics in `packages/db/migrations/017_system_settings.sql`.
+- Implemented admin-only settings endpoints in `apps/api/src/routes/admin/settings.ts` and wired them in `apps/api/src/app.ts`:
+  - `GET /api/admin/settings`
+  - `PATCH /api/admin/settings`
+- Added audit logging for settings updates via `admin_system_settings_updated` events.
+- Added frontend API client in `apps/web/src/api/adminSettings.ts` and shipped the admin UI at `apps/web/src/pages/AdminSettingsPage.tsx`.
+- Wired `/admin/settings` route in `apps/web/src/App.tsx` and added an `Admin Settings` navigation item in `apps/web/src/components/layout/AppLayout.tsx`.
+- Added automated coverage:
+  - API e2e: `apps/api/test/admin-settings.e2e.test.mjs`
+  - Frontend: `apps/web/src/test/AdminSettingsPage.test.tsx`
 
 ---
 
