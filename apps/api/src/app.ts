@@ -19,7 +19,7 @@ import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound } from './routes/rounds';
-import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory } from './routes/handicap';
+import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -103,6 +103,12 @@ function parseAdminTeeConfigurationPccRoute(path: string): { configId: string } 
 
 function parseHandicapHistoryRoute(path: string): { playerId: string } | null {
   const match = path.match(/^\/(?:api\/)?handicap\/history\/([0-9a-fA-F-]+)$/);
+  if (!match) return null;
+  return { playerId: String(match[1] || '') };
+}
+
+function parseHandicapOverrideRoute(path: string): { playerId: string } | null {
+  const match = path.match(/^\/(?:api\/)?admin\/handicap-override\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { playerId: String(match[1] || '') };
 }
@@ -376,6 +382,16 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     const handicapHistoryRoute = parseHandicapHistoryRoute(pathname);
     if (handicapHistoryRoute && method === 'GET') {
       await handleGetHandicapHistory(req, res, handicapHistoryRoute.playerId);
+      return;
+    }
+
+    const handicapOverrideRoute = parseHandicapOverrideRoute(pathname);
+    if (handicapOverrideRoute && method === 'POST') {
+      await handleCreateHandicapOverride(req, res, handicapOverrideRoute.playerId);
+      return;
+    }
+    if (handicapOverrideRoute && method === 'GET') {
+      await handleListHandicapOverrides(req, res, handicapOverrideRoute.playerId);
       return;
     }
 

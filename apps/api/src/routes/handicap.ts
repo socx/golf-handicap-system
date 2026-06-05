@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { dbPool } from '../lib/db';
-import { sendError, sendJson } from '../lib/http';
+import { sendError, sendJson, readJsonBody, getClientIp } from '../lib/http';
+import { logApplicationEvent } from '../lib/audit';
 import { sendTemplatedEmail } from '../lib/email';
 import { verifyAndAuthorize } from '../middleware/auth';
 import {
@@ -436,5 +437,138 @@ export async function handleGetHandicapHistory(
     playerId,
     total: records.length,
     records,
+  });
+}
+
+export async function handleCreateHandicapOverride(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  playerId: string,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  if (!isUuid(playerId)) {
+    sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(req);
+  } catch (error) {
+    sendError(res, 400, 'invalid_json', (error as Error).message);
+    return;
+  }
+
+  const newIndex = typeof payload.newIndex === 'number' ? payload.newIndex : Number(payload.newIndex);
+  if (!Number.isFinite(newIndex) || newIndex < -10 || newIndex > 54) {
+    sendError(res, 400, 'validation_error', 'newIndex must be a number between -10 and 54', [{ field: 'newIndex', message: 'Must be between -10 and 54' }]);
+    return;
+  }
+
+  const reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+  if (!reason) {
+    sendError(res, 400, 'validation_error', 'reason is required', [{ field: 'reason', message: 'Reason is required' }]);
+    return;
+  }
+
+  const clientIp = getClientIp(req);
+
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
+    sendError(res, 404, 'not_found', 'Player not found');
+    return;
+  }
+
+  const roundedIndex = Math.round(newIndex * 10) / 10;
+  const adminUserId = authResult.auth.userId;
+
+  await dbPool.query(
+    `INSERT INTO handicap_overrides (player_id, admin_user_id, previous_index, new_index, reason)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [playerId, adminUserId, player.handicap_index, roundedIndex, reason],
+  );
+
+  await dbPool.query(
+    `UPDATE players SET handicap_index = $2, updated_at = NOW() WHERE id = $1`,
+    [playerId, roundedIndex],
+  );
+
+  await logApplicationEvent({
+    requestId: (req.headers['x-request-id'] as string) || '',
+    event: 'handicap_override_applied',
+    ipAddress: clientIp,
+    metadata: {
+      playerId,
+      adminUserId,
+      previousIndex: player.handicap_index,
+      newIndex: roundedIndex,
+      reason,
+    },
+  });
+
+  sendJson(res, 201, {
+    message: 'Handicap override applied',
+    override: {
+      playerId,
+      adminUserId,
+      previousIndex: player.handicap_index,
+      newIndex: roundedIndex,
+      reason,
+    },
+  });
+}
+
+export async function handleListHandicapOverrides(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  playerId: string,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  if (!isUuid(playerId)) {
+    sendError(res, 400, 'validation_error', 'playerId must be a valid UUID', [{ field: 'playerId', message: 'playerId must be a valid UUID' }]);
+    return;
+  }
+
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
+    sendError(res, 404, 'not_found', 'Player not found');
+    return;
+  }
+
+  const result = await dbPool.query(
+    `SELECT ho.id, ho.player_id, ho.admin_user_id, u.email AS admin_email,
+            ho.previous_index, ho.new_index, ho.reason, ho.created_at
+     FROM handicap_overrides ho
+     LEFT JOIN users u ON u.id = ho.admin_user_id
+     WHERE ho.player_id = $1
+     ORDER BY ho.created_at DESC`,
+    [playerId],
+  );
+
+  const overrides = result.rows.map((row) => ({
+    id: String(row.id),
+    playerId: String(row.player_id),
+    adminUserId: String(row.admin_user_id),
+    adminEmail: row.admin_email ? String(row.admin_email) : null,
+    previousIndex: row.previous_index === null ? null : Number(row.previous_index),
+    newIndex: Number(row.new_index),
+    reason: String(row.reason),
+    createdAt: String(row.created_at),
+  }));
+
+  sendJson(res, 200, {
+    playerId,
+    total: overrides.length,
+    overrides,
   });
 }

@@ -271,14 +271,24 @@ So that admins can apply exceptional adjustments.
 **Target Date:** **19 December 2026**
 
 ### Acceptance Criteria
-- [ ] `/admin/handicap-override/:playerId` page.  
-- [ ] Form for manual index + reason.  
-- [ ] Shows history of overrides.  
-- [ ] Admin-only access enforced.
+- [x] `/admin/handicap-override/:playerId` page.  
+- [x] Form for manual index + reason.  
+- [x] Shows history of overrides.  
+- [x] Admin-only access enforced.
 
 ### Dependencies
 - **[Handicap override API](ca://s?q=Explain_handicap_override)**  
 - **[Handicap history API](ca://s?q=Explain_handicap_history_API)**
+
+### Implementation Notes
+- Added DB migration `016_handicap_overrides.sql` for the `handicap_overrides` table.
+- Added `handleCreateHandicapOverride` and `handleListHandicapOverrides` to `apps/api/src/routes/handicap.ts`.
+- Wired `POST /api/admin/handicap-override/:playerId` and `GET /api/admin/handicap-override/:playerId` in `apps/api/src/app.ts`.
+- Extended `apps/web/src/api/handicap.ts` with `createHandicapOverride` and `listHandicapOverrides`.
+- Created `AdminHandicapOverridePage` at `apps/web/src/pages/AdminHandicapOverridePage.tsx` with override form and history table.
+- Wired `/admin/handicap-override/:playerId` route in `apps/web/src/App.tsx`.
+- Added e2e API tests in `apps/api/test/admin-handicap-override.e2e.test.mjs` (4/4).
+- Added frontend page tests in `apps/web/src/test/AdminHandicapOverridePage.test.tsx` (3/3).
 
 ---
 

@@ -72,3 +72,56 @@ export async function calculateHandicap(
   );
   return response.data;
 }
+
+export interface HandicapOverride {
+  id: string;
+  playerId: string;
+  adminUserId: string;
+  adminEmail: string | null;
+  previousIndex: number | null;
+  newIndex: number;
+  reason: string;
+  createdAt: string;
+}
+
+export interface HandicapOverridesResponse {
+  playerId: string;
+  total: number;
+  overrides: HandicapOverride[];
+}
+
+export interface CreateHandicapOverridePayload {
+  newIndex: number;
+  reason: string;
+}
+
+export interface CreateHandicapOverrideResponse {
+  message: string;
+  override: {
+    playerId: string;
+    adminUserId: string;
+    previousIndex: number | null;
+    newIndex: number;
+    reason: string;
+  };
+}
+
+export async function listHandicapOverrides(
+  playerId: string
+): Promise<HandicapOverridesResponse> {
+  const response = await api.get<HandicapOverridesResponse>(
+    `/admin/handicap-override/${playerId}`
+  );
+  return response.data;
+}
+
+export async function createHandicapOverride(
+  playerId: string,
+  payload: CreateHandicapOverridePayload
+): Promise<CreateHandicapOverrideResponse> {
+  const response = await api.post<CreateHandicapOverrideResponse>(
+    `/admin/handicap-override/${playerId}`,
+    payload
+  );
+  return response.data;
+}
