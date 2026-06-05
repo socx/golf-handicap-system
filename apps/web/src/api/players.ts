@@ -11,6 +11,7 @@ export interface Player {
   country: string;
   handicap_index: number | null;
   email: string | null;
+  user_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -131,5 +132,12 @@ export const playersApi = {
     const params = new URLSearchParams({ search, limit: String(limit) });
     const response = await api.get<unknown>(`/players?${params}`);
     return normalizePlayersListResponse(response.data).players;
+  },
+  delete: async (playerId: string): Promise<void> => {
+    await api.delete(`/players/${playerId}`);
+  },
+  linkUser: async (playerId: string, userId: string | null): Promise<Player> => {
+    const response = await api.patch<{ player: Player }>(`/players/${playerId}/link-user`, { user_id: userId });
+    return response.data.player;
   },
 };

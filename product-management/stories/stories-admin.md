@@ -207,14 +207,23 @@ So that admins can edit, delete, and link players.
 **Target Date:** **12 December 2026**
 
 ### Acceptance Criteria
-- [ ] `/admin/players` shows list with search + filters.  
-- [ ] Edit player opens form.  
-- [ ] Delete triggers soft delete.  
-- [ ] Link/unlink user supported.
+- [x] `/admin/players` shows list with search + filters.  
+- [x] Edit player opens form.  
+- [x] Delete triggers soft delete.  
+- [x] Link/unlink user supported.
 
 ### Dependencies
 - **[Player CRUD APIs](ca://s?q=Explain_player_CRUD)**  
 - **[UI components](ca://s?q=Explain_UI_components)**
+
+### Implementation Notes
+- Added `AdminPlayersPage` at `apps/web/src/pages/AdminPlayersPage.tsx` with searchable and filterable players list.
+- Wired route in `apps/web/src/App.tsx` for `/admin/players`.
+- Reused existing player edit flow by routing edit actions to `/players/:playerId/edit`.
+- Added delete confirmation modal that calls `DELETE /players/:id` (soft delete endpoint).
+- Added link/unlink modal that calls `PATCH /players/:id/link-user`.
+- Extended `playersApi` in `apps/web/src/api/players.ts` with `delete` and `linkUser` helpers.
+- Added test coverage for new API helpers in `apps/web/src/api/players.test.ts`.
 
 ---
 
