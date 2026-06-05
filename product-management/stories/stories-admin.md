@@ -32,10 +32,16 @@ So that only authorised users can access admin endpoints.
 **Target Date:** **25 November 2026**
 
 ### Acceptance Criteria
-- [ ] **[Admin middleware](ca://s?q=Explain_admin_middleware)** checks JWT + role.  
-- [ ] Returns 403 for non-admin users.  
-- [ ] Logs access attempts.  
-- [ ] Reusable across all admin routes.
+- [x] **[Admin middleware](ca://s?q=Explain_admin_middleware)** checks JWT + role.  
+- [x] Returns 403 for non-admin users.  
+- [x] Logs access attempts.  
+- [x] Reusable across all admin routes.
+
+### Implementation Notes
+- `verifyAdminAndLog(req)` in `apps/api/src/middleware/auth.ts` — wraps `verifyAndAuthorize` with `['admin']` role requirement
+- Logs `admin_access_allowed` and `admin_access_denied` audit events via `logAuthAuditEvent`
+- Used by all admin route handlers throughout `apps/api/src/routes/admin/`
+- Commit: `0ffe237`
 
 ### Dependencies
 - **[RBAC](ca://s?q=Explain_RBAC)**  
