@@ -239,14 +239,23 @@ So that admins can inspect, approve, or reject rounds.
 **Target Date:** **17 December 2026**
 
 ### Acceptance Criteria
-- [ ] `/admin/rounds` shows list with filters.  
-- [ ] Clicking a round opens scorecard.  
-- [ ] Approve/reject buttons available.  
-- [ ] Rejection reason modal.
+- [x] `/admin/rounds` shows list with filters.  
+- [x] Clicking a round opens scorecard.  
+- [x] Approve/reject buttons available.  
+- [x] Rejection reason modal.
 
 ### Dependencies
 - **[Round detail API](ca://s?q=Explain_round_detail_API)**  
 - **[Round approval API](ca://s?q=Explain_approve_round)**
+
+### Implementation Notes
+- Added `AdminRoundsPage` in `apps/web/src/pages/AdminRoundsPage.tsx` and routed it from `/admin/rounds`.
+- Reused the existing rounds list API with course, tee, and date filters, plus a client-side status filter for admin moderation views.
+- Added row and card navigation to the existing scorecard page at `/rounds/:roundId`.
+- Added approve and reject actions wired to the existing admin moderation endpoints.
+- Implemented a rejection-reason modal before submitting round rejections.
+- Extended `apps/web/src/api/rounds.ts` with moderation helpers and moderation response types.
+- Added focused page coverage in `apps/web/src/test/AdminRoundsPage.test.tsx` for filtering, scorecard navigation, approval, and rejection flows.
 
 ---
 

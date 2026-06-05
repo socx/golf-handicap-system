@@ -54,6 +54,9 @@ export interface RoundSummary {
   teeConfigurationId: string;
   playedAt: string;
   playingHandicap: number | null;
+  status?: string;
+  rejectionReason?: string | null;
+  pcc?: number | null;
   grossScore: number;
   adjustedGrossScore: number;
   scoreDifferential: number | null;
@@ -111,6 +114,19 @@ export interface RoundDetailResponse {
   holeScores: CreateRoundResponse['holeScores'];
 }
 
+export interface RoundModerationResponse {
+  message: string;
+  round: {
+    id: string;
+    playerId: string;
+    teeConfigurationId: string;
+    playedAt: string;
+    status: string;
+    rejectionReason: string | null;
+  };
+  handicapRecalculationRequested: boolean;
+}
+
 export const roundsApi = {
   create: (payload: CreateRoundPayload) =>
     api.post<CreateRoundResponse>('/rounds', payload),
@@ -126,4 +142,7 @@ export const roundsApi = {
     if (filters.to) params.set('to', filters.to);
     return api.get<RoundsListResponse>(`/rounds?${params.toString()}`);
   },
+  approve: (roundId: string) => api.post<RoundModerationResponse>(`/admin/rounds/${roundId}/approve`),
+  reject: (roundId: string, rejectionReason: string) =>
+    api.post<RoundModerationResponse>(`/admin/rounds/${roundId}/reject`, { rejectionReason }),
 };

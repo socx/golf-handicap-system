@@ -38,6 +38,7 @@ const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 const PlayerProfilePage = lazy(async () => import('./pages/PlayerProfilePage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 const AdminPlayersPage = lazy(async () => import('./pages/AdminPlayersPage'));
+const AdminRoundsPage = lazy(async () => import('./pages/AdminRoundsPage'));
 const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
@@ -81,6 +82,7 @@ function AppRoutes() {
           element={<SectionPlaceholderPage title="Admin" description="Administrative controls will expand here as multirole workflows are implemented." />}
         />
         <Route path="/admin/players" element={<AdminPlayersPage />} />
+        <Route path="/admin/rounds" element={<AdminRoundsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
