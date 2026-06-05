@@ -90,7 +90,6 @@ const AdminRoundsPage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedCourseId) {
-      setTeeConfigurations([]);
       return;
     }
 
