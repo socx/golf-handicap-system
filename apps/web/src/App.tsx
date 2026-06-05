@@ -43,6 +43,7 @@ const AdminHandicapOverridePage = lazy(async () => import('./pages/AdminHandicap
 const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
+const SettingsPage = lazy(async () => import('./pages/SettingsPage'));
 
 function AppRoutes() {
   return (
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="/admin/players" element={<AdminPlayersPage />} />
         <Route path="/admin/rounds" element={<AdminRoundsPage />} />
         <Route path="/admin/handicap-override/:playerId" element={<AdminHandicapOverridePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

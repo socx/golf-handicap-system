@@ -27,6 +27,7 @@ export interface InputProps {
   step?: string | number;
   min?: string | number;
   max?: string | number;
+  autoComplete?: string;
   'aria-describedby'?: string;
   'aria-label'?: string;
 }

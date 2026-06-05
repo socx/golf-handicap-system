@@ -339,14 +339,20 @@ So that users can update their profile and preferences.
 **Target Date:** **21 October 2026**
 
 ### Acceptance Criteria
-- [ ] Update email, password, notification preferences.  
-- [ ] Update theme preference.  
-- [ ] Validation + error handling.  
-- [ ] Save triggers appropriate APIs.
+- [x] Update email, password, notification preferences.  
+- [x] Update theme preference.  
+- [x] Validation + error handling.  
+- [x] Save triggers appropriate APIs.
 
 ### Dependencies
 - Auth APIs  
 - Notification preferences API
+
+### Implementation Notes
+- Added authenticated settings endpoints in `apps/api/src/routes/auth/settings.ts` and wired them in `apps/api/src/app.ts` for profile, password, and notification preference updates.
+- Extended `apps/web/src/api/auth.ts` with settings API helpers and added the routed settings page at `/settings` in `apps/web/src/App.tsx`.
+- Implemented `apps/web/src/pages/SettingsPage.tsx` with profile, password, notification preference, and theme controls backed by toast-based validation and success states.
+- Updated the shared input component to accept `autoComplete` and added focused frontend and API regression coverage in `apps/web/src/test/SettingsPage.test.tsx` and `apps/api/test/settings.e2e.test.mjs`.
 
 ---
 

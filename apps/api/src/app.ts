@@ -10,6 +10,12 @@ import { handleRefresh } from './routes/auth/refresh';
 import { handleLogout } from './routes/auth/logout';
 import { handlePasswordResetRequest, handlePasswordResetConfirm } from './routes/auth/passwordReset';
 import { handleMe } from './routes/auth/me';
+import {
+  handleGetNotificationPreferences,
+  handleUpdateNotificationPreferences,
+  handleUpdateProfile,
+  handleChangePassword,
+} from './routes/auth/settings';
 import { handleActivateAccount } from './routes/auth/activate';
 import { handleReportClientError } from './routes/clientErrors';
 import { handleListAuditLogs } from './routes/admin/auditLogs';
@@ -211,6 +217,26 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
 
     if (method === 'POST' && (pathname === '/auth/password-reset/confirm' || pathname === '/api/auth/password-reset/confirm')) {
       await handlePasswordResetConfirm(req, res, requestId);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/auth/preferences' || pathname === '/api/auth/preferences')) {
+      await handleGetNotificationPreferences(req, res);
+      return;
+    }
+
+    if (method === 'PATCH' && (pathname === '/auth/preferences' || pathname === '/api/auth/preferences')) {
+      await handleUpdateNotificationPreferences(req, res);
+      return;
+    }
+
+    if (method === 'PATCH' && (pathname === '/auth/profile' || pathname === '/api/auth/profile')) {
+      await handleUpdateProfile(req, res);
+      return;
+    }
+
+    if (method === 'PATCH' && (pathname === '/auth/password' || pathname === '/api/auth/password')) {
+      await handleChangePassword(req, res);
       return;
     }
 
