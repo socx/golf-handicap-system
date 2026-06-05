@@ -8,9 +8,14 @@ import { roundsApi } from '../api/rounds';
 import { playersApi } from '../api/players';
 import RoundEntryPage from '../pages/RoundEntryPage';
 
+type AuthStateUser = {
+  role: 'admin' | 'player' | 'viewer';
+  player_id: string | null;
+};
+
 // Mock auth hook
 const authState = vi.hoisted(() => ({
-  user: { role: 'admin', player_id: null },
+  user: { role: 'admin', player_id: null } as AuthStateUser,
 }));
 
 vi.mock('../hooks/useAuth', () => ({
