@@ -7,9 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../api/auth';
 import SettingsPage from '../pages/SettingsPage';
 
-const mockRefreshUser = vi.fn(async () => {});
-const mockShowErrorToast = vi.fn();
-const mockShowSuccessToast = vi.fn();
+const { mockRefreshUser, mockShowErrorToast, mockShowSuccessToast } = vi.hoisted(() => ({
+  mockRefreshUser: vi.fn(async () => {}),
+  mockShowErrorToast: vi.fn(),
+  mockShowSuccessToast: vi.fn(),
+}));
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
