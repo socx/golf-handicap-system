@@ -27,19 +27,19 @@ So that HTTP concerns, domain logic, and infrastructure code are easier to maint
 **Target Date:** **TBD**
 
 ### Acceptance Criteria
-- [ ] API bootstrapping uses Express as the HTTP framework.
-- [ ] Folder structure is organized along clear boundaries, similar to:
+- [x] API bootstrapping uses Express as the HTTP framework.
+- [x] Folder structure is organized along clear boundaries, similar to:
   - `src/config/`
   - `src/database/`
   - `src/middlewares/`
   - `src/modules/`
   - `src/app.ts`
   - `src/server.ts`
-- [ ] Environment validation is centralized.
-- [ ] PostgreSQL connection pool initialization is isolated from request handling.
-- [ ] Error handling is centralized in middleware.
+- [x] Environment validation is centralized.
+- [x] PostgreSQL connection pool initialization is isolated from request handling.
+- [x] Error handling is centralized in middleware.
 - [ ] Feature modules own their routes, controllers, services, repositories, and schemas.
-- [ ] Existing API routes continue to pass their current test coverage.
+- [x] Existing API routes continue to pass their current test coverage.
 
 ### Dependencies
 - Existing API route behavior
@@ -50,6 +50,8 @@ So that HTTP concerns, domain logic, and infrastructure code are easier to maint
 - This is a refactor story, not a feature story.
 - The desired outcome is a maintainable HTTP layer with clearer separation of concerns.
 - The new structure should preserve current API behavior while reducing coupling between routes and business logic.
+- Completed in issue #523 with Express app/server split, centralized env validation, isolated DB pool setup, and centralized error middleware.
+- Validation evidence: `npm run build --workspace apps/api`, `npm run lint --workspace apps/api`, `node --test apps/api/test/courses.e2e.test.mjs` (5/5 pass), `node --test apps/api/test/rounds-create.e2e.test.mjs` (24/24 pass).
 
 ---
 

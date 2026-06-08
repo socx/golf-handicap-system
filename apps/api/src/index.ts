@@ -1,1 +1,3 @@
-import './app';
+import { startServer } from './server';
+
+startServer();

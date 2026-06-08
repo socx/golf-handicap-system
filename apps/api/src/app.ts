@@ -1,9 +1,11 @@
 import http from 'node:http';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { env } from './config/env';
 import { redisState } from './lib/redis';
 import { sendJson, normalizeRequestId, logRequest, parseUrl } from './lib/http';
 import { getOrSetCache, invalidateCache, buildDashboardSummary, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';
 import { verifyAndAuthorize } from './middleware/auth';
+import { errorHandler } from './middlewares/error-handler';
 import { handleRegister } from './routes/auth/register';
 import { handleLogin } from './routes/auth/login';
 import { handleRefresh } from './routes/auth/refresh';
@@ -132,7 +134,7 @@ function parseHandicapEligibilityRoute(path: string): { playerId: string } | nul
   return { playerId: String(match[1] || '') };
 }
 
-const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+export async function dispatchRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const startedAt = Date.now();
   const requestId = normalizeRequestId(req.headers['x-request-id'] as string | undefined);
   res.setHeader('x-request-id', requestId);
@@ -144,7 +146,7 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
   const requestUrl = parseUrl(req);
   const pathname = requestUrl.pathname;
 
-  try {
+
     // ── Health ──────────────────────────────────────────────────────────
     if (pathname === '/health' || pathname === '/api/health') {
       sendJson(res, 200, {
@@ -477,12 +479,18 @@ const server = http.createServer(async (req: http.IncomingMessage, res: http.Ser
     }
 
     sendJson(res, 200, { message: 'ghs-api running', health: '/health', apiHealth: '/api/health' });
-  } catch (error) {
-    console.error('[app] unhandled request error:', error);
-    sendJson(res, 500, { error: 'internal_error', message: (error as Error).message });
-  }
-});
+}
 
-server.listen(env.port, () => {
-  console.log(`ghs-api listening on http://localhost:${env.port}`);
-});
+export function createApp(): Express {
+  const app = express();
+  app.disable('x-powered-by');
+
+  // Keep body parsing in existing route handlers to avoid behavioral changes.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    void dispatchRequest(req, res).catch(next);
+  });
+
+  app.use(errorHandler);
+
+  return app;
+}
