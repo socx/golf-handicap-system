@@ -375,3 +375,21 @@ test('courses flow 4: tee configuration delete is admin-only and removed from co
     await cleanupCourse(courseId, adminToken);
   }
 });
+
+test('courses flow 5: course creation is admin-only', async () => {
+  const playerToken = buildPlayerToken();
+  const suffix = Date.now();
+
+  const createResp = await requestJson('/api/courses', {
+    method: 'POST',
+    token: playerToken,
+    body: {
+      name: `E2E Flow5 ${suffix}`,
+      city: 'Restricted City',
+      country: 'GB',
+    },
+  });
+
+  assert.equal(createResp.status, 403, JSON.stringify(createResp.json));
+  assert.equal(createResp.json.error.code, 'forbidden');
+});

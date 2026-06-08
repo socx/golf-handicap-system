@@ -1,8 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { coursesApi } from '../api/courses';
 import CoursesPage from '../pages/CoursesPage';
+
+const authState = vi.hoisted(() => ({
+  role: 'admin' as 'admin' | 'player' | 'viewer',
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ role: authState.role }),
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const makeMockResponse = (courses: any[] = [], pagination = { page: 1, limit: 10, total: 0, pages: 1 }) => ({
@@ -11,6 +19,11 @@ const makeMockResponse = (courses: any[] = [], pagination = { page: 1, limit: 10
   statusText: 'OK',
   headers: {},
   config: {} as never,
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  authState.role = 'admin';
 });
 
 describe('CoursesPage', () => {
@@ -97,6 +110,23 @@ describe('CoursesPage', () => {
     fireEvent.change(filterInput, { target: { value: 'G' } });
     await waitFor(() => {
       expect(filterInput).toHaveFocus();
+    });
+  });
+
+  it('hides create course action for non-admin users', async () => {
+    authState.role = 'player';
+    vi.spyOn(coursesApi, 'list').mockResolvedValue(makeMockResponse() as never);
+
+    render(
+      <MemoryRouter initialEntries={['/courses']}>
+        <Routes>
+          <Route path="/courses" element={<CoursesPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Create Course' })).not.toBeInTheDocument();
     });
   });
 });

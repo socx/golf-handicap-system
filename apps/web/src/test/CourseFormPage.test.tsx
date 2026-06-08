@@ -4,8 +4,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { coursesApi } from '../api/courses';
 import CourseFormPage from '../pages/CourseFormPage';
 
+const authState = vi.hoisted(() => ({
+  role: 'admin' as 'admin' | 'player' | 'viewer',
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ role: authState.role }),
+}));
+
 afterEach(() => {
   vi.restoreAllMocks();
+  authState.role = 'admin';
 });
 
 const mockCourse = {
@@ -112,5 +121,20 @@ describe('CourseFormPage', () => {
     expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument();
     expect(screen.getByText('Enter a valid website URL.')).toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks non-admin users from accessing course create form', async () => {
+    authState.role = 'player';
+
+    render(
+      <MemoryRouter initialEntries={['/courses/new']}>
+        <Routes>
+          <Route path="/courses/new" element={<CourseFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Only administrators can create or edit courses.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create course/i })).not.toBeInTheDocument();
   });
 });

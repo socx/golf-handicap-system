@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
+import { useAuth } from '../hooks/useAuth';
 
 interface FieldError {
   field: keyof CourseUpsertPayload;
@@ -82,6 +83,8 @@ function buildPayload(values: CourseUpsertPayload): CourseUpsertPayload {
 export const CourseFormPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
 
   const isEditMode = !!courseId;
   const [course, setCourse] = useState<Course | null>(null);
@@ -92,6 +95,7 @@ export const CourseFormPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) return;
     if (!isEditMode || !courseId) return;
 
     let cancelled = false;
@@ -114,7 +118,7 @@ export const CourseFormPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [courseId, isEditMode]);
+  }, [courseId, isAdmin, isEditMode]);
 
   const loading = isEditMode && !course && !loadError;
   const heading = useMemo(() => (isEditMode ? 'Edit Course' : 'Create Course'), [isEditMode]);
@@ -139,6 +143,11 @@ export const CourseFormPage: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isAdmin) {
+      setServerError('Only administrators can create or edit courses.');
+      return;
+    }
 
     const errors = validateForm(values);
     if (errors.length > 0) {
@@ -170,6 +179,21 @@ export const CourseFormPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Course Management</h2>
+          <Button variant="secondary" onClick={() => navigate('/courses')}>Back to Courses</Button>
+        </div>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="text-sm text-amber-800 dark:text-amber-300">Only administrators can create or edit courses.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

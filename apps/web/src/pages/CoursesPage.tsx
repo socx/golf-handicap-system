@@ -6,9 +6,12 @@ import { Button } from '../components/ui/Button';
 import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
+import { useAuth } from '../hooks/useAuth';
 
 export const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(false);
@@ -80,9 +83,11 @@ export const CoursesPage: React.FC = () => {
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Courses</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Browse and manage golf courses.</p>
         </div>
-        <Button variant="primary" onClick={() => navigate('/courses/new')}>
-          Create Course
-        </Button>
+        {isAdmin ? (
+          <Button variant="primary" onClick={() => navigate('/courses/new')}>
+            Create Course
+          </Button>
+        ) : null}
       </div>
 
       {/* Search and filters */}

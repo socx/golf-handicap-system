@@ -379,6 +379,40 @@ So that I can make small adjustments without re-entering all hole data from scra
 
 ---
 
+## 14. RBAC: Course creation restricted to admins
+
+**As a system owner**
+I want course creation to be admin-only
+So that non-admin users cannot add courses through the UI or API.
+
+**Size:** S  
+**Estimate:** 1-2 days  
+**Priority:** High  
+**Target Date:** **27 August 2026**
+
+### Acceptance Criteria
+- [x] `POST /api/courses` rejects non-admin users with `403 forbidden`.
+- [x] Course list page hides create action for non-admin users.
+- [x] Direct navigation to `/courses/new` and `/courses/:id/edit` is blocked for non-admin users.
+- [x] Existing admin course create/edit functionality remains unchanged.
+- [x] Automated tests cover both UI and API restrictions.
+
+### Dependencies
+- Auth middleware RBAC (`verifyAndAuthorize`)
+- Course create frontend (`CourseFormPage`, `CoursesPage`)
+- API e2e course tests
+
+### Implementation Notes
+- Confirmed API `handleCreateCourse` already enforces `requiredRoles: ['admin']`.
+- Added explicit e2e coverage in `apps/api/test/courses.e2e.test.mjs` for non-admin `POST /api/courses` rejection.
+- Updated `apps/web/src/pages/CoursesPage.tsx` to only render `Create Course` button for admin users.
+- Updated `apps/web/src/pages/CourseFormPage.tsx` to block non-admin users with a clear access message and no submit path.
+- Added/updated frontend tests:
+	- `apps/web/src/test/CoursesPage.test.tsx` verifies create action is hidden for non-admin users.
+	- `apps/web/src/test/CourseFormPage.test.tsx` verifies non-admin users cannot access create form actions.
+
+---
+
 ## 14. Frontend: Delete tee configuration
 
 **As an admin**
