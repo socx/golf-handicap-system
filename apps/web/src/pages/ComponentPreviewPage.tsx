@@ -19,6 +19,8 @@ import {
   TableCell,
   Pagination,
 } from '../components/ui';
+import { Icon } from '../components/ui/Icon';
+import { X } from '../components/ui/icons';
 import { toast } from '../lib/toast';
 
 const mockTableData = [
@@ -276,6 +278,7 @@ export const ComponentPreviewPage: React.FC = () => {
             </ModalBody>
             <ModalFooter>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>
+                <Icon icon={X} size="sm" />
                 Cancel
               </Button>
               <Button variant="primary" onClick={() => setModalOpen(false)}>

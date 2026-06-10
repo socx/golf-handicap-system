@@ -63,7 +63,7 @@ describe('PlayersPage', () => {
       country: undefined,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'View Profile' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View profile' }));
     expect(await screen.findByText('Player detail route')).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe('PlayersPage', () => {
 
     await screen.findByText('Self User');
     expect(screen.getByText('Your account is scoped to your own player record.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit player' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'View My Profile' }));
     expect(await screen.findByText('Own profile route')).toBeInTheDocument();

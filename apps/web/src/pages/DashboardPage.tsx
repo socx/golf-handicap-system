@@ -1,6 +1,8 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { HandicapSummaryWidget } from '../components/HandicapSummaryWidget';
+import { Icon } from '../components/ui/Icon';
+import { LayoutDashboard } from '../components/ui/icons';
 
 const widgetBaseClass = 'rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/60';
 
@@ -11,7 +13,10 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h2>
+        <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <Icon icon={LayoutDashboard} size="lg" className="text-teal-600 dark:text-teal-400" />
+          Dashboard
+        </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           This shell is ready for incremental widget delivery across handicap, rounds, and player insights.
         </p>

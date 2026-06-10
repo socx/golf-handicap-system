@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { roundsApi, type RoundDetailResponse } from '../api/rounds';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { ArrowLeft } from '../components/ui/icons';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { SkeletonTable } from '../components/ui/Skeleton';
 
@@ -61,6 +63,7 @@ const RoundScorecardPage: React.FC = () => {
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Round ID is missing.</p>
           </div>
           <Button variant="secondary" onClick={() => navigate('/rounds')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Rounds
           </Button>
         </div>
@@ -100,6 +103,7 @@ const RoundScorecardPage: React.FC = () => {
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Review round details and per-hole performance.</p>
           </div>
           <Button variant="secondary" onClick={() => navigate('/rounds')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Rounds
           </Button>
         </div>
@@ -123,6 +127,7 @@ const RoundScorecardPage: React.FC = () => {
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Played at {teeConfiguration.courseName}</p>
         </div>
         <Button variant="secondary" onClick={() => navigate('/rounds')}>
+          <Icon icon={ArrowLeft} size="sm" />
           Back to Rounds
         </Button>
       </div>

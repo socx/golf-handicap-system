@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { playersApi, type Player, type PlayerDetail } from '../api/players';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { Pencil, ArrowLeft } from '../components/ui/icons';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { HandicapSummaryWidget } from '../components/HandicapSummaryWidget';
 
@@ -138,9 +140,11 @@ export const PlayerProfilePage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => navigate(`/players/${playerId}/edit`)}>
+            <Icon icon={Pencil} size="sm" />
             Edit Profile
           </Button>
           <Button variant="secondary" onClick={() => navigate('/players')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back
           </Button>
         </div>

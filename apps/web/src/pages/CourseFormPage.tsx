@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { coursesApi, type Course, type CourseUpsertPayload } from '../api/courses';
 import { handleApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { ArrowLeft, Save, Plus, X } from '../components/ui/icons';
 import { Input } from '../components/ui/Input';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
@@ -185,7 +187,10 @@ export const CourseFormPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Course Management</h2>
-          <Button variant="secondary" onClick={() => navigate('/courses')}>Back to Courses</Button>
+          <Button variant="secondary" onClick={() => navigate('/courses')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Courses
+          </Button>
         </div>
 
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -200,7 +205,10 @@ export const CourseFormPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{heading}</h2>
-          <Button variant="secondary" onClick={handleCancel}>Cancel</Button>
+          <Button variant="secondary" onClick={handleCancel}>
+            <Icon icon={X} size="sm" />
+            Cancel
+          </Button>
         </div>
         <SkeletonForm fields={7} />
       </div>
@@ -212,7 +220,10 @@ export const CourseFormPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Edit Course</h2>
-          <Button variant="secondary" onClick={() => navigate('/courses')}>Back to Courses</Button>
+          <Button variant="secondary" onClick={() => navigate('/courses')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Courses
+          </Button>
         </div>
 
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
@@ -233,6 +244,7 @@ export const CourseFormPage: React.FC = () => {
         </div>
 
         <Button variant="secondary" onClick={handleCancel}>
+          <Icon icon={X} size="sm" />
           Cancel
         </Button>
       </div>
@@ -341,9 +353,11 @@ export const CourseFormPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <Button type="submit" isLoading={saving}>
-            {isEditMode ? 'Save Changes' : 'Create Course'}
+            <Icon icon={isEditMode ? Save : Plus} size="sm" />
+            {isEditMode ? 'Save changes' : 'Create Course'}
           </Button>
           <Button type="button" variant="secondary" onClick={handleCancel} disabled={saving}>
+            <Icon icon={X} size="sm" />
             Cancel
           </Button>
         </div>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { adminSettingsApi, type AdminSystemSettings } from '../api/adminSettings';
 import { Button, Card, CardBody, CardHeader, Input } from '../components/ui';
+import { Icon } from '../components/ui/Icon';
+import { Save } from '../components/ui/icons';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
 const defaultSettings: AdminSystemSettings = {
@@ -170,6 +172,7 @@ const AdminSettingsPage: React.FC = () => {
                   {settings.updatedAt ? `Last updated: ${new Date(settings.updatedAt).toLocaleString()}` : 'Not updated yet'}
                 </p>
                 <Button type="submit" variant="primary" disabled={saving}>
+                  <Icon icon={Save} size="sm" />
                   {saving ? 'Saving…' : 'Save settings'}
                 </Button>
               </div>

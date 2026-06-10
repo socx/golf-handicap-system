@@ -17,6 +17,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '../components/ui';
+import { Icon } from '../components/ui/Icon';
+import { ArrowLeft, Save } from '../components/ui/icons';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
 function formatDate(value: string): string {
@@ -136,6 +138,7 @@ const AdminHandicapOverridePage: React.FC = () => {
           )}
         </div>
         <Button variant="secondary" onClick={() => navigate(`/players/${playerId}`)}>
+          <Icon icon={ArrowLeft} size="sm" />
           Back to Profile
         </Button>
       </div>
@@ -179,6 +182,7 @@ const AdminHandicapOverridePage: React.FC = () => {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={submitting}>
+              <Icon icon={Save} size="sm" />
               {submitting ? 'Applying…' : 'Apply override'}
             </Button>
           </div>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { TrendingUp, ArrowLeft } from '../components/ui/icons';
 import { HandicapHistoryChart } from '../components/HandicapHistoryChart';
 
 export const HandicapHistoryPage: React.FC = () => {
@@ -11,10 +13,12 @@ export const HandicapHistoryPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={TrendingUp} size="lg" className="text-teal-600 dark:text-teal-400" />
             Handicap History
           </h2>
           <Button variant="secondary" onClick={() => navigate(-1)}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back
           </Button>
         </div>
@@ -28,10 +32,12 @@ export const HandicapHistoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+        <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <Icon icon={TrendingUp} size="lg" className="text-teal-600 dark:text-teal-400" />
           Handicap History
         </h2>
         <Button variant="secondary" onClick={() => navigate(`/players/${playerId}`)}>
+          <Icon icon={ArrowLeft} size="sm" />
           Back to Profile
         </Button>
       </div>

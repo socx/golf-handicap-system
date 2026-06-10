@@ -71,3 +71,11 @@ export type { CourseSelectorProps } from './CourseSelector';
 // TeeConfigurationSelector
 export { TeeConfigurationSelector } from './TeeConfigurationSelector';
 export type { TeeConfigurationSelectorProps } from './TeeConfigurationSelector';
+
+// Icon
+export { Icon } from './Icon';
+export type { IconProps, IconSize } from './Icon';
+
+// Icons barrel (all app icons re-exported from lucide-react)
+export * as icons from './icons';
+export * from './icons';

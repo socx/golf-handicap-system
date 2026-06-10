@@ -157,8 +157,8 @@ describe('AdminRoundsPage', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Approve' }).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Approve round' }).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Approve round' })[0]);
 
     await waitFor(() => expect(approveSpy).toHaveBeenCalledWith('round-1'));
     expect(screen.getAllByText('approved').length).toBeGreaterThan(0);
@@ -191,8 +191,8 @@ describe('AdminRoundsPage', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Reject' }).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reject' })[0]);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Reject round' }).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reject round' })[0]);
 
     const input = screen.getByRole('textbox', { name: 'Rejection reason' });
     fireEvent.change(input, { target: { value: 'Missing marker signature' } });

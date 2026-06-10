@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { handleApiError } from '../api/client';
+import { Icon } from '../components/ui/Icon';
+import { ClipboardList, Plus } from '../components/ui/icons';
 import { coursesApi, type Course, type TeeConfiguration } from '../api/courses';
 import { roundsApi, type RoundListItem } from '../api/rounds';
 import {
+  Button,
   Card,
   CardBody,
   CardHeader,
@@ -33,6 +36,7 @@ function formatPlayerDisplayName(firstName: string, lastName: string, shortSurna
 }
 
 export const RoundsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isPlayer = user?.role === 'player';
   const [rounds, setRounds] = useState<RoundListItem[] | null>(null);
@@ -188,19 +192,20 @@ export const RoundsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Rounds</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={ClipboardList} size="lg" className="text-teal-600 dark:text-teal-400" />
+            Rounds
+          </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             {isPlayer
               ? 'Browse your own rounds, filter by date range, and open your scorecards.'
               : 'Browse historical rounds, filter by date range, and open scorecards from the list.'}
           </p>
         </div>
-        <Link
-          to="/rounds/new"
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:bg-teal-500 dark:hover:bg-teal-400"
-        >
-          + Enter round
-        </Link>
+        <Button type="button" variant="primary" onClick={() => navigate('/rounds/new')}>
+          <Icon icon={Plus} size="sm" />
+          Enter round
+        </Button>
       </div>
 
       <Card>

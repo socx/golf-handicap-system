@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
+import { Icon } from '../ui/Icon';
+import { Menu, X, Sun, Moon, LogOut } from '../ui/icons';
 import { getFilteredNavigationItems } from './navigationItems';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
-    'block rounded-xl px-3 py-2 text-sm font-medium transition',
+    'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition',
     isActive ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
   ].join(' ');
 
@@ -34,7 +36,7 @@ export const AppLayout: React.FC = () => {
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-label="Toggle navigation"
             >
-              <span className="text-lg">{mobileOpen ? 'x' : '='}</span>
+              {mobileOpen ? <Icon icon={X} size="md" /> : <Icon icon={Menu} size="md" />}
             </button>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Golf Handicap System</p>
@@ -49,7 +51,7 @@ export const AppLayout: React.FC = () => {
               onClick={toggleTheme}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >
-              <span className="text-base">{isDark ? '☀' : '☾'}</span>
+              {isDark ? <Icon icon={Sun} size="md" /> : <Icon icon={Moon} size="md" />}
               <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
             </button>
             <div className="hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right transition-colors dark:border-slate-700 dark:bg-slate-900 sm:block">
@@ -58,9 +60,10 @@ export const AppLayout: React.FC = () => {
             </div>
             <button
               type="button"
-              className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
               onClick={() => void handleLogout()}
             >
+              <Icon icon={LogOut} size="sm" />
               Sign out
             </button>
           </div>
@@ -78,6 +81,7 @@ export const AppLayout: React.FC = () => {
           <nav className="mt-3 space-y-1">
             {navigationItems.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                <Icon icon={item.icon} size="sm" />
                 {item.label}
               </NavLink>
             ))}

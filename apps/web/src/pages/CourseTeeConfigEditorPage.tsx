@@ -6,9 +6,11 @@ import {
   type TeeConfigurationUpdatePayload,
 } from '../api/courses';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
 import { Input } from '../components/ui/Input';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
+import { Flag, ArrowLeft, Save, Plus } from '../components/ui/icons';
 
 interface HoleFormRow {
   id?: string;
@@ -323,8 +325,12 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            {title}
+          </h2>
           <Button variant="secondary" onClick={() => navigate('/courses')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Courses
           </Button>
         </div>
@@ -339,8 +345,12 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            {title}
+          </h2>
           <Button variant="secondary" onClick={() => navigate(`/courses/${courseId}`)}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Course
           </Button>
         </div>
@@ -353,10 +363,14 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            {title}
+          </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Configure tee metadata and hole setup.</p>
         </div>
         <Button variant="secondary" onClick={() => navigate(`/courses/${courseId}`)}>
+          <Icon icon={ArrowLeft} size="sm" />
           Back to Course
         </Button>
       </div>
@@ -518,9 +532,11 @@ export const CourseTeeConfigEditorPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Configuration'}
+            <Icon icon={isEditMode ? Save : Plus} size="sm" />
+            {saving ? 'Saving...' : isEditMode ? 'Save changes' : 'Create Configuration'}
           </Button>
           <Button type="button" variant="secondary" onClick={() => navigate(`/courses/${courseId}`)}>
+            <Icon icon={ArrowLeft} size="sm" />
             Cancel
           </Button>
         </div>

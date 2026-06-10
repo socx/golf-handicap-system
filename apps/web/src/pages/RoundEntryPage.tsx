@@ -5,6 +5,8 @@ import { handleApiError } from '../api/client';
 import { type HoleScoreInput, roundsApi } from '../api/rounds';
 import { playersApi } from '../api/players';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { ArrowLeft, Save } from '../components/ui/icons';
 import { Input } from '../components/ui/Input';
 import { CourseSelector } from '../components/ui/CourseSelector';
 import { PlayerSelector } from '../components/ui/PlayerSelector';
@@ -325,9 +327,11 @@ const RoundEntryPage: React.FC = () => {
             onClick={() => navigate('/rounds')}
             disabled={saving}
           >
+            <Icon icon={ArrowLeft} size="sm" />
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={saving}>
+            <Icon icon={Save} size="sm" />
             {saving ? 'Saving…' : 'Save round'}
           </Button>
         </div>

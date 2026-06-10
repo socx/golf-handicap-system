@@ -4,6 +4,8 @@ import { playersApi, type Player } from '../api/players';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { Users, Eye, Pencil } from '../components/ui/icons';
 import { Table, TableBody, TableHead, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
@@ -105,7 +107,10 @@ export const PlayersPage: React.FC = () => {
   return (
     <div className="space-y-6" data-testid="players-page">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Players</h2>
+        <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <Icon icon={Users} size="lg" className="text-teal-600 dark:text-teal-400" />
+          Players
+        </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {isPlayer ? 'View your player profile and performance details.' : 'Browse player profiles with quick search and filters.'}
         </p>
@@ -115,7 +120,10 @@ export const PlayersPage: React.FC = () => {
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
           <p className="text-sm text-slate-700 dark:text-slate-300">Your account is scoped to your own player record.</p>
           <div className="mt-3">
-            <Button onClick={handleOpenOwnProfile} disabled={!ownPlayerId}>View My Profile</Button>
+            <Button onClick={handleOpenOwnProfile} disabled={!ownPlayerId}>
+              <Icon icon={Eye} size="sm" />
+              View My Profile
+            </Button>
           </div>
         </div>
       ) : null}
@@ -165,12 +173,26 @@ export const PlayersPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => handleOpenProfile(player.id)} disabled={loading}>
-                        View Profile
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleOpenProfile(player.id)}
+                        disabled={loading}
+                        title="View profile"
+                        aria-label="View profile"
+                      >
+                        <Icon icon={Eye} size="sm" />
                       </Button>
                       {!isPlayer ? (
-                        <Button size="sm" variant="secondary" onClick={() => navigate(`/players/${player.id}/edit`)} disabled={loading}>
-                          Edit
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => navigate(`/players/${player.id}/edit`)}
+                          disabled={loading}
+                          title="Edit player"
+                          aria-label="Edit player"
+                        >
+                          <Icon icon={Pencil} size="sm" />
                         </Button>
                       ) : null}
                     </div>

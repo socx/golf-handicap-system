@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { authApi, type NotificationPreferences } from '../api/auth';
 import { Button, Card, CardBody, CardHeader, Input } from '../components/ui';
+import { Icon } from '../components/ui/Icon';
+import { Save, Sun, Moon } from '../components/ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
@@ -135,6 +137,7 @@ const SettingsPage: React.FC = () => {
               autoComplete="email"
             />
             <Button type="submit" variant="primary" disabled={profileSaving}>
+              <Icon icon={Save} size="sm" />
               {profileSaving ? 'Saving…' : 'Save profile'}
             </Button>
           </form>
@@ -173,6 +176,7 @@ const SettingsPage: React.FC = () => {
               autoComplete="new-password"
             />
             <Button type="submit" variant="primary" disabled={passwordSaving}>
+              <Icon icon={Save} size="sm" />
               {passwordSaving ? 'Saving…' : 'Change password'}
             </Button>
           </form>
@@ -209,6 +213,7 @@ const SettingsPage: React.FC = () => {
                 </label>
               ))}
               <Button type="submit" variant="primary" disabled={prefsSaving}>
+                <Icon icon={Save} size="sm" />
                 {prefsSaving ? 'Saving…' : 'Save preferences'}
               </Button>
             </form>
@@ -227,6 +232,7 @@ const SettingsPage: React.FC = () => {
               Current theme: <strong>{isDark ? 'Dark' : 'Light'}</strong>
             </span>
             <Button type="button" variant="secondary" onClick={handleThemeToggle} aria-label="Toggle theme">
+              {isDark ? <Icon icon={Sun} size="sm" /> : <Icon icon={Moon} size="sm" />}
               Switch to {isDark ? 'light' : 'dark'} mode
             </Button>
           </div>

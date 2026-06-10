@@ -61,7 +61,7 @@ describe('CoursesPage', () => {
     await screen.findByText('Harbour Links');
     expect(listSpy).toHaveBeenCalledWith(1, 10, undefined, undefined);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View course' }));
     expect(await screen.findByText('Course detail route')).toBeInTheDocument();
   });
 

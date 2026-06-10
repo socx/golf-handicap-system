@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { playersApi, type Player } from '../api/players';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
+import { Users, Pencil, Link2, Trash2 } from '../components/ui/icons';
 
 const PAGE_SIZE = 20;
 
@@ -131,7 +133,10 @@ export const AdminPlayersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Admin: Players</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <Icon icon={Users} size="lg" className="text-teal-600 dark:text-teal-400" />
+          Admin: Players
+        </h1>
         <p className="text-sm text-gray-500 mt-1">Manage all players — edit details, delete records, or link to user accounts.</p>
       </div>
 
@@ -201,22 +206,28 @@ export const AdminPlayersPage: React.FC = () => {
                           size="sm"
                           variant="secondary"
                           onClick={() => navigate(`/players/${player.id}/edit`)}
+                          title="Edit player"
+                          aria-label="Edit player"
                         >
-                          Edit
+                          <Icon icon={Pencil} size="sm" />
                         </Button>
                         <Button
                           size="sm"
                           variant="secondary"
                           onClick={() => openLinkModal(player)}
+                          title={player.user_id ? 'Unlink user' : 'Link user'}
+                          aria-label={player.user_id ? 'Unlink user' : 'Link user'}
                         >
-                          {player.user_id ? 'Unlink' : 'Link'} User
+                          <Icon icon={Link2} size="sm" />
                         </Button>
                         <Button
                           size="sm"
                           variant="danger"
                           onClick={() => setDeleteTarget(player)}
+                          title="Delete player"
+                          aria-label="Delete player"
                         >
-                          Delete
+                          <Icon icon={Trash2} size="sm" />
                         </Button>
                       </div>
                     </TableCell>

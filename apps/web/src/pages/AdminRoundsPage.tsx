@@ -20,6 +20,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '../components/ui';
+import { Icon } from '../components/ui/Icon';
+import { ClipboardList, CheckCircle, XCircle } from '../components/ui/icons';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
 const PAGE_SIZE = 10;
@@ -221,7 +223,10 @@ const AdminRoundsPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Admin</p>
-        <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">Round management</h2>
+        <h2 className="mt-2 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <Icon icon={ClipboardList} size="lg" className="text-teal-600 dark:text-teal-400" />
+          Round management
+        </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Review round submissions, open scorecards, and moderate approvals from one queue.
         </p>
@@ -335,8 +340,8 @@ const AdminRoundsPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
-                    <Button size="sm" onClick={() => void handleApprove(round.id)} disabled={pendingActionId === round.id || (round.status ?? 'pending') === 'approved'}>
-                      Approve
+                    <Button size="sm" onClick={() => void handleApprove(round.id)} disabled={pendingActionId === round.id || (round.status ?? 'pending') === 'approved'} title="Approve round" aria-label="Approve round">
+                      <Icon icon={CheckCircle} size="sm" />
                     </Button>
                     <Button
                       size="sm"
@@ -346,8 +351,10 @@ const AdminRoundsPage: React.FC = () => {
                         setRejectionReason(round.rejectionReason ?? '');
                       }}
                       disabled={pendingActionId === round.id}
+                      title="Reject round"
+                      aria-label="Reject round"
                     >
-                      Reject
+                      <Icon icon={XCircle} size="sm" />
                     </Button>
                   </div>
                 </article>
@@ -394,8 +401,8 @@ const AdminRoundsPage: React.FC = () => {
                       <TableCell>{round.rejectionReason ?? '—'}</TableCell>
                       <TableCell>
                         <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
-                          <Button size="sm" onClick={() => void handleApprove(round.id)} disabled={pendingActionId === round.id || (round.status ?? 'pending') === 'approved'}>
-                            Approve
+                          <Button size="sm" onClick={() => void handleApprove(round.id)} disabled={pendingActionId === round.id || (round.status ?? 'pending') === 'approved'} title="Approve round" aria-label="Approve round">
+                            <Icon icon={CheckCircle} size="sm" />
                           </Button>
                           <Button
                             size="sm"
@@ -405,8 +412,10 @@ const AdminRoundsPage: React.FC = () => {
                               setRejectionReason(round.rejectionReason ?? '');
                             }}
                             disabled={pendingActionId === round.id}
+                            title="Reject round"
+                            aria-label="Reject round"
                           >
-                            Reject
+                            <Icon icon={XCircle} size="sm" />
                           </Button>
                         </div>
                       </TableCell>

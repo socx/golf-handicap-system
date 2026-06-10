@@ -5,6 +5,8 @@ import { handleApiError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { Flag, ArrowLeft, Pencil, Plus, Trash2, Copy } from '../components/ui/icons';
 import { SkeletonCard, SkeletonForm, SkeletonList, SkeletonTable } from '../components/ui/Skeleton';
 
 export const CourseDetailPage: React.FC = () => {
@@ -73,8 +75,12 @@ export const CourseDetailPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Course Details</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            Course Details
+          </h2>
           <Button variant="secondary" onClick={() => navigate('/courses')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Courses
           </Button>
         </div>
@@ -113,8 +119,12 @@ export const CourseDetailPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Course Details</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            Course Details
+          </h2>
           <Button variant="secondary" onClick={() => navigate('/courses')}>
+            <Icon icon={ArrowLeft} size="sm" />
             Back to Courses
           </Button>
         </div>
@@ -139,20 +149,38 @@ export const CourseDetailPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{course.name}</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            {course.name}
+          </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {course.city}, {course.country}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => navigate(`/courses/${course.id}/edit`)}>
-            Edit Course
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/courses/${course.id}/edit`)}
+            title="Edit course"
+            aria-label="Edit course"
+          >
+            <Icon icon={Pencil} size="sm" />
           </Button>
-          <Button variant="secondary" onClick={() => navigate(`/courses/${course.id}/configurations/new`)}>
-            Add Tee Configuration
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/courses/${course.id}/configurations/new`)}
+            title="Add tee configuration"
+            aria-label="Add tee configuration"
+          >
+            <Icon icon={Plus} size="sm" />
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/courses')}>
-            Back to Courses
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/courses')}
+            title="Back to courses"
+            aria-label="Back to courses"
+          >
+            <Icon icon={ArrowLeft} size="sm" />
           </Button>
         </div>
       </div>
@@ -329,15 +357,19 @@ export const CourseDetailPage: React.FC = () => {
                         size="sm"
                         variant="secondary"
                         onClick={() => navigate(`/courses/${course.id}/configurations/${teeConfig.id}/edit`)}
+                        title="Edit configuration"
+                        aria-label="Edit configuration"
                       >
-                        Edit Configuration
+                        <Icon icon={Pencil} size="sm" />
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => navigate(`/courses/${course.id}/configurations/new?cloneFrom=${teeConfig.id}`)}
+                        title="Duplicate configuration"
+                        aria-label="Duplicate configuration"
                       >
-                        Duplicate
+                        <Icon icon={Copy} size="sm" />
                       </Button>
                       {isAdmin ? (
                         <Button
@@ -345,8 +377,10 @@ export const CourseDetailPage: React.FC = () => {
                           variant="danger"
                           isLoading={deletingConfigId === teeConfig.id}
                           onClick={() => void handleDeleteConfiguration(teeConfig.id, teeConfig.name)}
+                          title="Delete configuration"
+                          aria-label="Delete configuration"
                         >
-                          Delete Configuration
+                          <Icon icon={Trash2} size="sm" />
                         </Button>
                       ) : null}
                     </div>

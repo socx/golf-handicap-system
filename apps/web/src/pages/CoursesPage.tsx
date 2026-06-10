@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { coursesApi, type Course } from '../api/courses';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { Flag, Plus, Eye } from '../components/ui/icons';
 import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
@@ -80,11 +82,15 @@ export const CoursesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Courses</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <Icon icon={Flag} size="lg" className="text-teal-600 dark:text-teal-400" />
+            Courses
+          </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Browse and manage golf courses.</p>
         </div>
         {isAdmin ? (
           <Button variant="primary" onClick={() => navigate('/courses/new')}>
+            <Icon icon={Plus} size="sm" />
             Create Course
           </Button>
         ) : null}
@@ -142,8 +148,10 @@ export const CoursesPage: React.FC = () => {
                       variant="secondary"
                       onClick={() => handleCourseClick(course.id)}
                       disabled={loading}
+                      title="View course"
+                      aria-label="View course"
                     >
-                      View
+                      <Icon icon={Eye} size="sm" />
                     </Button>
                   </TableCell>
                 </TableRow>

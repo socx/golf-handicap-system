@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { playersApi, type Player, type PlayerUpdatePayload } from '../api/players';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import { ArrowLeft, Save, X } from '../components/ui/icons';
 import { Input } from '../components/ui/Input';
 import { SkeletonForm } from '../components/ui/Skeleton';
 import { showSuccessToast, showErrorToast } from '../lib/toast';
@@ -133,7 +135,10 @@ export const PlayerEditPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900">Edit Player</h2>
-          <Button variant="secondary" onClick={() => navigate('/players')}>Back to Players</Button>
+          <Button variant="secondary" onClick={() => navigate('/players')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Players
+          </Button>
         </div>
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">Player ID is missing.</p>
@@ -149,7 +154,10 @@ export const PlayerEditPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900">Edit Player</h2>
-          <Button variant="secondary" onClick={() => navigate('/players')}>Back to Players</Button>
+          <Button variant="secondary" onClick={() => navigate('/players')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Players
+          </Button>
         </div>
         <SkeletonForm fields={8} />
       </div>
@@ -161,7 +169,10 @@ export const PlayerEditPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-slate-900">Edit Player</h2>
-          <Button variant="secondary" onClick={() => navigate('/players')}>Back to Players</Button>
+          <Button variant="secondary" onClick={() => navigate('/players')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Players
+          </Button>
         </div>
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{loadError ?? 'Player not found.'}</p>
@@ -180,6 +191,7 @@ export const PlayerEditPage: React.FC = () => {
           </p>
         </div>
         <Button variant="secondary" onClick={() => navigate('/players')}>
+          <Icon icon={ArrowLeft} size="sm" />
           Back to Players
         </Button>
       </div>
@@ -333,9 +345,11 @@ export const PlayerEditPage: React.FC = () => {
 
         <div className="flex gap-3">
           <Button type="submit" disabled={saving}>
+            <Icon icon={Save} size="sm" />
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
           <Button type="button" variant="secondary" onClick={() => navigate('/players')}>
+            <Icon icon={X} size="sm" />
             Cancel
           </Button>
         </div>
