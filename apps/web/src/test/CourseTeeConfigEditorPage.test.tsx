@@ -110,7 +110,7 @@ describe('CourseTeeConfigEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Competition Updated' } });
     fireEvent.change(screen.getByLabelText('Hole 1 par'), { target: { value: '5' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
       expect(updateMetadataSpy).toHaveBeenCalledWith(
