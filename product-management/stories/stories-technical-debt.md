@@ -67,17 +67,17 @@ So that navigation, page headers, and common actions are easier to scan and feel
 **Target Date:** **TBD**
 
 ### Acceptance Criteria
-- [ ] Navigation items include relevant icons.
-- [ ] Page headers include relevant icons where appropriate.
-- [ ] Action buttons use appropriate icons for common actions such as:
+- [x] Navigation items include relevant icons.
+- [x] Page headers include relevant icons where appropriate.
+- [x] Action buttons use appropriate icons for common actions such as:
   - create
   - update
   - delete
   - go back
   - export to CSV
   - export to PDF
-- [ ] Any other appropriate icon use is applied consistently.
-- [ ] Icon usage does not reduce accessibility or clarity.
+- [x] Any other appropriate icon use is applied consistently.
+- [x] Icon usage does not reduce accessibility or clarity.
 
 ### Dependencies
 - Frontend component library / icon set
@@ -86,6 +86,9 @@ So that navigation, page headers, and common actions are easier to scan and feel
 ### Implementation Notes
 - Icons should reinforce meaning, not add noise.
 - The selected icon set should remain consistent across the app.
+- The shared icon library was updated first so new and existing frontend screens can use the same reference point.
+- Icon-only actions use `title` and `aria-label` so tooltips and accessibility stay intact.
+- Validation evidence: `npm run test --workspace @ghs/web -- src/test/AppLayout.test.tsx src/test/CoursesPage.test.tsx src/test/PlayersPage.test.tsx src/test/AdminRoundsPage.test.tsx src/test/CourseDetailPage.test.tsx src/test/CourseTeeConfigEditorPage.test.tsx`.
 
 ---
 

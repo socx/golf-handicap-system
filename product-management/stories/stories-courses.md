@@ -413,7 +413,7 @@ So that non-admin users cannot add courses through the UI or API.
 
 ---
 
-## 14. Frontend: Delete tee configuration
+## 15. Frontend: Delete tee configuration
 
 **As an admin**
 I want to delete a tee configuration from the frontend
