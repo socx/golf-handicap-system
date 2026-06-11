@@ -80,7 +80,13 @@ export const AppLayout: React.FC = () => {
           <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Navigation</p>
           <nav className="mt-3 space-y-1">
             {navigationItems.map((item) => (
-              <NavLink key={item.to} to={item.to} className={navLinkClass} onClick={() => setMobileOpen(false)}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/admin'}
+                className={navLinkClass}
+                onClick={() => setMobileOpen(false)}
+              >
                 <Icon icon={item.icon} size="sm" />
                 {item.label}
               </NavLink>

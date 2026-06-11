@@ -35,6 +35,24 @@ function validateRegistrationInput(
   return { errors, value: { email, password, role } };
 }
 
+function toNamePart(value: string, fallback: string): string {
+  const cleaned = value.trim();
+  if (!cleaned) return fallback;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+}
+
+function derivePlayerNameFromEmail(email: string): { firstName: string; lastName: string } {
+  const localPart = email.split('@')[0] || '';
+  const chunks = localPart
+    .replace(/[^a-zA-Z0-9._-]/g, '')
+    .split(/[._-]+/)
+    .filter(Boolean);
+
+  const firstName = toNamePart(chunks[0] || '', 'New');
+  const lastName = toNamePart(chunks[1] || '', 'Player');
+  return { firstName, lastName };
+}
+
 async function registerUser(payload: { email: string; password: string; role: string }): Promise<User> {
   const passwordHash = await bcrypt.hash(payload.password, 12);
   const result = await dbPool.query(
@@ -101,11 +119,44 @@ export async function handleRegister(
 
   try {
     const role = isAdminRegistration ? validation.value.role : 'player';
-    const user = await registerUser({
-      email: validation.value.email,
-      password: validation.value.password,
-      role,
-    });
+    let user: User;
+
+    if (!isAdminRegistration && role === 'player') {
+      const client = await dbPool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const passwordHash = await bcrypt.hash(validation.value.password, 12);
+        const userResult = await client.query(
+          `INSERT INTO users (email, password_hash, role, is_active)
+           VALUES ($1, $2, $3, FALSE)
+           RETURNING id, email::text AS email, role, is_active, created_at, updated_at`,
+          [validation.value.email, passwordHash, role],
+        );
+
+        user = userResult.rows[0] as User;
+
+        const playerName = derivePlayerNameFromEmail(validation.value.email);
+        await client.query(
+          `INSERT INTO players (first_name, last_name, email, country, user_id)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [playerName.firstName, playerName.lastName, validation.value.email, 'GB', user.id],
+        );
+
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      user = await registerUser({
+        email: validation.value.email,
+        password: validation.value.password,
+        role,
+      });
+    }
 
     const activationToken = await createActivationToken(user.id);
     await sendActivationEmail(user.email, activationToken);

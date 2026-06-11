@@ -25,7 +25,6 @@ const ActivateAccountPage = lazy(async () => {
 
 const DashboardPage = lazy(async () => import('./pages/DashboardPage'));
 const RoundsPage = lazy(async () => import('./pages/RoundsPage'));
-const SectionPlaceholderPage = lazy(async () => import('./pages/SectionPlaceholderPage'));
 const ComponentPreviewPage = lazy(async () =>
   import('./pages/ComponentPreviewPage').then((m) => ({ default: m.ComponentPreviewPage }))
 );
@@ -41,6 +40,8 @@ const AdminPlayersPage = lazy(async () => import('./pages/AdminPlayersPage'));
 const AdminRoundsPage = lazy(async () => import('./pages/AdminRoundsPage'));
 const AdminHandicapOverridePage = lazy(async () => import('./pages/AdminHandicapOverridePage'));
 const AdminSettingsPage = lazy(async () => import('./pages/AdminSettingsPage'));
+const AdminHomePage = lazy(async () => import('./pages/AdminHomePage'));
+const HandicapPage = lazy(async () => import('./pages/HandicapPage'));
 const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
@@ -77,13 +78,10 @@ function AppRoutes() {
         <Route path="/rounds/:roundId" element={<RoundScorecardPage />} />
         <Route
           path="/handicap"
-          element={<SectionPlaceholderPage title="Handicap" description="Handicap calculations, history, and trend breakdowns are planned in upcoming stories." />}
+          element={<HandicapPage />}
         />
         <Route path="/handicap/history/:playerId" element={<HandicapHistoryPage />} />
-        <Route
-          path="/admin"
-          element={<SectionPlaceholderPage title="Admin" description="Administrative controls will expand here as multirole workflows are implemented." />}
-        />
+        <Route path="/admin" element={<AdminHomePage />} />
         <Route path="/admin/players" element={<AdminPlayersPage />} />
         <Route path="/admin/rounds" element={<AdminRoundsPage />} />
         <Route path="/admin/handicap-override/:playerId" element={<AdminHandicapOverridePage />} />

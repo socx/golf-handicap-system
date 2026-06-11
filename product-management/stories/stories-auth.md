@@ -351,4 +351,29 @@ So that the frontend can determine the user’s identity and role.
 
 ---
 
+## 12. Self-registration creates linked player profile
+
+**As a self-registering player**  
+I want signup to create both my user account and a linked player profile  
+So that I can immediately access player-scoped pages after activation without manual admin linking.
+
+**Size:** S  
+**Estimate:** 1–2 days  
+**Priority:** High  
+**Target Date:** **19 June 2026**
+
+### Acceptance Criteria
+- [ ] When self-registration is enabled on backend and frontend, `POST /auth/register` creates a `users` row and a linked `players` row for player registrations.
+- [ ] New player profile is linked via `players.user_id = users.id`.
+- [ ] Auto-created player profile uses safe default values and remains editable by admins/users later.
+- [ ] Existing admin registration path remains unchanged.
+- [ ] Duplicate-email and linkage errors return clear responses and do not leave partial inconsistent state.
+
+### Dependencies
+- User registration API
+- Players table
+- Player linking constraints
+
+---
+
 # End of stories-auth.md

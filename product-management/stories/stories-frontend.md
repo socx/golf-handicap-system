@@ -411,4 +411,50 @@ So that I am not distracted by admin controls that are unavailable to me.
 
 ---
 
+## 17. Frontend: Player handicap landing page
+
+**As a player**  
+I want the Handicap navigation item to open meaningful handicap content  
+So that I can view my handicap summary and history without dead-end placeholders.
+
+**Size:** XS  
+**Estimate:** 0.5–1 day  
+**Priority:** High  
+**Target Date:** **28 October 2026**
+
+### Acceptance Criteria
+- [ ] `/handicap` no longer renders a placeholder for player users.
+- [ ] Player users are routed to their own handicap history/summary experience.
+- [ ] If a player account is not linked, a clear guidance message is displayed.
+- [ ] Admin/viewer experience remains role-appropriate.
+
+### Dependencies
+- Auth session data (`user.player_id`)
+- Handicap history page/components
+
+---
+
+## 18. Frontend: Exact active-state for overlapping admin routes
+
+**As an admin**  
+I want only the current admin navigation item highlighted  
+So that route context is clear when navigating between `Admin` and `Admin Settings`.
+
+**Size:** XS  
+**Estimate:** 0.5 day  
+**Priority:** Medium  
+**Target Date:** **28 October 2026**
+
+### Acceptance Criteria
+- [ ] Visiting `/admin/settings` highlights `Admin Settings` only.
+- [ ] `Admin` remains highlighted only on `/admin`.
+- [ ] Existing navigation filtering behavior is unchanged.
+- [ ] Automated tests cover active-state behavior for overlapping route prefixes.
+
+### Dependencies
+- Global layout navigation
+- Route configuration
+
+---
+
 # End of stories-frontend.md

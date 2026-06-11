@@ -4,6 +4,7 @@ import { getClientIp, readJsonBody, sendError, sendJson } from '../lib/http';
 import { logApplicationEvent } from '../lib/audit';
 import { verifyAndAuthorize } from '../middleware/auth';
 import { getOrCreateDailyPcc, getPlayedOnDate } from '../services/pcc';
+import { recalculateHandicapForPlayer } from './handicap';
 
 type RoundStatus = 'pending' | 'approved' | 'rejected';
 
@@ -669,6 +670,54 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         updatedAt: String(row.updated_at),
       }));
 
+    let handicapRecalculation:
+      | {
+          attempted: true;
+          status: 'eligible' | 'insufficient_holes' | 'insufficient_rounds';
+          handicapIndex?: number;
+          recordId?: string;
+        }
+      | {
+          attempted: false;
+          status: 'failed';
+          reason: string;
+        };
+
+    try {
+      const recalculationResult = await recalculateHandicapForPlayer(value.player_id, { sendNotifications: true });
+      if (recalculationResult.status === 'eligible') {
+        handicapRecalculation = {
+          attempted: true,
+          status: 'eligible',
+          handicapIndex: recalculationResult.payload.handicapIndex,
+          recordId: recalculationResult.payload.recordId,
+        };
+      } else if (recalculationResult.status === 'insufficient_holes') {
+        handicapRecalculation = {
+          attempted: true,
+          status: 'insufficient_holes',
+        };
+      } else if (recalculationResult.status === 'insufficient_rounds') {
+        handicapRecalculation = {
+          attempted: true,
+          status: 'insufficient_rounds',
+        };
+      } else {
+        handicapRecalculation = {
+          attempted: false,
+          status: 'failed',
+          reason: 'player_not_found',
+        };
+      }
+    } catch (error) {
+      console.error('[rounds.create] handicap auto-recalculation failed:', error);
+      handicapRecalculation = {
+        attempted: false,
+        status: 'failed',
+        reason: 'recalculation_error',
+      };
+    }
+
     sendJson(res, 201, {
       round: {
         id: round.id,
@@ -696,6 +745,7 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
         updatedAt: round.updated_at,
       },
       holeScores,
+      handicapRecalculation,
     });
   } catch (error) {
     await client.query('ROLLBACK');

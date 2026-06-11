@@ -357,4 +357,30 @@ So that admins can temporarily disable user access.
 
 ---
 
+## 12. Admin: Provision linked player account (user + player)
+
+**As an admin**  
+I want to create a user account, create a player profile, and link them in one guided flow  
+So that onboarding a new player is fast and consistent.
+
+**Size:** M  
+**Estimate:** 3–5 days  
+**Priority:** High  
+**Target Date:** **29 December 2026**
+
+### Acceptance Criteria
+- [ ] Admin players UI provides a create flow that can create user + player in one submission.
+- [ ] Flow supports player-only onboarding and links `players.user_id` to created user.
+- [ ] API-level validation surfaces clear errors for duplicate email, duplicate user linkage, and invalid country.
+- [ ] On success, list refreshes and shows the linked user id.
+- [ ] Optional path supports creating player-only records without linked user.
+
+### Dependencies
+- **[User registration API](ca://s?q=Explain_user_registration_API)**
+- **[Create player API](ca://s?q=Explain_create_player_API)**
+- **[Player linking API](ca://s?q=Explain_player_linking_API)**
+- **[Admin player management UI](ca://s?q=Explain_admin_player_management_UI)**
+
+---
+
 # End of stories-admin.md

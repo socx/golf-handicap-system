@@ -390,4 +390,29 @@ So that all players’ handicaps can be updated after rule changes or data impor
 
 ---
 
+## 13. Auto-recalculate handicap after round submission
+
+**As a player**  
+I want handicap recalculation to run automatically after submitting rounds when enough data exists  
+So that my handicap widgets and history stay up to date without manual recalculation requests.
+
+**Size:** S  
+**Estimate:** 1–2 days  
+**Priority:** High  
+**Target Date:** **12 November 2026**
+
+### Acceptance Criteria
+- [ ] Round submission flow triggers handicap recalculation attempt automatically.
+- [ ] If eligibility is not met, submission still succeeds and response indicates recalculation was skipped.
+- [ ] If eligible, new handicap record is stored and player handicap index is updated.
+- [ ] Recalculation result is included in round submission response metadata.
+- [ ] Errors in recalculation do not roll back successful round creation.
+
+### Dependencies
+- Round entry API
+- Handicap calculation service
+- Handicap history table
+
+---
+
 # End of stories-handicap.md

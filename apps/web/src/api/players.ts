@@ -40,6 +40,19 @@ export interface PlayerUpdatePayload {
   handicap_index?: number | null;
 }
 
+export interface PlayerCreatePayload {
+  first_name: string;
+  last_name: string;
+  middle_name?: string | null;
+  dob?: string | null;
+  gender?: string | null;
+  club?: string | null;
+  email?: string | null;
+  country: string;
+  handicap_index?: number | null;
+  user_id?: string | null;
+}
+
 export interface PlayersListResponse {
   players: Player[];
   pagination: {
@@ -113,6 +126,10 @@ export const playersApi = {
   },
   update: async (playerId: string, payload: PlayerUpdatePayload): Promise<Player> => {
     const response = await api.patch<{ player: Player }>(`/players/${playerId}`, payload);
+    return response.data.player;
+  },
+  create: async (payload: PlayerCreatePayload): Promise<Player> => {
+    const response = await api.post<{ player: Player }>('/players', payload);
     return response.data.player;
   },
   list: async (query: PlayersListQuery = {}): Promise<PlayersListResponse> => {

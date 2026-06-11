@@ -39,6 +39,25 @@ describe('AppLayout mobile navigation', () => {
     expect(sidebar).toHaveClass('translate-x-0');
     expect(screen.getByRole('button', { name: 'Close navigation' })).toBeInTheDocument();
   });
+
+  it('highlights only Admin Settings on /admin/settings', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/settings']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="admin" element={<div>Admin content</div>} />
+            <Route path="admin/settings" element={<div>Admin settings content</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const adminLink = screen.getByRole('link', { name: 'Admin' });
+    const adminSettingsLink = screen.getByRole('link', { name: 'Admin Settings' });
+
+    expect(adminSettingsLink).toHaveClass('bg-teal-600');
+    expect(adminLink).not.toHaveClass('bg-teal-600');
+  });
 });
 
 describe('Navigation Filtering', () => {

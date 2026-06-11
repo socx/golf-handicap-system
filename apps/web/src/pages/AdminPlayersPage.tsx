@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { playersApi, type Player } from '../api/players';
+import { authApi } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { Input } from '../components/ui/Input';
@@ -9,9 +10,27 @@ import { Pagination } from '../components/ui/Pagination';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
-import { Users, Pencil, Link2, Trash2 } from '../components/ui/icons';
+import { Users, Pencil, Link2, Trash2, Plus } from '../components/ui/icons';
 
 const PAGE_SIZE = 20;
+
+interface ProvisionFormState {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+  club: string;
+}
+
+const defaultProvisionForm: ProvisionFormState = {
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  country: 'GB',
+  club: '',
+};
 
 export const AdminPlayersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,6 +51,8 @@ export const AdminPlayersPage: React.FC = () => {
   const [linkTarget, setLinkTarget] = useState<Player | null>(null);
   const [linkUserId, setLinkUserId] = useState('');
   const [isLinking, setIsLinking] = useState(false);
+  const [provisionForm, setProvisionForm] = useState<ProvisionFormState>(defaultProvisionForm);
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   const fetchPlayers = async (opts?: { resetPage?: boolean }) => {
     const currentPage = opts?.resetPage ? 1 : page;
@@ -128,6 +149,49 @@ export const AdminPlayersPage: React.FC = () => {
     }
   };
 
+  const updateProvisionField = <K extends keyof ProvisionFormState>(field: K, value: ProvisionFormState[K]) => {
+    setProvisionForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleProvisionLinkedAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const email = provisionForm.email.trim().toLowerCase();
+    const password = provisionForm.password;
+    const firstName = provisionForm.firstName.trim();
+    const lastName = provisionForm.lastName.trim();
+    const country = provisionForm.country.trim().toUpperCase();
+    const club = provisionForm.club.trim();
+
+    if (!email || !password || !firstName || !lastName || !country) {
+      showErrorToast('Missing details', 'Email, password, first name, last name, and country are required.');
+      return;
+    }
+
+    setIsProvisioning(true);
+    try {
+      const registration = await authApi.register(email, password, 'player');
+      const linkedUserId = registration.data.user.id;
+
+      await playersApi.create({
+        first_name: firstName,
+        last_name: lastName,
+        country,
+        club: club || null,
+        email,
+        user_id: linkedUserId,
+      });
+
+      showSuccessToast('Player provisioned', 'Created linked user and player profile successfully.');
+      setProvisionForm(defaultProvisionForm);
+      await fetchPlayers({ resetPage: true });
+    } catch (error) {
+      showErrorToast('Provisioning failed', error instanceof Error ? error.message : 'Unable to create linked user/player.');
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
+
   const loading = players === null && !error;
 
   return (
@@ -139,6 +203,67 @@ export const AdminPlayersPage: React.FC = () => {
         </h1>
         <p className="text-sm text-gray-500 mt-1">Manage all players — edit details, delete records, or link to user accounts.</p>
       </div>
+
+      <form className="rounded-xl border border-slate-200 p-4 dark:border-slate-800" onSubmit={(event) => void handleProvisionLinkedAccount(event)}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <Icon icon={Plus} size="sm" className="text-teal-600 dark:text-teal-400" />
+          Create linked user and player
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Creates a player user account, creates the player profile, and links them in one step.
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <Input
+            label="Email"
+            type="email"
+            value={provisionForm.email}
+            onChange={(event) => updateProvisionField('email', event.target.value)}
+            autoComplete="email"
+            required
+          />
+          <Input
+            label="Temporary password"
+            type="password"
+            value={provisionForm.password}
+            onChange={(event) => updateProvisionField('password', event.target.value)}
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+          <Input
+            label="Country"
+            value={provisionForm.country}
+            onChange={(event) => updateProvisionField('country', event.target.value.toUpperCase())}
+            maxLength={2}
+            required
+          />
+          <Input
+            label="First name"
+            value={provisionForm.firstName}
+            onChange={(event) => updateProvisionField('firstName', event.target.value)}
+            required
+          />
+          <Input
+            label="Last name"
+            value={provisionForm.lastName}
+            onChange={(event) => updateProvisionField('lastName', event.target.value)}
+            required
+          />
+          <Input
+            label="Club"
+            value={provisionForm.club}
+            onChange={(event) => updateProvisionField('club', event.target.value)}
+          />
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button type="submit" disabled={isProvisioning}>
+            <Icon icon={Plus} size="sm" />
+            {isProvisioning ? 'Creating linked account…' : 'Create linked account'}
+          </Button>
+        </div>
+      </form>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

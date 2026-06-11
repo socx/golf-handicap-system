@@ -9,6 +9,8 @@ import {
   calculateEligibleHoles,
   calculateHandicapFromDifferentials,
   MINIMUM_ELIGIBLE_HOLES,
+  type EffectiveDifferential,
+  type HandicapSelectionResult,
   type RoundDifferentialRow,
 } from '../services/handicap';
 
@@ -195,6 +197,200 @@ async function sendHandicapUpdateNotification(params: {
   }
 }
 
+interface EligibleHandicapCalculationPayload {
+  playerId: string;
+  eligibilityStatus: 'eligible';
+  totalEligibleHoles: number;
+  minimumRequiredHoles: number;
+  roundsConsidered: number;
+  effectiveDifferentials: EffectiveDifferential[];
+  selection: {
+    countUsed: number;
+    selectedDifferentials: HandicapSelectionResult['selected'];
+    averageDifferential: number;
+    multiplier: number;
+  };
+  currentIndex: number;
+  handicapIndex: number;
+  pccValues: Array<{ roundId: string; pcc: number | null }>;
+  capAdjustment: {
+    rawHandicapIndex: number;
+    appliedHandicapIndex: number;
+    softCapTriggered: boolean;
+    hardCapTriggered: boolean;
+    softCapThreshold: number;
+    hardCapThreshold: number;
+    lowHandicapIndex: number;
+  };
+  lowHandicapIndex: number;
+  recordId: string;
+  calculatedAt: string;
+}
+
+type HandicapRecalculationResult =
+  | { status: 'player_not_found' }
+  | {
+      status: 'insufficient_holes';
+      payload: {
+        playerId: string;
+        eligibilityStatus: 'insufficient_holes';
+        totalEligibleHoles: number;
+        minimumRequiredHoles: number;
+      };
+    }
+  | {
+      status: 'insufficient_rounds';
+      payload: {
+        playerId: string;
+        eligibilityStatus: 'insufficient_rounds';
+        roundsConsidered: number;
+        minimumRoundsRequired: number;
+        effectiveDifferentials: RoundDifferentialRow[];
+      };
+    }
+  | { status: 'eligible'; payload: EligibleHandicapCalculationPayload };
+
+export async function recalculateHandicapForPlayer(
+  playerId: string,
+  options?: { sendNotifications?: boolean },
+): Promise<HandicapRecalculationResult> {
+  const player = await getPlayerForHandicap(playerId);
+  if (!player) {
+    return { status: 'player_not_found' };
+  }
+
+  const allEligibleRounds = await getPlayerRoundDifferentials(playerId);
+  const totalEligibleHoles = calculateEligibleHoles(allEligibleRounds);
+
+  if (totalEligibleHoles < MINIMUM_ELIGIBLE_HOLES) {
+    return {
+      status: 'insufficient_holes',
+      payload: {
+        playerId,
+        eligibilityStatus: 'insufficient_holes',
+        totalEligibleHoles,
+        minimumRequiredHoles: MINIMUM_ELIGIBLE_HOLES,
+      },
+    };
+  }
+
+  const roundDifferentials = await getPlayerRoundDifferentials(playerId, { limit: 20 });
+  const selection = calculateHandicapFromDifferentials(roundDifferentials);
+  if (!selection) {
+    return {
+      status: 'insufficient_rounds',
+      payload: {
+        playerId,
+        eligibilityStatus: 'insufficient_rounds',
+        roundsConsidered: roundDifferentials.length,
+        minimumRoundsRequired: 3,
+        effectiveDifferentials: [],
+      },
+    };
+  }
+
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const pccByRoundId = new Map(roundDifferentials.map((round) => [round.id, round.pcc]));
+    const pccValues = selection.selected.flatMap((item) => item.roundIds.map((roundId) => ({
+      roundId,
+      pcc: pccByRoundId.get(roundId) ?? 0,
+    })));
+
+    const capApplication = applyWhsCaps(
+      selection.handicapIndex,
+      player.low_handicap_index === null ? player.handicap_index : player.low_handicap_index,
+    );
+
+    const capAdjustments = {
+      multiplier: selection.multiplier,
+      method: 'whs_selection_3_20',
+      rawHandicapIndex: capApplication.rawHandicapIndex,
+      appliedHandicapIndex: capApplication.appliedHandicapIndex,
+      softCapTriggered: capApplication.softCapTriggered,
+      hardCapTriggered: capApplication.hardCapTriggered,
+      softCapThreshold: capApplication.softCapThreshold,
+      hardCapThreshold: capApplication.hardCapThreshold,
+      lowHandicapIndex: capApplication.lowHandicapIndex,
+    };
+
+    const insertResult = await client.query(
+      `INSERT INTO handicap_records
+       (player_id, handicap_index, num_differentials, average_differential, differentials_used, rounds_used, pcc_values, cap_adjustments)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb)
+       RETURNING id, calculation_date`,
+      [
+        playerId,
+        capApplication.appliedHandicapIndex,
+        selection.countUsed,
+        selection.averageDifferential,
+        JSON.stringify(selection.selected.map((item) => item.value)),
+        JSON.stringify(selection.selected.flatMap((item) => item.roundIds)),
+        JSON.stringify(pccValues),
+        JSON.stringify(capAdjustments),
+      ],
+    );
+
+    await client.query(
+      `UPDATE players
+       SET handicap_index = $2, low_handicap_index = $3, updated_at = NOW()
+       WHERE id = $1`,
+      [playerId, capApplication.appliedHandicapIndex, capApplication.updatedLowHandicapIndex],
+    );
+
+    await client.query('COMMIT');
+
+    if (options?.sendNotifications !== false) {
+      await sendHandicapUpdateNotification({
+        playerId,
+        oldIndex: player.handicap_index,
+        newIndex: capApplication.appliedHandicapIndex,
+        roundsUsed: selection.selected.flatMap((item) => item.roundIds).length,
+      });
+    }
+
+    return {
+      status: 'eligible',
+      payload: {
+        playerId,
+        eligibilityStatus: 'eligible',
+        totalEligibleHoles,
+        minimumRequiredHoles: MINIMUM_ELIGIBLE_HOLES,
+        roundsConsidered: selection.roundsConsidered,
+        effectiveDifferentials: selection.effectiveDifferentials,
+        selection: {
+          countUsed: selection.countUsed,
+          selectedDifferentials: selection.selected,
+          averageDifferential: selection.averageDifferential,
+          multiplier: selection.multiplier,
+        },
+        currentIndex: capApplication.appliedHandicapIndex,
+        handicapIndex: capApplication.appliedHandicapIndex,
+        pccValues,
+        capAdjustment: {
+          rawHandicapIndex: capApplication.rawHandicapIndex,
+          appliedHandicapIndex: capApplication.appliedHandicapIndex,
+          softCapTriggered: capApplication.softCapTriggered,
+          hardCapTriggered: capApplication.hardCapTriggered,
+          softCapThreshold: capApplication.softCapThreshold,
+          hardCapThreshold: capApplication.hardCapThreshold,
+          lowHandicapIndex: capApplication.lowHandicapIndex,
+        },
+        lowHandicapIndex: capApplication.updatedLowHandicapIndex,
+        recordId: String(insertResult.rows[0].id),
+        calculatedAt: String(insertResult.rows[0].calculation_date),
+      },
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function handleGetHandicapEligibility(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -257,134 +453,17 @@ export async function handleCalculateHandicap(
     return;
   }
 
-  const player = await getPlayerForHandicap(playerId);
-  if (!player) {
-    sendError(res, 404, 'not_found', 'Player not found');
-    return;
-  }
-
-  const allEligibleRounds = await getPlayerRoundDifferentials(playerId);
-  const totalEligibleHoles = calculateEligibleHoles(allEligibleRounds);
-
-  if (totalEligibleHoles < MINIMUM_ELIGIBLE_HOLES) {
-    sendJson(res, 200, {
-      playerId,
-      eligibilityStatus: 'insufficient_holes',
-      totalEligibleHoles,
-      minimumRequiredHoles: MINIMUM_ELIGIBLE_HOLES,
-    });
-    return;
-  }
-
-  const roundDifferentials = await getPlayerRoundDifferentials(playerId, { limit: 20 });
-
-  const selection = calculateHandicapFromDifferentials(roundDifferentials);
-  if (!selection) {
-    sendJson(res, 200, {
-      playerId,
-      eligibilityStatus: 'insufficient_rounds',
-      roundsConsidered: roundDifferentials.length,
-      minimumRoundsRequired: 3,
-      effectiveDifferentials: [],
-    });
-    return;
-  }
-
-  const client = await dbPool.connect();
   try {
-    await client.query('BEGIN');
+    const result = await recalculateHandicapForPlayer(playerId, { sendNotifications: true });
+    if (result.status === 'player_not_found') {
+      sendError(res, 404, 'not_found', 'Player not found');
+      return;
+    }
 
-    const pccByRoundId = new Map(roundDifferentials.map((round) => [round.id, round.pcc]));
-    const pccValues = selection.selected.flatMap((item) => item.roundIds.map((roundId) => ({
-      roundId,
-      pcc: pccByRoundId.get(roundId) ?? 0,
-    })));
-
-    const capApplication = applyWhsCaps(
-      selection.handicapIndex,
-      player.low_handicap_index === null ? player.handicap_index : player.low_handicap_index,
-    );
-
-    const capAdjustments = {
-      multiplier: selection.multiplier,
-      method: 'whs_selection_3_20',
-      rawHandicapIndex: capApplication.rawHandicapIndex,
-      appliedHandicapIndex: capApplication.appliedHandicapIndex,
-      softCapTriggered: capApplication.softCapTriggered,
-      hardCapTriggered: capApplication.hardCapTriggered,
-      softCapThreshold: capApplication.softCapThreshold,
-      hardCapThreshold: capApplication.hardCapThreshold,
-      lowHandicapIndex: capApplication.lowHandicapIndex,
-    };
-
-    const insertResult = await client.query(
-      `INSERT INTO handicap_records
-       (player_id, handicap_index, num_differentials, average_differential, differentials_used, rounds_used, pcc_values, cap_adjustments)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb)
-       RETURNING id, calculation_date`,
-      [
-        playerId,
-        capApplication.appliedHandicapIndex,
-        selection.countUsed,
-        selection.averageDifferential,
-        JSON.stringify(selection.selected.map((item) => item.value)),
-        JSON.stringify(selection.selected.flatMap((item) => item.roundIds)),
-        JSON.stringify(pccValues),
-        JSON.stringify(capAdjustments),
-      ],
-    );
-
-    await client.query(
-      `UPDATE players
-       SET handicap_index = $2, low_handicap_index = $3, updated_at = NOW()
-       WHERE id = $1`,
-      [playerId, capApplication.appliedHandicapIndex, capApplication.updatedLowHandicapIndex],
-    );
-
-    await client.query('COMMIT');
-
-    await sendHandicapUpdateNotification({
-      playerId,
-      oldIndex: player.handicap_index,
-      newIndex: capApplication.appliedHandicapIndex,
-      roundsUsed: selection.selected.flatMap((item) => item.roundIds).length,
-    });
-
-    sendJson(res, 200, {
-      playerId,
-      eligibilityStatus: 'eligible',
-      totalEligibleHoles,
-      minimumRequiredHoles: MINIMUM_ELIGIBLE_HOLES,
-      roundsConsidered: selection.roundsConsidered,
-      effectiveDifferentials: selection.effectiveDifferentials,
-      selection: {
-        countUsed: selection.countUsed,
-        selectedDifferentials: selection.selected,
-        averageDifferential: selection.averageDifferential,
-        multiplier: selection.multiplier,
-      },
-      currentIndex: capApplication.appliedHandicapIndex,
-      handicapIndex: capApplication.appliedHandicapIndex,
-      pccValues,
-      capAdjustment: {
-        rawHandicapIndex: capApplication.rawHandicapIndex,
-        appliedHandicapIndex: capApplication.appliedHandicapIndex,
-        softCapTriggered: capApplication.softCapTriggered,
-        hardCapTriggered: capApplication.hardCapTriggered,
-        softCapThreshold: capApplication.softCapThreshold,
-        hardCapThreshold: capApplication.hardCapThreshold,
-        lowHandicapIndex: capApplication.lowHandicapIndex,
-      },
-      lowHandicapIndex: capApplication.updatedLowHandicapIndex,
-      recordId: String(insertResult.rows[0].id),
-      calculatedAt: String(insertResult.rows[0].calculation_date),
-    });
+    sendJson(res, 200, result.payload as unknown as Record<string, unknown>);
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('[handicap.calculate] unexpected error:', error);
     sendError(res, 500, 'handicap_calculation_failed', 'Unable to calculate handicap at this time');
-  } finally {
-    client.release();
   }
 }
 
