@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
-import { ShieldCheck, UserCog, ClipboardCheck, SlidersHorizontal, Plus } from '../components/ui/icons';
+import { ShieldCheck, UserCog, ClipboardCheck, SlidersHorizontal, Plus, Logs } from '../components/ui/icons';
 
 const adminCards = [
   {
@@ -15,6 +15,12 @@ const adminCards = [
     title: 'Rounds',
     description: 'Review pending rounds and approve or reject submitted scorecards.',
     icon: ClipboardCheck,
+  },
+  {
+    to: '/admin/audit-logs',
+    title: 'Audit Logs',
+    description: 'Track system events, user actions, and application activity with round event presets.',
+    icon: Logs,
   },
   {
     to: '/admin/settings',

@@ -75,4 +75,5 @@ export {
 export {
   Activity, // Handicap override / admin activity
   Palette,  // Component preview / design
+  Logs,     // Audit logs
 } from 'lucide-react';

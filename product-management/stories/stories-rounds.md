@@ -456,4 +456,37 @@ So that corrections can be made while preserving approval controls and handicap 
 
 ---
 
+## 15. Admin audit UI: Filter presets for round events
+
+**As an admin**  
+I want quick-access filter presets for round-related audit events  
+So that I can easily inspect the trail of round submissions, edits, and approvals.
+
+**Size:** S  
+**Estimate:** 1–2 days  
+**Priority:** Medium  
+**Target Date:** **TBD**
+
+### Acceptance Criteria
+- [ ] Admin audit logs screen includes preset filter buttons for round events.
+- [ ] Presets include: "All Round Events", "Round Submissions" (round_created), "Round Edits" (round_updated), and "Round Approvals" (round_approved).
+- [ ] Clicking a preset applies the corresponding event type filter and immediately fetches matching logs.
+- [ ] Active preset is visually highlighted.
+- [ ] Presets can be combined with other filters (user, date range).
+- [ ] UI provides clear indication that a preset filter is active.
+
+### Dependencies
+- Admin audit logs frontend page or component
+- Audit logs API with eventType filter support (already implemented)
+- Audit event types: `round_created`, `round_updated`, `round_approved`
+
+### Implementation Notes
+- Add preset filter buttons to the admin audit logs display (either new page or section).
+- Presets map to specific event type values: `round_created`, `round_updated`, `round_approved`.
+- Store active preset state and reflect it in query parameters for bookmarking.
+- Combine presets seamlessly with existing filters (userId, date range).
+- Consider grouping round presets under a "Round Audit Trail" section for discoverability.
+
+---
+
 # End of stories-rounds.md
