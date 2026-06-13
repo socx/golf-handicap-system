@@ -27,7 +27,7 @@ import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDel
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
-import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound } from './routes/rounds';
+import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
@@ -381,6 +381,11 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
     const roundRoute = parseRoundRoute(pathname);
     if (roundRoute && method === 'GET') {
       await handleGetRound(req, res, roundRoute.roundId);
+      return;
+    }
+
+    if (roundRoute && method === 'PATCH') {
+      await handleUpdateRound(req, res, roundRoute.roundId);
       return;
     }
 

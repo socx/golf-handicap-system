@@ -5,6 +5,7 @@ export interface RawEnv {
   DATABASE_URL?: string;
   APP_URL?: string;
   SELF_REGISTRATION_ENABLED?: string;
+  AUTO_APPROVE_ROUNDS?: string;
   ACCOUNT_ACTIVATION_TOKEN_EXPIRY_HOURS?: string;
   AUTH_AUTO_LOGIN_ENABLED?: string;
   JWT_SECRET?: string;
@@ -53,6 +54,7 @@ export function validateAndNormalizeEnv(raw: RawEnv) {
     dbUrl: raw.DATABASE_URL || 'postgresql://localhost:5432/golf_db',
     appUrl: raw.APP_URL || 'http://localhost:5175',
     selfRegistrationEnabled: toBoolean(raw.SELF_REGISTRATION_ENABLED, false),
+    autoApproveRounds: toBoolean(raw.AUTO_APPROVE_ROUNDS, false),
     accountActivationTokenExpiryHours: toPositiveNumber(raw.ACCOUNT_ACTIVATION_TOKEN_EXPIRY_HOURS, 24, 'ACCOUNT_ACTIVATION_TOKEN_EXPIRY_HOURS'),
     authAutoLoginEnabled: toBoolean(raw.AUTH_AUTO_LOGIN_ENABLED, true),
     jwtSecret: raw.JWT_SECRET || 'dev-jwt-secret-change-me',

@@ -75,6 +75,7 @@ function AppRoutes() {
         <Route path="/courses/:courseId/configurations/:configId/edit" element={<CourseTeeConfigEditorPage />} />
         <Route path="/rounds" element={<RoundsPage />} />
         <Route path="/rounds/new" element={<RoundEntryPage />} />
+        <Route path="/rounds/:roundId/edit" element={<RoundEntryPage />} />
         <Route path="/rounds/:roundId" element={<RoundScorecardPage />} />
         <Route
           path="/handicap"

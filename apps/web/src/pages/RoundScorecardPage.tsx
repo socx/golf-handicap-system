@@ -4,9 +4,10 @@ import { handleApiError } from '../api/client';
 import { roundsApi, type RoundDetailResponse } from '../api/rounds';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
-import { ArrowLeft } from '../components/ui/icons';
+import { ArrowLeft, Pencil } from '../components/ui/icons';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { SkeletonTable } from '../components/ui/Skeleton';
+import { useAuth } from '../hooks/useAuth';
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -25,6 +26,7 @@ function formatPlayerDisplayName(firstName: string, lastName: string): string {
 const RoundScorecardPage: React.FC = () => {
   const { roundId } = useParams<{ roundId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState<RoundDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +117,9 @@ const RoundScorecardPage: React.FC = () => {
   }
 
   const { round, teeConfiguration, holeScores } = data;
+  const canEditRound =
+    user?.role === 'admin'
+    || (user?.role === 'player' && user.player_id === round.playerId);
 
   return (
     <div className="space-y-6">
@@ -126,10 +131,18 @@ const RoundScorecardPage: React.FC = () => {
           </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Played at {teeConfiguration.courseName}</p>
         </div>
-        <Button variant="secondary" onClick={() => navigate('/rounds')}>
-          <Icon icon={ArrowLeft} size="sm" />
-          Back to Rounds
-        </Button>
+        <div className="flex gap-2">
+          {canEditRound && (
+            <Button variant="secondary" onClick={() => navigate(`/rounds/${round.id}/edit`)}>
+              <Icon icon={Pencil} size="sm" />
+              Edit round
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => navigate('/rounds')}>
+            <Icon icon={ArrowLeft} size="sm" />
+            Back to Rounds
+          </Button>
+        </div>
       </div>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

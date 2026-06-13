@@ -186,6 +186,10 @@ after(async () => {
     });
   }
 
+  await dbPool.query(
+    "DELETE FROM audit_logs WHERE event_type IN ('round_created', 'round_updated', 'round_approved') AND metadata->>'playerId' IN ($1, $2)",
+    [PLAYER_ONE_ID, PLAYER_TWO_ID],
+  );
   await dbPool.query('DELETE FROM hole_scores WHERE round_id IN (SELECT id FROM rounds WHERE player_id IN ($1, $2))', [PLAYER_ONE_ID, PLAYER_TWO_ID]);
   await dbPool.query('DELETE FROM rounds WHERE player_id IN ($1, $2)', [PLAYER_ONE_ID, PLAYER_TWO_ID]);
   await dbPool.query('DELETE FROM holes WHERE tee_configuration_id = $1', [TEE_ID]);
@@ -244,4 +248,102 @@ test('POST /api/rounds allows players to submit only for themselves', async () =
 
   assert.equal(adminRound.status, 201, JSON.stringify(adminRound.json));
   assert.equal(adminRound.json.round.playerId, PLAYER_TWO_ID);
+});
+
+test('PATCH /api/rounds/:id enforces ownership and allows admin edits', async () => {
+  const adminToken = buildToken('admin', ADMIN_USER_ID);
+  const playerToken = buildToken('player', PLAYER_USER_ID);
+
+  const ownRound = await requestJson('/api/rounds', {
+    method: 'POST',
+    token: playerToken,
+    body: {
+      playerId: PLAYER_ONE_ID,
+      teeConfigurationId: TEE_ID,
+      playedAt: '2026-05-22T08:00:00.000Z',
+      playingHandicap: 12,
+      holeScores: buildHoleScores(9),
+    },
+  });
+
+  assert.equal(ownRound.status, 201, JSON.stringify(ownRound.json));
+
+  const updatedOwnRound = await requestJson(`/api/rounds/${ownRound.json.round.id}`, {
+    method: 'PATCH',
+    token: playerToken,
+    body: {
+      playerId: PLAYER_ONE_ID,
+      teeConfigurationId: TEE_ID,
+      playedAt: '2026-05-22T08:00:00.000Z',
+      playingHandicap: 11,
+      holeScores: buildHoleScores(9).map((hole, index) =>
+        index === 0
+          ? { ...hole, strokes: 5 }
+          : hole
+      ),
+    },
+  });
+
+  assert.equal(updatedOwnRound.status, 200, JSON.stringify(updatedOwnRound.json));
+  assert.equal(updatedOwnRound.json.round.playerId, PLAYER_ONE_ID);
+  assert.equal(updatedOwnRound.json.round.status, 'pending');
+
+  const createdAudit = await dbPool.query(
+    "SELECT event_type FROM audit_logs WHERE event_type = 'round_created' AND metadata->>'roundId' = $1",
+    [ownRound.json.round.id],
+  );
+  assert.ok(createdAudit.rowCount >= 1, 'Expected round_created audit event');
+
+  const updatedAudit = await dbPool.query(
+    "SELECT event_type FROM audit_logs WHERE event_type = 'round_updated' AND metadata->>'roundId' = $1",
+    [ownRound.json.round.id],
+  );
+  assert.ok(updatedAudit.rowCount >= 1, 'Expected round_updated audit event');
+
+  const adminRound = await requestJson('/api/rounds', {
+    method: 'POST',
+    token: adminToken,
+    body: {
+      playerId: PLAYER_TWO_ID,
+      teeConfigurationId: TEE_ID,
+      playedAt: '2026-05-23T08:00:00.000Z',
+      playingHandicap: 8,
+      holeScores: buildHoleScores(9),
+    },
+  });
+
+  assert.equal(adminRound.status, 201, JSON.stringify(adminRound.json));
+
+  const forbiddenUpdate = await requestJson(`/api/rounds/${adminRound.json.round.id}`, {
+    method: 'PATCH',
+    token: playerToken,
+    body: {
+      playerId: PLAYER_TWO_ID,
+      teeConfigurationId: TEE_ID,
+      playedAt: '2026-05-23T08:00:00.000Z',
+      playingHandicap: 8,
+      holeScores: buildHoleScores(9),
+    },
+  });
+
+  assert.equal(forbiddenUpdate.status, 403, JSON.stringify(forbiddenUpdate.json));
+
+  const adminUpdate = await requestJson(`/api/rounds/${adminRound.json.round.id}`, {
+    method: 'PATCH',
+    token: adminToken,
+    body: {
+      playerId: PLAYER_TWO_ID,
+      teeConfigurationId: TEE_ID,
+      playedAt: '2026-05-24T08:00:00.000Z',
+      playingHandicap: 7,
+      holeScores: buildHoleScores(9).map((hole, index) =>
+        index === 1
+          ? { ...hole, penalties: 2 }
+          : hole
+      ),
+    },
+  });
+
+  assert.equal(adminUpdate.status, 200, JSON.stringify(adminUpdate.json));
+  assert.equal(adminUpdate.json.round.playerId, PLAYER_TWO_ID);
 });

@@ -418,4 +418,42 @@ So that I can record my scores without needing admin assistance.
 
 ---
 
+## 14. Round edit workflow with approval and audit trail
+
+**As a player or admin**  
+I want rounds to be editable after entry  
+So that corrections can be made while preserving approval controls and handicap integrity.
+
+**Size:** M  
+**Estimate:** 3–5 days  
+**Priority:** High  
+**Target Date:** **TBD**
+
+### Acceptance Criteria
+- [ ] Frontend supports editing an existing round from the scorecard flow.
+- [ ] Player users can edit only their own rounds.
+- [ ] Admin users can edit any round.
+- [ ] Updated rounds default to `pending` and require admin approval when auto-approve is disabled.
+- [ ] Admin approval recalculates handicap for the affected player.
+- [ ] Audit trail captures round creation, round update, and round approval events.
+- [ ] New environment flag `AUTO_APPROVE_ROUNDS` controls auto-approval behavior:
+	- [ ] `true`: create/update auto-approves and recalculates handicap.
+	- [ ] `false`: create/update remains pending until admin approval.
+
+### Dependencies
+- Rounds API create/detail/moderation endpoints
+- Frontend scorecard and round entry routes
+- Audit logging infrastructure
+- Handicap recalculation service
+
+### Implementation Notes
+- Introduce `PATCH /api/rounds/:id` with role-aware authorization and ownership checks.
+- Recompute per-hole Net Double Bogey, round totals, and differential on update.
+- Use `AUTO_APPROVE_ROUNDS` to determine `round.status` on create/update.
+- On admin approval (manual or auto), invoke handicap recalculation helper and return status metadata.
+- Emit audit events: `round_created`, `round_updated`, and `round_approved`.
+- Add frontend route `/rounds/:roundId/edit` and prefilled round edit form.
+
+---
+
 # End of stories-rounds.md

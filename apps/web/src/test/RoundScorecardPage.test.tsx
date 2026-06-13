@@ -7,6 +7,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { roundsApi } from '../api/rounds';
 import RoundScorecardPage from '../pages/RoundScorecardPage';
 
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { role: 'player', player_id: 'player-1' },
+  }),
+}));
+
 const roundResponse = {
   round: {
     id: 'round-1',

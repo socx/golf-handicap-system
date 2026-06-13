@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { handleApiError } from '../api/client';
 import { type HoleScoreInput, roundsApi } from '../api/rounds';
@@ -55,6 +55,8 @@ function validate(
 }
 
 const RoundEntryPage: React.FC = () => {
+  const { roundId } = useParams<{ roundId: string }>();
+  const isEditMode = Boolean(roundId);
   const navigate = useNavigate();
   const { user } = useAuth();
   const isPlayerRole = user?.role === 'player';
@@ -69,6 +71,7 @@ const RoundEntryPage: React.FC = () => {
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [pageError, setPageError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loadingExistingRound, setLoadingExistingRound] = useState(false);
 
   // Auto-load player profile for player users
   useEffect(() => {
@@ -86,6 +89,80 @@ const RoundEntryPage: React.FC = () => {
 
     void loadOwnProfile();
   }, [isPlayerRole, user?.player_id]);
+
+  useEffect(() => {
+    if (!isEditMode || !roundId) return;
+
+    let cancelled = false;
+
+    const loadRoundForEdit = async () => {
+      setLoadingExistingRound(true);
+      try {
+        const roundResponse = await roundsApi.get(roundId);
+        if (cancelled) return;
+
+        const round = roundResponse.data.round;
+        const teeConfiguration = roundResponse.data.teeConfiguration;
+
+        setPlayedAt(new Date(round.playedAt).toISOString().slice(0, 10));
+        setPlayingHandicap(round.playingHandicap === null ? '' : String(round.playingHandicap));
+        setCourse({
+          id: teeConfiguration.courseId,
+          name: teeConfiguration.courseName,
+          address: '',
+          city: '',
+          country: '',
+          phone: '',
+          email: '',
+          website: '',
+          created_at: '',
+          updated_at: '',
+          deleted_at: null,
+        });
+        setTeeConfig({
+          id: teeConfiguration.id,
+          course_id: teeConfiguration.courseId,
+          name: teeConfiguration.name,
+          tee_colour: teeConfiguration.teeColour,
+          hole_count: teeConfiguration.holeCount,
+          course_rating: teeConfiguration.courseRating ?? 0,
+          slope_rating: teeConfiguration.slopeRating ?? 0,
+          created_at: '',
+          updated_at: '',
+        });
+
+        const playerResponse = await playersApi.get(round.playerId);
+        if (cancelled) return;
+
+        setPlayer(playerResponse.player);
+        setHoles(
+          roundResponse.data.holeScores.map((hole) => ({
+            holeNumber: hole.holeNumber,
+            strokes: hole.strokes,
+            putts: hole.putts,
+            gir: hole.gir,
+            fairwayHit: hole.fairwayHit,
+            inSand: hole.inSand,
+            penalties: hole.penalties,
+          })),
+        );
+        setPageError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setPageError(handleApiError(err));
+      } finally {
+        if (!cancelled) {
+          setLoadingExistingRound(false);
+        }
+      }
+    };
+
+    void loadRoundForEdit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode, roundId]);
 
   // When course changes reset tee config
   const handleCourseChange = (c: Course | null) => {
@@ -119,14 +196,24 @@ const RoundEntryPage: React.FC = () => {
     setPageError(null);
     setSaving(true);
     try {
-      const response = await roundsApi.create({
+      const payload = {
         playerId: player!.id,
         teeConfigurationId: teeConfig!.id,
         playedAt: new Date(playedAt).toISOString(),
         playingHandicap: playingHandicap !== '' ? Number(playingHandicap) : null,
         holeScores: holes,
-      });
-      showSuccessToast('Round saved', 'Your scorecard has been submitted.');
+      };
+
+      const response = isEditMode && roundId
+        ? await roundsApi.update(roundId, payload)
+        : await roundsApi.create(payload);
+
+      showSuccessToast(
+        isEditMode ? 'Round updated' : 'Round saved',
+        isEditMode
+          ? 'Your round changes have been submitted.'
+          : 'Your scorecard has been submitted.',
+      );
       navigate(`/rounds/${response.data.round.id}`);
     } catch (err) {
       const msg = handleApiError(err);
@@ -140,11 +227,21 @@ const RoundEntryPage: React.FC = () => {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Enter Round</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          {isEditMode ? 'Edit Round' : 'Enter Round'}
+        </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Select a player and tee, then fill in scores for each hole.
+          {isEditMode
+            ? 'Update player, tee, and hole-by-hole scores, then resubmit for approval.'
+            : 'Select a player and tee, then fill in scores for each hole.'}
         </p>
       </div>
+
+      {loadingExistingRound && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+          Loading round details...
+        </div>
+      )}
 
       {pageError && (
         <div
@@ -186,14 +283,15 @@ const RoundEntryPage: React.FC = () => {
               value={player}
               onChange={isPlayerRole ? () => {} : setPlayer}
               label="Player"
-              disabled={isPlayerRole}
+              disabled={isPlayerRole || loadingExistingRound}
             />
-            <CourseSelector value={course} onChange={handleCourseChange} label="Course" />
+            <CourseSelector value={course} onChange={handleCourseChange} label="Course" disabled={loadingExistingRound} />
             <TeeConfigurationSelector
               courseId={course?.id ?? null}
               value={teeConfig}
               onChange={handleTeeConfigurationChange}
               label="Tee configuration"
+              disabled={loadingExistingRound}
             />
             <Input
               label="Date played"
@@ -201,6 +299,7 @@ const RoundEntryPage: React.FC = () => {
               value={playedAt}
               onChange={(e) => setPlayedAt(e.target.value)}
               required
+              disabled={loadingExistingRound}
             />
           </div>
           <div className="mt-4 max-w-xs">
@@ -212,6 +311,7 @@ const RoundEntryPage: React.FC = () => {
               value={playingHandicap}
               onChange={(e) => setPlayingHandicap(e.target.value)}
               placeholder="e.g. 18"
+              disabled={loadingExistingRound}
             />
           </div>
         </section>
@@ -256,6 +356,7 @@ const RoundEntryPage: React.FC = () => {
                         onChange={(e) =>
                           updateHole(idx, 'strokes', e.target.value === '' ? 0 : Number(e.target.value))
                         }
+                        disabled={loadingExistingRound}
                         className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                         required
                       />
@@ -270,6 +371,7 @@ const RoundEntryPage: React.FC = () => {
                         onChange={(e) =>
                           updateHole(idx, 'putts', e.target.value === '' ? null : Number(e.target.value))
                         }
+                        disabled={loadingExistingRound}
                         className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </td>
@@ -279,6 +381,7 @@ const RoundEntryPage: React.FC = () => {
                         type="checkbox"
                         checked={hole.gir}
                         onChange={(e) => updateHole(idx, 'gir', e.target.checked)}
+                        disabled={loadingExistingRound}
                         className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
                     </td>
@@ -288,6 +391,7 @@ const RoundEntryPage: React.FC = () => {
                         type="checkbox"
                         checked={hole.fairwayHit ?? false}
                         onChange={(e) => updateHole(idx, 'fairwayHit', e.target.checked)}
+                        disabled={loadingExistingRound}
                         className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
                     </td>
@@ -297,6 +401,7 @@ const RoundEntryPage: React.FC = () => {
                         type="checkbox"
                         checked={hole.inSand}
                         onChange={(e) => updateHole(idx, 'inSand', e.target.checked)}
+                        disabled={loadingExistingRound}
                         className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
                     </td>
@@ -310,6 +415,7 @@ const RoundEntryPage: React.FC = () => {
                         onChange={(e) =>
                           updateHole(idx, 'penalties', e.target.value === '' ? 0 : Number(e.target.value))
                         }
+                        disabled={loadingExistingRound}
                         className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </td>
@@ -325,14 +431,14 @@ const RoundEntryPage: React.FC = () => {
             type="button"
             variant="secondary"
             onClick={() => navigate('/rounds')}
-            disabled={saving}
+            disabled={saving || loadingExistingRound}
           >
             <Icon icon={ArrowLeft} size="sm" />
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={saving}>
+          <Button type="submit" variant="primary" disabled={saving || loadingExistingRound}>
             <Icon icon={Save} size="sm" />
-            {saving ? 'Saving…' : 'Save round'}
+            {saving ? 'Saving…' : isEditMode ? 'Update round' : 'Save round'}
           </Button>
         </div>
       </form>

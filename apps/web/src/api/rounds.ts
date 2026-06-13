@@ -125,11 +125,20 @@ export interface RoundModerationResponse {
     rejectionReason: string | null;
   };
   handicapRecalculationRequested: boolean;
+  handicapRecalculation?: {
+    attempted: boolean;
+    status: string;
+    reason?: string;
+    handicapIndex?: number;
+    recordId?: string;
+  };
 }
 
 export const roundsApi = {
   create: (payload: CreateRoundPayload) =>
     api.post<CreateRoundResponse>('/rounds', payload),
+  update: (roundId: string, payload: CreateRoundPayload) =>
+    api.patch<CreateRoundResponse>(`/rounds/${roundId}`, payload),
   get: (roundId: string) => api.get<RoundDetailResponse>(`/rounds/${roundId}`),
   list: (filters: RoundsListFilters = {}) => {
     const params = new URLSearchParams();
