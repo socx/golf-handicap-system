@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { adminApi } from '../api/admin';
 import { handleApiError } from '../api/client';
 import { Icon } from '../components/ui/Icon';
 import { Logs, RefreshCw } from '../components/ui/icons';
 import { Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell } from '../components/ui/Table';
-import { SkeletonTable } from '../components/ui/SkeletonTable';
+import { SkeletonTable } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
-import { formatDate } from '../lib/date-formatting';
 
 interface AuditLog {
   id: string;
@@ -42,18 +42,37 @@ const ROUND_EVENT_PRESETS: Record<string, FilterPreset> = {
   },
 };
 
+function parsePositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number(value || '');
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.floor(parsed);
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+}
+
 const AdminAuditLogsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(50);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const page = parsePositiveInt(searchParams.get('page'), 1);
+  const limit = 50;
   const [total, setTotal] = useState(0);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
-  const [eventTypeFilter, setEventTypeFilter] = useState<string>('');
-  const [userIdFilter, setUserIdFilter] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const eventTypeFilter = (searchParams.get('eventType') || '').trim();
+  const userIdFilter = (searchParams.get('userId') || '').trim();
+  const fromDate = (searchParams.get('from') || '').trim();
+  const toDate = (searchParams.get('to') || '').trim();
+  const selectedPreset = useMemo(() => {
+    const preset = (searchParams.get('preset') || '').trim();
+    if (!preset || !Object.prototype.hasOwnProperty.call(ROUND_EVENT_PRESETS, preset)) {
+      return null;
+    }
+    return preset;
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,8 +91,8 @@ const AdminAuditLogsPage: React.FC = () => {
         });
 
         if (cancelled) return;
-        setLogs(response.logs);
-        setTotal(response.pagination.total);
+        setLogs(response.data.logs);
+        setTotal(response.data.pagination.total);
       } catch (err) {
         if (cancelled) return;
         setError(handleApiError(err));
@@ -90,24 +109,44 @@ const AdminAuditLogsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, limit, eventTypeFilter, userIdFilter, fromDate, toDate]);
+  }, [page, limit, eventTypeFilter, userIdFilter, fromDate, toDate, refreshKey]);
+
+  const updateQueryParams = (updates: Record<string, string | null>, resetPage = false) => {
+    setSearchParams((currentParams) => {
+      const nextParams = new URLSearchParams(currentParams);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value && value.trim().length > 0) {
+          nextParams.set(key, value);
+        } else {
+          nextParams.delete(key);
+        }
+      }
+
+      if (resetPage) {
+        nextParams.set('page', '1');
+      }
+
+      return nextParams;
+    });
+  };
 
   const handlePresetFilter = (presetKey: string) => {
     if (selectedPreset === presetKey) {
-      // Deselect preset
-      setSelectedPreset(null);
-      setEventTypeFilter('');
+      updateQueryParams({ preset: null, eventType: null }, true);
     } else {
-      // Select preset
       const preset = ROUND_EVENT_PRESETS[presetKey];
-      setSelectedPreset(presetKey);
-      // Join multiple event types with comma for API filter
-      setEventTypeFilter(preset.eventTypes.join(','));
+      updateQueryParams(
+        {
+          preset: presetKey,
+          eventType: preset.eventTypes.join(','),
+        },
+        true,
+      );
     }
   };
 
   const handleRefresh = () => {
-    setPage(1); // Reset to first page on refresh
+    setRefreshKey((previous) => previous + 1);
   };
 
   const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
@@ -154,8 +193,7 @@ const AdminAuditLogsPage: React.FC = () => {
               type="text"
               value={userIdFilter}
               onChange={(e) => {
-                setUserIdFilter(e.target.value);
-                setPage(1);
+                updateQueryParams({ userId: e.target.value }, true);
               }}
               placeholder="Filter by user"
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -167,8 +205,7 @@ const AdminAuditLogsPage: React.FC = () => {
               type="date"
               value={fromDate}
               onChange={(e) => {
-                setFromDate(e.target.value);
-                setPage(1);
+                updateQueryParams({ from: e.target.value }, true);
               }}
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
@@ -179,8 +216,7 @@ const AdminAuditLogsPage: React.FC = () => {
               type="date"
               value={toDate}
               onChange={(e) => {
-                setToDate(e.target.value);
-                setPage(1);
+                updateQueryParams({ to: e.target.value }, true);
               }}
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
@@ -282,7 +318,7 @@ const AdminAuditLogsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (page > 1) {
-                      setPage(page - 1);
+                      updateQueryParams({ page: String(page - 1) });
                     }
                   }}
                   disabled={page <= 1}
@@ -293,7 +329,7 @@ const AdminAuditLogsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (page < totalPages) {
-                      setPage(page + 1);
+                      updateQueryParams({ page: String(page + 1) });
                     }
                   }}
                   disabled={page >= totalPages}

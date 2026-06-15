@@ -39,6 +39,13 @@ function parseDateFilter(value: string, boundary: 'start' | 'end'): string | nul
   return parsed.toISOString();
 }
 
+function parseEventTypes(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 function isSensitiveKey(key: string): boolean {
   return /(password|pass|token|secret|authorization|cookie|jwt|refresh)/i.test(key);
 }
@@ -78,6 +85,7 @@ export async function handleListAuditLogs(
   }
 
   const eventType = (requestUrl.searchParams.get('eventType') || requestUrl.searchParams.get('event') || '').trim();
+  const eventTypes = parseEventTypes(eventType);
   const fromRaw = (requestUrl.searchParams.get('from') || '').trim();
   const toRaw = (requestUrl.searchParams.get('to') || '').trim();
   const from = fromRaw ? parseDateFilter(fromRaw, 'start') : null;
@@ -103,9 +111,9 @@ export async function handleListAuditLogs(
     clauses.push(`(user_id = $${params.length} OR actor_user_id = $${params.length})`);
   }
 
-  if (eventType) {
-    params.push(eventType);
-    clauses.push(`event_type = $${params.length}`);
+  if (eventTypes.length > 0) {
+    params.push(eventTypes);
+    clauses.push(`event_type = ANY($${params.length}::text[])`);
   }
 
   if (from) {

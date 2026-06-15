@@ -145,6 +145,16 @@ test('GET /api/admin/audit-logs supports user and date range filters', async () 
   assert.ok(response.json.logs.every((log) => log.user_id === PLAYER_USER_ID || log.actor_user_id === PLAYER_USER_ID));
 });
 
+test('GET /api/admin/audit-logs supports comma-separated eventType filters', async () => {
+  const token = buildToken('admin', ADMIN_USER_ID);
+  const response = await requestJson('/api/admin/audit-logs?eventType=story6_event_login,story6_event_round', { token });
+
+  assert.equal(response.status, 200, JSON.stringify(response.json));
+  assert.equal(response.json.filters.eventType, 'story6_event_login,story6_event_round');
+  assert.ok(response.json.logs.length >= 2);
+  assert.ok(response.json.logs.every((log) => ['story6_event_login', 'story6_event_round'].includes(log.event_type)));
+});
+
 test('GET /api/admin/audit-logs redacts sensitive metadata keys', async () => {
   const token = buildToken('admin', ADMIN_USER_ID);
   const response = await requestJson('/api/admin/audit-logs?eventType=story6_event_login', { token });
