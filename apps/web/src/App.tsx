@@ -23,6 +23,9 @@ const ActivateAccountPage = lazy(async () => {
   return { default: module.ActivateAccountPage };
 });
 
+const ForgotPasswordPage = lazy(async () => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(async () => import('./pages/ResetPasswordPage'));
+
 const DashboardPage = lazy(async () => import('./pages/DashboardPage'));
 const RoundsPage = lazy(async () => import('./pages/RoundsPage'));
 const ComponentPreviewPage = lazy(async () =>
@@ -55,6 +58,9 @@ function AppRoutes() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/register" element={<RegisterPage />} />
       <Route path="/auth/activate" element={<ActivateAccountPage />} />
+      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/components" element={<ComponentPreviewPage />} />
 
       <Route

@@ -376,4 +376,42 @@ So that I can immediately access player-scoped pages after activation without ma
 
 ---
 
+## 13. Frontend: Forgot password and reset password flow
+
+**As a user**  
+I want a forgot-password path from the login screen and a reset form  
+So that I can recover account access without admin intervention.
+
+**Size:** S  
+**Estimate:** 1–2 days  
+**Priority:** High  
+**Target Date:** **TBD**
+
+### Acceptance Criteria
+- [x] Login page includes a clear "Forgot password?" link.
+- [x] Link routes to a password reset request page where user submits email.
+- [x] Request page calls `POST /auth/password-reset/request` and shows non-enumerating success feedback.
+- [x] Reset page accepts token and new password, calls `POST /auth/password-reset/confirm`, and handles success/error states.
+- [x] Reset flow supports token passed via URL query string.
+- [x] On successful reset, user is redirected to login with confirmation messaging.
+- [x] Frontend tests cover request and confirm flows, including error handling.
+
+### Dependencies
+- Password reset APIs (`/auth/password-reset/request`, `/auth/password-reset/confirm`)
+- Email delivery module
+- Auth frontend routing
+
+### Implementation Notes
+- Added frontend auth routes in `apps/web/src/App.tsx`:
+	- `/auth/forgot-password`
+	- `/auth/reset-password`
+	- `/reset-password` (compatibility with reset-link URLs)
+- Added login-page recovery entry point in `apps/web/src/pages/LoginPage.tsx` with a `Forgot password?` link.
+- Added `ForgotPasswordPage` in `apps/web/src/pages/ForgotPasswordPage.tsx` calling `POST /auth/password-reset/request`.
+- Added `ResetPasswordPage` in `apps/web/src/pages/ResetPasswordPage.tsx` using token query param and calling `POST /auth/password-reset/confirm`.
+- Extended `authApi` in `apps/web/src/api/auth.ts` with `requestPasswordReset` and `confirmPasswordReset` helpers.
+- Added frontend coverage in `apps/web/src/test/ForgotResetPasswordPages.test.tsx` for request and confirm flows.
+
+---
+
 # End of stories-auth.md

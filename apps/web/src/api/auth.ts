@@ -21,6 +21,10 @@ export const authApi = {
     api.post<{ user: User; tokens: AuthTokens }>('/auth/login', { email, password }),
   activateAccount: (token: string) =>
     api.post<{ message: string; user: User }>('/auth/activate', { token }),
+  requestPasswordReset: (email: string) =>
+    api.post<{ message: string }>('/auth/password-reset/request', { email }),
+  confirmPasswordReset: (token: string, password: string) =>
+    api.post<{ message: string }>('/auth/password-reset/confirm', { token, password }),
   logout: (refreshToken: string) => api.post('/auth/logout', { refreshToken }),
   me: () => api.get<{ user: Omit<User, 'created_at'> }>('/auth/me'),
   getNotificationPreferences: () =>

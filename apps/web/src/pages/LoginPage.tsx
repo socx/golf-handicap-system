@@ -84,7 +84,12 @@ export const LoginPage: React.FC = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Password
                 </label>
-                <span className="text-sm font-medium text-teal-700 dark:text-teal-300">Secure access</span>
+                <Link
+                  to="/auth/forgot-password"
+                  className="text-sm font-medium text-teal-700 transition hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200"
+                >
+                  Forgot password?
+                </Link>
               </div>
               <input
                 id="password"
