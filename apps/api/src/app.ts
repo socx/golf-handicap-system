@@ -3,7 +3,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { env } from './config/env';
 import { redisState } from './lib/redis';
 import { sendJson, normalizeRequestId, logRequest, parseUrl } from './lib/http';
-import { getOrSetCache, invalidateCache, buildDashboardSummary, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';
+import { getOrSetCache, invalidateCache, buildLeaderboardSummary, buildSettingsSummary } from './lib/cache';
 import { verifyAndAuthorize } from './middleware/auth';
 import { errorHandler } from './middlewares/error-handler';
 import { handleRegister } from './routes/auth/register';
@@ -25,10 +25,12 @@ import { handleListPendingRounds } from './routes/admin/rounds';
 import { handleGetAdminSettings, handleUpdateAdminSettings } from './routes/admin/settings';
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
+import { handleGetAdminDashboard } from './routes/admin/dashboard';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
+import { handleGetDashboardSummary } from './routes/dashboard';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -160,8 +162,7 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
 
     // ── Cache-backed dashboard / leaderboard / settings ─────────────────
     if (method === 'GET' && pathname === '/api/dashboard') {
-      const result = await getOrSetCache({ resource: 'dashboard', requestUrl, computeValue: async () => buildDashboardSummary() });
-      sendJson(res, 200, { ...result.value, cache: { hit: result.cacheHit, key: result.key, ttlSeconds: result.ttl } });
+      await handleGetDashboardSummary(req, res, requestUrl);
       return;
     }
 
@@ -251,6 +252,11 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
     // ── Admin ─────────────────────────────────────────────────────────────
     if (method === 'GET' && (pathname === '/api/admin/status' || pathname === '/admin/status')) {
       await handleAdminStatus(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/dashboard' || pathname === '/admin/dashboard')) {
+      await handleGetAdminDashboard(req, res);
       return;
     }
 
