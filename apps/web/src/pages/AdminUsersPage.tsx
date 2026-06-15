@@ -189,7 +189,7 @@ const AdminUsersPage: React.FC = () => {
                     <TableCell>
                       <Button
                         size="sm"
-                        variant={row.is_active ? 'secondary' : 'default'}
+                        variant={row.is_active ? 'secondary' : 'primary'}
                         onClick={() => void handleToggleActivation(row)}
                         disabled={busyUserId === row.id}
                       >

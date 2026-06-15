@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   Users,
+  UserCog,
   Flag,
   ClipboardList,
   TrendingUp,
@@ -34,5 +35,5 @@ export const getFilteredNavigationItems = (role: User['role'] | null) => {
   if (!role) {
     return [];
   }
-  return ALL_NAVIGATION_ITEMS.filter((item) => item.roles.includes(role));
+  return ALL_NAVIGATION_ITEMS.filter((item) => item.roles.some((itemRole) => itemRole === role));
 };
