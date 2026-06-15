@@ -190,6 +190,10 @@ after(async () => {
     "DELETE FROM audit_logs WHERE event_type IN ('round_created', 'round_updated', 'round_approved') AND metadata->>'playerId' IN ($1, $2)",
     [PLAYER_ONE_ID, PLAYER_TWO_ID],
   );
+  await dbPool.query(
+    "DELETE FROM notification_history WHERE user_id = $1 AND type IN ('round_submitted', 'round_updated', 'round_approved')",
+    [PLAYER_USER_ID],
+  );
   await dbPool.query('DELETE FROM hole_scores WHERE round_id IN (SELECT id FROM rounds WHERE player_id IN ($1, $2))', [PLAYER_ONE_ID, PLAYER_TWO_ID]);
   await dbPool.query('DELETE FROM rounds WHERE player_id IN ($1, $2)', [PLAYER_ONE_ID, PLAYER_TWO_ID]);
   await dbPool.query('DELETE FROM holes WHERE tee_configuration_id = $1', [TEE_ID]);
@@ -299,6 +303,21 @@ test('PATCH /api/rounds/:id enforces ownership and allows admin edits', async ()
     [ownRound.json.round.id],
   );
   assert.ok(updatedAudit.rowCount >= 1, 'Expected round_updated audit event');
+
+  const updatedNotification = await dbPool.query(
+    `SELECT type, status, payload
+     FROM notification_history
+     WHERE user_id = $1 AND type = 'round_updated' AND payload->>'roundId' = $2
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [PLAYER_USER_ID, ownRound.json.round.id],
+  );
+  assert.equal(updatedNotification.rowCount, 1, 'Expected round_updated notification history');
+  assert.equal(updatedNotification.rows[0].type, 'round_updated');
+  assert.ok(
+    ['sent', 'failed', 'skipped'].includes(updatedNotification.rows[0].status),
+    `Unexpected notification status: ${updatedNotification.rows[0].status}`,
+  );
 
   const adminRound = await requestJson('/api/rounds', {
     method: 'POST',

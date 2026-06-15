@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { env } from '../config/env';
 import { dbPool } from '../lib/db';
+import { sendTemplatedEmail } from '../lib/email';
 import { getClientIp, readJsonBody, sendError, sendJson } from '../lib/http';
 import { logApplicationEvent } from '../lib/audit';
 import { verifyAndAuthorize } from '../middleware/auth';
@@ -103,6 +104,13 @@ interface RoundListFilters {
   to: string;
 }
 
+interface RoundNotificationTarget {
+  user_id: string | null;
+  email: string | null;
+  round_submitted_enabled: boolean | null;
+  round_approved_enabled: boolean | null;
+}
+
 function getStrokesReceivedOnHole(playingHandicap: number, holeStrokeIndex: number, holeCount: number): number {
   if (holeCount <= 0) return 0;
 
@@ -200,6 +208,134 @@ async function getLinkedPlayerIdForUser(userId: string): Promise<string | null> 
   }
 
   return String(result.rows[0].id);
+}
+
+async function getCourseNameForTeeConfiguration(teeConfigurationId: string): Promise<string> {
+  const result = await dbPool.query(
+    `SELECT c.name
+     FROM courses c
+     INNER JOIN tee_configurations tc ON tc.course_id = c.id
+     WHERE tc.id = $1`,
+    [teeConfigurationId],
+  );
+
+  return Number(result.rowCount || 0) > 0 ? String(result.rows[0].name) : 'Unknown Course';
+}
+
+async function getRoundNotificationTarget(playerId: string): Promise<RoundNotificationTarget | null> {
+  const result = await dbPool.query<RoundNotificationTarget>(
+    `SELECT p.user_id,
+            u.email::text AS email,
+            np.round_submitted_enabled,
+            np.round_approved_enabled
+     FROM players p
+     LEFT JOIN users u ON u.id = p.user_id AND u.deleted_at IS NULL
+     LEFT JOIN notification_preferences np ON np.user_id = p.user_id
+     WHERE p.id = $1 AND p.deleted_at IS NULL
+     LIMIT 1`,
+    [playerId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+async function logRoundNotificationHistory(params: {
+  userId: string;
+  type: 'round_submitted' | 'round_updated' | 'round_approved';
+  payload: Record<string, unknown>;
+  status: 'sent' | 'failed' | 'skipped';
+  sentAt?: string | null;
+}): Promise<void> {
+  await dbPool.query(
+    `INSERT INTO notification_history (user_id, type, payload, sent_at, status)
+     VALUES ($1, $2, $3::jsonb, $4, $5)`,
+    [params.userId, params.type, JSON.stringify(params.payload), params.sentAt || null, params.status],
+  );
+}
+
+async function sendRoundNotification(params: {
+  playerId: string;
+  roundId: string;
+  eventType: 'round_submitted' | 'round_updated' | 'round_approved';
+  status: RoundStatus;
+  grossScore: number;
+  adjustedGrossScore: number;
+  courseName: string;
+  playedAt: string;
+}): Promise<void> {
+  const target = await getRoundNotificationTarget(params.playerId);
+  if (!target || !target.user_id) {
+    return;
+  }
+
+  const payload = {
+    playerId: params.playerId,
+    roundId: params.roundId,
+    eventType: params.eventType,
+    status: params.status,
+    grossScore: params.grossScore,
+    adjustedGrossScore: params.adjustedGrossScore,
+    courseName: params.courseName,
+    playedAt: params.playedAt,
+  };
+
+  const notificationsEnabled =
+    params.eventType === 'round_approved'
+      ? target.round_approved_enabled !== false
+      : target.round_submitted_enabled !== false;
+
+  if (!notificationsEnabled) {
+    await logRoundNotificationHistory({
+      userId: target.user_id,
+      type: params.eventType,
+      payload,
+      status: 'skipped',
+      sentAt: null,
+    });
+    return;
+  }
+
+  if (!target.email) {
+    await logRoundNotificationHistory({
+      userId: target.user_id,
+      type: params.eventType,
+      payload: { ...payload, reason: 'missing_user_email' },
+      status: 'failed',
+      sentAt: null,
+    });
+    return;
+  }
+
+  try {
+    await sendTemplatedEmail({
+      to: target.email,
+      template: 'round_update',
+      data: {
+      eventType: params.eventType,
+      status: params.status,
+      grossScore: params.grossScore,
+      adjustedGrossScore: params.adjustedGrossScore,
+      courseName: params.courseName,
+      playedAt: params.playedAt,
+      },
+    });
+
+    await logRoundNotificationHistory({
+      userId: target.user_id,
+      type: params.eventType,
+      payload,
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    await logRoundNotificationHistory({
+      userId: target.user_id,
+      type: params.eventType,
+      payload: { ...payload, error: error instanceof Error ? error.message : String(error) },
+      status: 'failed',
+      sentAt: null,
+    });
+  }
 }
 
 async function maybeRecalculateHandicapForPlayer(
@@ -700,27 +836,27 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
       updated_at: string;
     };
 
-    const holeInsertResults = await Promise.all(
-      computedHoleScores.map((hole) =>
-        client.query(
-          `INSERT INTO hole_scores
-           (round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           RETURNING id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at`,
-          [
-            round.id,
-            hole.hole_number,
-            hole.strokes,
-            hole.putts,
-            hole.gir,
-            hole.fairway_hit,
-            hole.in_sand,
-            hole.penalties,
-            hole.net_double_bogey_adjusted,
-          ],
-        ),
-      ),
-    );
+    const holeInsertResults = [];
+    for (const hole of computedHoleScores) {
+      const holeInsertResult = await client.query(
+        `INSERT INTO hole_scores
+         (round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at`,
+        [
+          round.id,
+          hole.hole_number,
+          hole.strokes,
+          hole.putts,
+          hole.gir,
+          hole.fairway_hit,
+          hole.in_sand,
+          hole.penalties,
+          hole.net_double_bogey_adjusted,
+        ],
+      );
+      holeInsertResults.push(holeInsertResult);
+    }
 
     await client.query('COMMIT');
 
@@ -747,6 +883,19 @@ export async function handleCreateRound(req: http.IncomingMessage, res: http.Ser
       nextStatus === 'approved',
       'round_pending_admin_approval',
     );
+
+    const courseName = await getCourseNameForTeeConfiguration(value.tee_configuration_id);
+
+    await sendRoundNotification({
+      playerId: value.player_id,
+      roundId: round.id,
+      eventType: 'round_submitted',
+      status: nextStatus,
+      grossScore: grossScore,
+      adjustedGrossScore: adjustedGrossScore,
+      courseName: courseName,
+      playedAt: value.played_at,
+    });
 
     await logApplicationEvent({
       requestId,
@@ -1056,27 +1205,27 @@ export async function handleUpdateRound(req: http.IncomingMessage, res: http.Ser
 
     await client.query('DELETE FROM hole_scores WHERE round_id = $1', [round.id]);
 
-    const holeInsertResults = await Promise.all(
-      computedHoleScores.map((hole) =>
-        client.query(
-          `INSERT INTO hole_scores
-           (round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           RETURNING id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at`,
-          [
-            round.id,
-            hole.hole_number,
-            hole.strokes,
-            hole.putts,
-            hole.gir,
-            hole.fairway_hit,
-            hole.in_sand,
-            hole.penalties,
-            hole.net_double_bogey_adjusted,
-          ],
-        ),
-      ),
-    );
+    const holeInsertResults = [];
+    for (const hole of computedHoleScores) {
+      const holeInsertResult = await client.query(
+        `INSERT INTO hole_scores
+         (round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, round_id, hole_number, strokes, putts, gir, fairway_hit, in_sand, penalties, net_double_bogey_adjusted, created_at, updated_at`,
+        [
+          round.id,
+          hole.hole_number,
+          hole.strokes,
+          hole.putts,
+          hole.gir,
+          hole.fairway_hit,
+          hole.in_sand,
+          hole.penalties,
+          hole.net_double_bogey_adjusted,
+        ],
+      );
+      holeInsertResults.push(holeInsertResult);
+    }
 
     await client.query('COMMIT');
 
@@ -1103,6 +1252,19 @@ export async function handleUpdateRound(req: http.IncomingMessage, res: http.Ser
       nextStatus === 'approved',
       'round_pending_admin_approval',
     );
+
+    const courseName = await getCourseNameForTeeConfiguration(value.tee_configuration_id);
+
+    await sendRoundNotification({
+      playerId: value.player_id,
+      roundId: round.id,
+      eventType: 'round_updated',
+      status: nextStatus,
+      grossScore: grossScore,
+      adjustedGrossScore: adjustedGrossScore,
+      courseName: courseName,
+      playedAt: value.played_at,
+    });
 
     await logApplicationEvent({
       requestId,
@@ -1448,6 +1610,29 @@ export async function handleApproveRound(req: http.IncomingMessage, res: http.Se
       true,
       'manual_round_approval',
     );
+
+    const roundDetailsResult = await dbPool.query(
+      `SELECT r.gross_score, r.adjusted_gross_score, c.name
+       FROM rounds r
+       INNER JOIN tee_configurations tc ON tc.id = r.tee_configuration_id
+       INNER JOIN courses c ON c.id = tc.course_id
+       WHERE r.id = $1`,
+      [approvedRound.id],
+    );
+    const roundDetails = Number(roundDetailsResult.rowCount || 0) > 0 ? roundDetailsResult.rows[0] : null;
+
+    if (roundDetails) {
+      await sendRoundNotification({
+        playerId: approvedRound.player_id,
+        roundId: approvedRound.id,
+        eventType: 'round_approved',
+        status: 'approved',
+        grossScore: Number(roundDetails.gross_score),
+        adjustedGrossScore: Number(roundDetails.adjusted_gross_score),
+        courseName: String(roundDetails.name),
+        playedAt: approvedRound.played_at,
+      });
+    }
 
     await logApplicationEvent({
       requestId: (req.headers['x-request-id'] as string) || '',

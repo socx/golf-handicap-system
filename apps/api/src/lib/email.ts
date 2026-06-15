@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
 export type EmailProvider = 'mailpit' | 'smtp' | 'sendgrid' | 'ses' | 'mock';
-export type TemplateName = 'password_reset' | 'account_activation' | 'handicap_update';
+export type TemplateName = 'password_reset' | 'account_activation' | 'handicap_update' | 'round_update';
 
 export interface EmailBody {
   text: string;
@@ -28,10 +28,20 @@ interface HandicapUpdateTemplateData {
   roundsUsed: number;
 }
 
+interface RoundUpdateTemplateData {
+  eventType: 'round_submitted' | 'round_updated' | 'round_approved';
+  status: 'pending' | 'approved' | 'rejected';
+  grossScore: number;
+  adjustedGrossScore: number;
+  courseName: string;
+  playedAt: string;
+}
+
 type TemplateData = {
   password_reset: PasswordResetTemplateData;
   account_activation: AccountActivationTemplateData;
   handicap_update: HandicapUpdateTemplateData;
+  round_update: RoundUpdateTemplateData;
 };
 
 export interface SendEmailOptions {
@@ -130,6 +140,23 @@ export function renderEmailTemplate<T extends TemplateName>(template: T, data: T
         body: {
           text: `Your handicap index has changed.\n\nOld index: ${oldIndexLabel}\nNew index: ${t.newIndex.toFixed(1)}\nRounds used: ${t.roundsUsed}\n\nSign in to view your full handicap history.`,
           html: `<p>Your handicap index has changed.</p><ul><li><strong>Old index:</strong> ${oldIndexLabel}</li><li><strong>New index:</strong> ${t.newIndex.toFixed(1)}</li><li><strong>Rounds used:</strong> ${t.roundsUsed}</li></ul><p>Sign in to view your full handicap history.</p>`,
+        },
+      };
+    }
+    case 'round_update': {
+      const t = data as RoundUpdateTemplateData;
+      const statusLabel = t.status === 'approved' ? 'Approved' : t.status === 'pending' ? 'Pending Review' : 'Rejected';
+      const eventLabel =
+        t.eventType === 'round_submitted'
+          ? 'Round Submitted'
+          : t.eventType === 'round_updated'
+            ? 'Round Updated'
+            : 'Round Approved';
+      return {
+        subject: `${eventLabel}: ${t.courseName}`,
+        body: {
+          text: `Your round has been ${t.eventType === 'round_submitted' ? 'submitted' : t.eventType === 'round_updated' ? 'updated' : 'approved'}.\n\nCourse: ${t.courseName}\nPlayed: ${t.playedAt}\nGross Score: ${t.grossScore}\nAdjusted Score: ${t.adjustedGrossScore}\nStatus: ${statusLabel}\n\nSign in to view your round details.`,
+          html: `<p>Your round has been <strong>${t.eventType === 'round_submitted' ? 'submitted' : t.eventType === 'round_updated' ? 'updated' : 'approved'}</strong>.</p><ul><li><strong>Course:</strong> ${t.courseName}</li><li><strong>Played:</strong> ${t.playedAt}</li><li><strong>Gross Score:</strong> ${t.grossScore}</li><li><strong>Adjusted Score:</strong> ${t.adjustedGrossScore}</li><li><strong>Status:</strong> ${statusLabel}</li></ul><p>Sign in to view your round details.</p>`,
         },
       };
     }
