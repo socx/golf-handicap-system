@@ -1350,20 +1350,34 @@ export async function handleDeleteRound(req: http.IncomingMessage, res: http.Ser
       },
     });
 
-    const shouldRequestHandicapRecalculation = deletedRound.score_differential !== null;
-    if (shouldRequestHandicapRecalculation) {
-      await logApplicationEvent({
-        requestId,
-        event: 'handicap_recalculation_requested',
-        ipAddress: clientIp,
-        metadata: {
-          reason: 'round_deleted',
-          roundId: deletedRound.id,
-          playerId: deletedRound.player_id,
-          actorUserId: authResult.auth.userId,
-          scoreDifferential: Number(deletedRound.score_differential),
-        },
-      });
+    const shouldRecalculate = deletedRound.score_differential !== null;
+
+    await logApplicationEvent({
+      requestId,
+      event: 'round_deleted',
+      ipAddress: clientIp,
+      metadata: {
+        roundId: deletedRound.id,
+        playerId: deletedRound.player_id,
+        actorUserId: authResult.auth.userId,
+        teeConfigurationId: deletedRound.tee_configuration_id,
+        playedAt: deletedRound.played_at,
+        softDeleted: true,
+      },
+    });
+
+    let handicapRecalculation: HandicapRecalculationResponse = {
+      attempted: false,
+      status: 'not_approved',
+      reason: 'deleted_round_had_no_differential',
+    };
+
+    if (shouldRecalculate) {
+      handicapRecalculation = await maybeRecalculateHandicapForPlayer(
+        deletedRound.player_id,
+        true,
+        'round_deleted',
+      );
     }
 
     sendJson(res, 200, {
@@ -1375,7 +1389,7 @@ export async function handleDeleteRound(req: http.IncomingMessage, res: http.Ser
         playedAt: deletedRound.played_at,
         deletedAt: deletedRound.deleted_at,
       },
-      handicapRecalculationRequested: shouldRequestHandicapRecalculation,
+      handicapRecalculation,
     });
   } catch (error) {
     console.error('[rounds.delete] unexpected error:', error);

@@ -28,7 +28,7 @@ async function getPlayerRoundDifferentials(playerId: string, options?: { limit?:
        AND deleted_at IS NULL
        AND status = 'approved'
        AND score_differential IS NOT NULL
-     ORDER BY played_at DESC, created_at DESC
+     ORDER BY played_at DESC, id DESC
      ${limitClause}`,
     queryParams,
   );
