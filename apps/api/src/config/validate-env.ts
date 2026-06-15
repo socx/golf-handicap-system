@@ -43,8 +43,8 @@ export function validateAndNormalizeEnv(raw: RawEnv) {
   const nodeEnv = (process.env.NODE_ENV || 'development').toLowerCase();
   const emailTransport = (raw.EMAIL_TRANSPORT || (nodeEnv === 'production' ? 'smtp' : 'mailpit')).toLowerCase();
 
-  if (!['mailpit', 'smtp', 'sendgrid', 'ses'].includes(emailTransport)) {
-    throw new Error('Invalid environment variable EMAIL_TRANSPORT: expected one of mailpit, smtp, sendgrid, ses');
+  if (!['mailpit', 'smtp', 'sendgrid', 'ses', 'mock'].includes(emailTransport)) {
+    throw new Error('Invalid environment variable EMAIL_TRANSPORT: expected one of mailpit, smtp, sendgrid, ses, mock');
   }
 
   return {

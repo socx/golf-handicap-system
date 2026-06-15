@@ -26,6 +26,7 @@ export const ALL_NAVIGATION_ITEMS = [
   { to: '/handicap', label: 'Handicap', icon: TrendingUp, roles: ['admin', 'player'] },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'player', 'viewer'] },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['admin'] },
+  { to: '/admin/users', label: 'Admin Users', icon: UserCog, roles: ['admin'] },
   { to: '/admin/settings', label: 'Admin Settings', icon: SlidersHorizontal, roles: ['admin'] },
 ] satisfies ReadonlyArray<NavigationItem>;
 

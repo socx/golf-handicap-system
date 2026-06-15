@@ -37,6 +37,7 @@ const PlayersPage = lazy(async () => import('./pages/PlayersPage'));
 const PlayerProfilePage = lazy(async () => import('./pages/PlayerProfilePage'));
 const PlayerEditPage = lazy(async () => import('./pages/PlayerEditPage'));
 const AdminPlayersPage = lazy(async () => import('./pages/AdminPlayersPage'));
+const AdminUsersPage = lazy(async () => import('./pages/AdminUsersPage'));
 const AdminRoundsPage = lazy(async () => import('./pages/AdminRoundsPage'));
 const AdminHandicapOverridePage = lazy(async () => import('./pages/AdminHandicapOverridePage'));
 const AdminAuditLogsPage = lazy(async () => import('./pages/AdminAuditLogsPage'));
@@ -84,6 +85,7 @@ function AppRoutes() {
         />
         <Route path="/handicap/history/:playerId" element={<HandicapHistoryPage />} />
         <Route path="/admin" element={<AdminHomePage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/players" element={<AdminPlayersPage />} />
         <Route path="/admin/rounds" element={<AdminRoundsPage />} />
         <Route path="/admin/handicap-override/:playerId" element={<AdminHandicapOverridePage />} />

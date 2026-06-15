@@ -4,6 +4,8 @@ import { sendJson, sendError, getClientIp, readJsonBody } from '../../lib/http';
 import { dbPool } from '../../lib/db';
 import { logAuthAuditEvent } from '../../lib/audit';
 import { redisState } from '../../lib/redis';
+import { env } from '../../config/env';
+import { sendEmail } from '../../lib/email';
 import { verifyAndAuthorize, verifyAdminAndLog } from '../../middleware/auth';
 
 function isUuid(value: string): boolean {
@@ -206,8 +208,26 @@ export async function handleUserActivation(
       metadata: { is_active: updatedUser.is_active, role: updatedUser.role },
     });
 
+    let notificationEmailSent = false;
+    if (nextStatus) {
+      try {
+        await sendEmail(
+          updatedUser.email,
+          'Your account has been activated',
+          {
+            text: `Your Golf Handicap System account has been activated. You can now sign in at ${env.appUrl}/auth/login.`,
+            html: `<p>Your Golf Handicap System account has been activated.</p><p>You can now sign in at <a href="${env.appUrl}/auth/login">${env.appUrl}/auth/login</a>.</p>`,
+          },
+        );
+        notificationEmailSent = true;
+      } catch (emailError) {
+        console.error('[users.activation] activation email failed:', (emailError as Error).message);
+      }
+    }
+
     sendJson(res, 200, {
       user: updatedUser,
+      notificationEmailSent,
       message: nextStatus ? 'User activated successfully' : 'User deactivated successfully',
     });
   } catch (error) {

@@ -383,4 +383,39 @@ So that onboarding a new player is fast and consistent.
 
 ---
 
+## 13. Admin: Activate/reactivate users from frontend with email alert
+
+**As an admin**  
+I want to activate or reactivate user accounts from the frontend  
+So that access can be restored quickly and affected users are informed immediately.
+
+**Size:** S  
+**Estimate:** 1-2 days  
+**Priority:** High  
+**Target Date:** **TBD**
+
+### Acceptance Criteria
+- [x] Admin users list page is available in the frontend and shows account activation status.
+- [x] Admin can activate/reactivate inactive users directly from the UI.
+- [x] Admin can deactivate active users directly from the UI.
+- [x] Activation/deactivation actions call the existing activation API endpoints and refresh UI state without full-page reload.
+- [x] When a user is activated/reactivated, the system sends an email alert to that user.
+- [x] Success/error outcomes are surfaced clearly in the UI.
+- [x] Automated tests cover admin activate/deactivate frontend flow and activation email side effects.
+
+### Dependencies
+- **[Admin users list API](ca://s?q=Explain_admin_users_endpoint)**
+- **[User activation API](ca://s?q=Explain_user_activation_API)**
+- **[Email delivery module](ca://s?q=Explain_email_delivery_module)**
+- **[Admin middleware](ca://s?q=Explain_admin_middleware)**
+
+### Implementation Notes
+- Added `AdminUsersPage` at `apps/web/src/pages/AdminUsersPage.tsx` with filters, status badges, and activate/deactivate actions.
+- Added `adminUsersApi` in `apps/web/src/api/adminUsers.ts` for list/activate/deactivate calls.
+- Wired `/admin/users` route in `apps/web/src/App.tsx` and navigation links in `apps/web/src/components/layout/navigationItems.ts` and `apps/web/src/pages/AdminHomePage.tsx`.
+- Extended `handleUserActivation` in `apps/api/src/routes/admin/users.ts` to send activation email alerts on activate/reactivate and return `notificationEmailSent` status.
+- Added API e2e coverage in `apps/api/test/admin-user-activation.e2e.test.mjs` and frontend coverage in `apps/web/src/test/AdminUsersPage.test.tsx`.
+
+---
+
 # End of stories-admin.md

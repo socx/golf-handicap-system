@@ -5,6 +5,12 @@ import { ShieldCheck, UserCog, ClipboardCheck, SlidersHorizontal, Plus, Logs } f
 
 const adminCards = [
   {
+    to: '/admin/users',
+    title: 'Users',
+    description: 'Manage account status and activate or deactivate users.',
+    icon: UserCog,
+  },
+  {
     to: '/admin/players',
     title: 'Players',
     description: 'Create linked user+player accounts, edit players, and manage user links.',
@@ -60,7 +66,7 @@ const AdminHomePage: React.FC = () => {
         </Link>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {adminCards.map((card) => (
           <Link
             key={card.to}
