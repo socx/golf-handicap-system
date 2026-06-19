@@ -119,7 +119,7 @@ function parseHandicapHistoryRoute(path: string): { playerId: string } | null {
 }
 
 function parseHandicapOverrideRoute(path: string): { playerId: string } | null {
-  const match = path.match(/^\/(?:api\/)?admin\/handicap-override\/([0-9a-fA-F-]+)$/);
+  const match = path.match(/^\/(?:api\/)?(?:admin\/handicap-override|handicap\/override)\/([0-9a-fA-F-]+)$/);
   if (!match) return null;
   return { playerId: String(match[1] || '') };
 }

@@ -616,6 +616,22 @@ export async function handleCreateHandicapOverride(
     [playerId, roundedIndex],
   );
 
+  await dbPool.query(
+    `INSERT INTO handicap_records
+     (player_id, handicap_index, num_differentials, average_differential, differentials_used, rounds_used, pcc_values, cap_adjustments)
+     VALUES ($1, $2, 1, 0, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $3::jsonb)`,
+    [
+      playerId,
+      roundedIndex,
+      JSON.stringify({
+        method: 'manual_override',
+        previousIndex: player.handicap_index,
+        reason,
+        adminUserId,
+      }),
+    ],
+  );
+
   await logApplicationEvent({
     requestId: (req.headers['x-request-id'] as string) || '',
     event: 'handicap_override_applied',

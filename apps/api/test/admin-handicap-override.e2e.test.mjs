@@ -127,6 +127,34 @@ test('GET /api/admin/handicap-override/:playerId lists overrides after creation'
   assert.equal(override.adminEmail, 'story9-admin@example.test');
 });
 
+test('POST /api/handicap/override/:playerId applies override via story path alias', async () => {
+  const token = buildToken('admin', ADMIN_USER_ID);
+  const response = await requestJson(`/api/handicap/override/${PLAYER_ID}`, {
+    method: 'POST',
+    token,
+    body: { newIndex: 13.8, reason: 'Committee adjustment' },
+  });
+
+  assert.equal(response.status, 201, JSON.stringify(response.json));
+  assert.equal(response.json.override.newIndex, 13.8);
+  assert.equal(response.json.override.reason, 'Committee adjustment');
+});
+
+test('POST override logs manual entry in handicap history records', async () => {
+  const record = await dbPool.query(
+    `SELECT cap_adjustments, handicap_index
+     FROM handicap_records
+     WHERE player_id = $1
+     ORDER BY calculation_date DESC
+     LIMIT 1`,
+    [PLAYER_ID],
+  );
+
+  assert.equal(record.rowCount, 1);
+  assert.equal(Number(record.rows[0].handicap_index), 13.8);
+  assert.equal(record.rows[0].cap_adjustments.method, 'manual_override');
+});
+
 test('POST /api/admin/handicap-override/:playerId returns 400 when reason is missing', async () => {
   const token = buildToken('admin', ADMIN_USER_ID);
   const response = await requestJson(`/api/admin/handicap-override/${PLAYER_ID}`, {
