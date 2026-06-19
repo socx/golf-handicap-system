@@ -251,14 +251,16 @@ So that users can control what they receive.
 ### Acceptance Criteria
 - [ ] `/settings/notifications` page.  
 - [ ] Toggles for each notification type.  
-- [ ] Saves via PATCH `/notifications/preferences`.  
-- [ ] Shows success toast.
+- [x] Saves via PATCH `/notifications/preferences`.  
+- [x] Shows success toast.
 
 ### Dependencies
 - **[Notification preferences API](ca://s?q=Explain_notification_preferences_API)**  
 - **[Settings page](ca://s?q=Explain_settings_page)**
 
 ---
+
+
 
 ## 9. Frontend: Notification history UI
 
