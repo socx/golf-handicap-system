@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Line,
   LineChart,
   ResponsiveContainer,
+  TooltipProps,
   Tooltip,
   XAxis,
   YAxis,
@@ -18,6 +20,11 @@ interface DashboardState {
   loading: boolean;
   error: string | null;
   summary: DashboardSummaryResponse | null;
+}
+
+interface TrendDateRange {
+  from: string;
+  to: string;
 }
 
 const widgetBaseClass =
@@ -36,9 +43,36 @@ function formatRoundStatus(status: 'pending' | 'approved' | 'rejected'): string 
   return 'Pending';
 }
 
+function parseIsoDate(value: string): Date | null {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function TrendTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const point = payload[0]?.payload as
+    | { date: string; handicapIndex: number; roundsUsed: number }
+    | undefined;
+  if (!point) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-md dark:border-slate-700 dark:bg-slate-800">
+      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{point.date}</p>
+      <p className="mt-1 text-sm font-bold text-teal-700 dark:text-teal-400">
+        Index: {point.handicapIndex.toFixed(1)}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Rounds used: {point.roundsUsed}</p>
+    </div>
+  );
+}
+
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const playerId = user?.player_id ?? null;
+  const [trendRange, setTrendRange] = useState<TrendDateRange>({ from: '', to: '' });
   const [state, setState] = useState<DashboardState>({
     loading: true,
     error: null,
@@ -76,11 +110,25 @@ export const DashboardPage: React.FC = () => {
   const trendData = useMemo(() => {
     const points = state.summary?.handicapTrend || [];
     return [...points].reverse().map((point) => ({
+      calculationDate: point.calculationDate,
       date: formatDate(point.calculationDate),
       handicapIndex: point.handicapIndex,
       roundsUsed: point.roundsUsed.length,
     }));
   }, [state.summary]);
+
+  const filteredTrendData = useMemo(() => {
+    const fromDate = trendRange.from ? parseIsoDate(`${trendRange.from}T00:00:00`) : null;
+    const toDate = trendRange.to ? parseIsoDate(`${trendRange.to}T23:59:59`) : null;
+
+    return trendData.filter((point) => {
+      const pointDate = parseIsoDate(point.calculationDate);
+      if (!pointDate) return false;
+      if (fromDate && pointDate < fromDate) return false;
+      if (toDate && pointDate > toDate) return false;
+      return true;
+    });
+  }, [trendData, trendRange.from, trendRange.to]);
 
   return (
     <div className="space-y-6">
@@ -125,25 +173,30 @@ export const DashboardPage: React.FC = () => {
               {!state.loading && !state.error && state.summary && state.summary.recentRounds.length > 0 && (
                 <ul className="mt-3 space-y-2" aria-label="Recent rounds list">
                   {state.summary.recentRounds.map((round) => (
-                    <li key={round.id} className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-                      <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {round.courseName || 'Unknown course'}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {formatRoundStatus(round.status)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                        {formatDate(round.playedAt)} • Gross {round.grossScore} • Adjusted {round.adjustedGrossScore}
-                      </p>
+                    <li key={round.id}>
+                      <Link
+                        to={`/rounds/${round.id}`}
+                        className="block rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-700/80"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="font-medium text-slate-900 dark:text-slate-100">
+                            {round.courseName || 'Unknown course'}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {formatRoundStatus(round.status)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                          {formatDate(round.playedAt)} • Gross {round.grossScore} • Adjusted {round.adjustedGrossScore}
+                        </p>
+                      </Link>
                     </li>
                   ))}
                 </ul>
               )}
             </article>
 
-            <article className={widgetBaseClass}>
+            <article className={widgetBaseClass} aria-label="Stats widget">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
                 Stats
               </p>
@@ -151,26 +204,26 @@ export const DashboardPage: React.FC = () => {
               {state.loading && <div className="mt-4 h-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
 
               {!state.loading && !state.error && state.summary && (
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                     <dt className="text-slate-500 dark:text-slate-400">GIR</dt>
                     <dd className="text-base font-semibold text-slate-900 dark:text-slate-100">
                       {state.summary.stats.girPercentage.toFixed(1)}%
                     </dd>
                   </div>
-                  <div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                     <dt className="text-slate-500 dark:text-slate-400">FIR</dt>
                     <dd className="text-base font-semibold text-slate-900 dark:text-slate-100">
                       {state.summary.stats.firPercentage.toFixed(1)}%
                     </dd>
                   </div>
-                  <div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                     <dt className="text-slate-500 dark:text-slate-400">Avg Putts</dt>
                     <dd className="text-base font-semibold text-slate-900 dark:text-slate-100">
                       {state.summary.stats.averagePutts.toFixed(2)}
                     </dd>
                   </div>
-                  <div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                     <dt className="text-slate-500 dark:text-slate-400">Avg Penalties</dt>
                     <dd className="text-base font-semibold text-slate-900 dark:text-slate-100">
                       {state.summary.stats.averagePenalties.toFixed(2)}
@@ -186,9 +239,47 @@ export const DashboardPage: React.FC = () => {
           </section>
 
           <section className={widgetBaseClass}>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
-              Handicap Trend
-            </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+                Handicap Trend
+              </p>
+
+              <form className="flex flex-wrap items-end gap-2" aria-label="Trend date range filter">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="dashboard-trend-from" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    From
+                  </label>
+                  <input
+                    id="dashboard-trend-from"
+                    type="date"
+                    value={trendRange.from}
+                    onChange={(e) => setTrendRange((prev) => ({ ...prev, from: e.target.value }))}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="dashboard-trend-to" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    To
+                  </label>
+                  <input
+                    id="dashboard-trend-to"
+                    type="date"
+                    value={trendRange.to}
+                    onChange={(e) => setTrendRange((prev) => ({ ...prev, to: e.target.value }))}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                {(trendRange.from || trendRange.to) && (
+                  <button
+                    type="button"
+                    onClick={() => setTrendRange({ from: '', to: '' })}
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Reset
+                  </button>
+                )}
+              </form>
+            </div>
 
             {state.loading && <div className="mt-4 h-48 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
 
@@ -196,17 +287,17 @@ export const DashboardPage: React.FC = () => {
               <p className="mt-3 text-sm text-red-600 dark:text-red-400">{state.error}</p>
             )}
 
-            {!state.loading && !state.error && trendData.length === 0 && (
+            {!state.loading && !state.error && filteredTrendData.length === 0 && (
               <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">No handicap history available.</p>
             )}
 
-            {!state.loading && !state.error && trendData.length > 0 && (
+            {!state.loading && !state.error && filteredTrendData.length > 0 && (
               <div className="mt-4 h-56" data-testid="dashboard-trend-chart">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData}>
+                  <LineChart data={filteredTrendData}>
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} />
                     <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} width={34} />
-                    <Tooltip />
+                    <Tooltip content={<TrendTooltip />} />
                     <Line
                       type="monotone"
                       dataKey="handicapIndex"
