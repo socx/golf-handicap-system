@@ -1,0 +1,29 @@
+# Node / React Dependencies & Artifacts
+node_modules/
+.npm/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build Outputs
+dist/
+build/
+out/
+.next/
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Git and Version Control
+.git/
+.github/
+
+# Testing Coverages
+coverage/
+.nyc_output/
+
+# Environment secrets

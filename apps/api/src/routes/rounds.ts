@@ -1766,3 +1766,306 @@ export async function handleRejectRound(req: http.IncomingMessage, res: http.Ser
     sendError(res, 500, 'round_rejection_failed', 'Unable to reject round at this time');
   }
 }
+
+interface RoundImportRowValues {
+  player_name: string;
+  course_name: string;
+  tee_colour: string;
+  played_at: string;
+  hole_strokes: number[];
+}
+
+interface RoundImportRowResult {
+  rowNumber: number;
+  values: RoundImportRowValues;
+  issues: ValidationIssue[];
+  lookupWarnings: string[];
+}
+
+function parseCsvTextForRounds(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentCell = '';
+  let currentRow: string[] = [];
+  let inQuotes = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const nextChar = csvText[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentCell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        index += 1;
+      }
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+function normalizeHeaderForRounds(header: string): string {
+  return header.trim().toLowerCase();
+}
+
+async function parseRoundImportRows(csvText: string): Promise<{ headers: string[]; rows: RoundImportRowResult[] }> {
+  const parsedRows = parseCsvTextForRounds(csvText);
+  if (parsedRows.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  const headers = parsedRows[0].map(normalizeHeaderForRounds);
+  const results: RoundImportRowResult[] = [];
+
+  for (let rowIndex = 1; rowIndex < parsedRows.length; rowIndex += 1) {
+    const row = parsedRows[rowIndex];
+    const record = Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ''])) as Record<string, string>;
+    const issues: ValidationIssue[] = [];
+    const lookupWarnings: string[] = [];
+
+    const playerName = record.player_name?.trim() || '';
+    const courseName = record.course_name?.trim() || '';
+    const teeColour = record.tee_colour?.trim() || '';
+    const playedAt = record.played_at?.trim() || '';
+
+    if (!playerName) {
+      issues.push({ field: 'player_name', message: 'Player name is required' });
+    }
+
+    if (!courseName) {
+      issues.push({ field: 'course_name', message: 'Course name is required' });
+    }
+
+    if (!teeColour) {
+      issues.push({ field: 'tee_colour', message: 'Tee colour is required' });
+    }
+
+    if (!playedAt) {
+      issues.push({ field: 'played_at', message: 'Played at date is required' });
+    } else {
+      const parsed = new Date(playedAt);
+      if (Number.isNaN(parsed.getTime())) {
+        issues.push({ field: 'played_at', message: 'Played at must be a valid date (YYYY-MM-DD or ISO format)' });
+      }
+    }
+
+    // Parse hole strokes
+    const holeStrokes: number[] = [];
+    for (let holeNum = 1; holeNum <= 18; holeNum += 1) {
+      const strokeKey = `h${holeNum}_strokes`;
+      const strokeStr = record[strokeKey]?.trim() || '';
+      if (!strokeStr) {
+        issues.push({ field: strokeKey, message: `Hole ${holeNum} strokes are required` });
+        holeStrokes.push(0);
+      } else {
+        const strokes = Number(strokeStr);
+        if (!Number.isInteger(strokes) || strokes < 1) {
+          issues.push({ field: strokeKey, message: `Hole ${holeNum} strokes must be an integer >= 1` });
+        }
+        holeStrokes.push(strokes);
+      }
+    }
+
+    results.push({
+      rowNumber: rowIndex + 1,
+      values: {
+        player_name: playerName,
+        course_name: courseName,
+        tee_colour: teeColour,
+        played_at: playedAt,
+        hole_strokes: holeStrokes,
+      },
+      issues,
+      lookupWarnings,
+    });
+  }
+
+  return { headers, rows: results };
+}
+
+export async function handleImportRounds(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(req);
+  } catch (error) {
+    sendError(res, 400, 'invalid_json', (error as Error).message);
+    return;
+  }
+
+  const csvText = typeof payload.csvText === 'string' ? payload.csvText.trim() : '';
+  const dryRun = payload.dryRun !== false;
+
+  if (!csvText) {
+    sendError(res, 400, 'validation_error', 'csvText is required');
+    return;
+  }
+
+  const { headers, rows } = await parseRoundImportRows(csvText);
+  if (headers.length === 0 || rows.length === 0) {
+    sendError(res, 400, 'validation_error', 'CSV must include a header row and at least one data row');
+    return;
+  }
+
+  const totalIssues = rows.reduce((sum, row) => sum + row.issues.length, 0);
+
+  if (dryRun) {
+    sendJson(res, 200, {
+      dryRun: true,
+      summary: {
+        rowCount: rows.length,
+        validRows: rows.filter((row) => row.issues.length === 0).length,
+        invalidRows: rows.filter((row) => row.issues.length > 0).length,
+        totalIssues,
+      },
+      rows,
+    });
+    return;
+  }
+
+  if (totalIssues > 0) {
+    sendJson(res, 400, {
+      error: {
+        code: 'validation_error',
+        message: 'Import contains validation errors',
+      },
+      dryRun: false,
+      summary: {
+        rowCount: rows.length,
+        validRows: rows.filter((row) => row.issues.length === 0).length,
+        invalidRows: rows.filter((row) => row.issues.length > 0).length,
+        totalIssues,
+      },
+      rows,
+    });
+    return;
+  }
+
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const importedRounds = [];
+
+    for (const row of rows) {
+      if (row.issues.length > 0) {
+        continue;
+      }
+
+      const playerNameParts = row.values.player_name.trim().split(/\s+/);
+      let playerResult;
+
+      if (playerNameParts.length >= 2) {
+        playerResult = await client.query(
+          'SELECT id FROM players WHERE first_name ILIKE $1 AND last_name ILIKE $2 AND deleted_at IS NULL LIMIT 1',
+          [playerNameParts[0], playerNameParts[playerNameParts.length - 1]],
+        );
+      } else if (playerNameParts.length === 1) {
+        playerResult = await client.query(
+          'SELECT id FROM players WHERE (first_name ILIKE $1 OR last_name ILIKE $1) AND deleted_at IS NULL LIMIT 1',
+          [playerNameParts[0]],
+        );
+      }
+
+      if (!playerResult || playerResult.rows.length === 0) {
+        continue;
+      }
+
+      const playerId = playerResult.rows[0].id;
+
+      const courseResult = await client.query(
+        'SELECT id FROM courses WHERE name ILIKE $1 AND deleted_at IS NULL LIMIT 1',
+        [row.values.course_name],
+      );
+
+      if (!courseResult || courseResult.rows.length === 0) {
+        continue;
+      }
+
+      const courseId = courseResult.rows[0].id;
+
+      const teeResult = await client.query(
+        'SELECT id FROM tee_configurations WHERE course_id = $1 AND tee_colour ILIKE $2 AND deleted_at IS NULL LIMIT 1',
+        [courseId, row.values.tee_colour],
+      );
+
+      if (!teeResult || teeResult.rows.length === 0) {
+        continue;
+      }
+
+      const teeConfigurationId = teeResult.rows[0].id;
+
+      const roundResult = await client.query(
+        `INSERT INTO rounds (player_id, tee_configuration_id, played_at, status)
+         VALUES ($1, $2, $3, 'pending')
+         RETURNING id`,
+        [playerId, teeConfigurationId, row.values.played_at],
+      );
+
+      const roundId = roundResult.rows[0].id;
+
+      for (let holeNum = 1; holeNum <= 18; holeNum += 1) {
+        const strokes = row.values.hole_strokes[holeNum - 1];
+        await client.query(
+          `INSERT INTO hole_scores (round_id, hole_number, strokes)
+           VALUES ($1, $2, $3)`,
+          [roundId, holeNum, strokes],
+        );
+      }
+
+      importedRounds.push(roundId);
+    }
+
+    await client.query('COMMIT');
+
+    sendJson(res, 201, {
+      dryRun: false,
+      summary: {
+        rowCount: rows.length,
+        importedRows: importedRounds.length,
+      },
+      importedRoundIds: importedRounds,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[rounds.import] unexpected error:', error);
+    sendError(res, 500, 'round_import_failed', 'Unable to import rounds at this time');
+  } finally {
+    client.release();
+  }
+}
