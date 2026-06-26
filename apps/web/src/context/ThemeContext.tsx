@@ -1,7 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { authApi } from '../api/auth';
 
 export type ThemeMode = 'light' | 'dark';
+type ThemePreference = ThemeMode | 'system';
 
 interface ThemeContextValue {
   theme: ThemeMode;
@@ -34,8 +36,37 @@ function applyTheme(theme: ThemeMode): void {
   window.localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
+function resolveThemePreference(preference: ThemePreference): ThemeMode {
+  if (preference === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return preference;
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadPreference = async () => {
+      try {
+        const response = await authApi.getNotificationPreferences();
+        if (cancelled) return;
+        const preference = response.data.preferences.theme_mode;
+        if (preference === 'light' || preference === 'dark' || preference === 'system') {
+          setThemeState(resolveThemePreference(preference));
+        }
+      } catch {
+        // Ignore failures for unauthenticated state.
+      }
+    };
+
+    void loadPreference();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -45,8 +76,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () => ({
       theme,
       isDark: theme === 'dark',
-      toggleTheme: () => setThemeState((current) => (current === 'dark' ? 'light' : 'dark')),
-      setTheme: setThemeState,
+      toggleTheme: () => {
+        setThemeState((current) => {
+          const next = current === 'dark' ? 'light' : 'dark';
+          void authApi.updateNotificationPreferences({ theme_mode: next }).catch(() => undefined);
+          return next;
+        });
+      },
+      setTheme: (nextTheme) => {
+        setThemeState(nextTheme);
+        void authApi.updateNotificationPreferences({ theme_mode: nextTheme }).catch(() => undefined);
+      },
     }),
     [theme],
   );

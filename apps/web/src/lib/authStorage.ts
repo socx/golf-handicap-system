@@ -5,6 +5,8 @@ export interface User {
   role: 'admin' | 'player' | 'viewer';
   is_active: boolean;
   player_id?: string | null;
+  impersonated_by?: string | null;
+  original_user_id?: string | null;
 }
 
 const REFRESH_TOKEN_KEY = 'ghs-refresh-token';

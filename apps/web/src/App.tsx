@@ -53,6 +53,8 @@ const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
 const SettingsPage = lazy(async () => import('./pages/SettingsPage'));
 const ReleaseNotesPage = lazy(async () => import('./pages/ReleaseNotesPage'));
+const FeedbackPage = lazy(async () => import('./pages/FeedbackPage'));
+const AdminFeedbackPage = lazy(async () => import('./pages/AdminFeedbackPage'));
 
 function AppRoutes() {
   return (
@@ -101,7 +103,9 @@ function AppRoutes() {
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/whats-new" element={<ReleaseNotesPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/admin/release-notes" element={<AdminReleaseNotesPage />} />
+        <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

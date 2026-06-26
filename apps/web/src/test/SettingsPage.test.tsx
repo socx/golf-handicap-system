@@ -20,6 +20,13 @@ vi.mock('../hooks/useAuth', () => ({
   }),
 }));
 
+vi.mock('../context/ThemeContext', () => ({
+  useTheme: () => ({
+    isDark: false,
+    toggleTheme: vi.fn(),
+  }),
+}));
+
 vi.mock('../lib/toast', () => ({
   showErrorToast: mockShowErrorToast,
   showSuccessToast: mockShowSuccessToast,
@@ -30,6 +37,7 @@ const defaultPrefs = {
   round_submitted_enabled: false,
   round_approved_enabled: true,
   marketing_enabled: false,
+  theme_mode: 'system' as const,
 };
 
 afterEach(() => {

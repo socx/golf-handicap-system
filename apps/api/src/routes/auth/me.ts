@@ -9,6 +9,8 @@ interface AuthSessionUser {
   role: 'admin' | 'player' | 'viewer';
   is_active: boolean;
   player_id: string | null;
+  impersonated_by?: string | null;
+  original_user_id?: string | null;
 }
 
 export async function handleMe(
@@ -50,7 +52,18 @@ export async function handleMe(
       return;
     }
 
-    sendJson(res, 200, { user });
+    const claimsMap = claims as unknown as Record<string, unknown>;
+    const impersonatedBy = typeof claimsMap.impersonatedBy === 'string'
+      ? String(claimsMap.impersonatedBy)
+      : null;
+
+    sendJson(res, 200, {
+      user: {
+        ...user,
+        impersonated_by: impersonatedBy,
+        original_user_id: impersonatedBy,
+      },
+    });
   } catch (error) {
     console.error('[auth.me] unexpected error:', error);
     sendError(res, 500, 'internal_error', 'Unable to retrieve session');

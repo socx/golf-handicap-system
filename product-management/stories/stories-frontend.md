@@ -423,10 +423,17 @@ So that I can view my handicap summary and history without dead-end placeholders
 **Target Date:** **28 October 2026**
 
 ### Acceptance Criteria
-- [ ] `/handicap` no longer renders a placeholder for player users.
-- [ ] Player users are routed to their own handicap history/summary experience.
-- [ ] If a player account is not linked, a clear guidance message is displayed.
-- [ ] Admin/viewer experience remains role-appropriate.
+- [x] `/handicap` no longer renders a placeholder for player users.
+- [x] Player users are routed to their own handicap history/summary experience.
+- [x] If a player account is not linked, a clear guidance message is displayed.
+- [x] Admin/viewer experience remains role-appropriate.
+
+### Implementation Notes
+- Implemented player-aware handicap landing behavior in `apps/web/src/pages/HandicapPage.tsx`.
+- Linked players are redirected from `/handicap` to `/handicap/history/:playerId`.
+- Unlinked player accounts see a clear guidance message to request admin linking.
+- Non-player roles retain role-appropriate guidance and navigation behavior.
+- Added test coverage in `apps/web/src/test/HandicapPage.test.tsx`.
 
 ### Dependencies
 - Auth session data (`user.player_id`)
@@ -446,10 +453,16 @@ So that route context is clear when navigating between `Admin` and `Admin Settin
 **Target Date:** **28 October 2026**
 
 ### Acceptance Criteria
-- [ ] Visiting `/admin/settings` highlights `Admin Settings` only.
-- [ ] `Admin` remains highlighted only on `/admin`.
-- [ ] Existing navigation filtering behavior is unchanged.
-- [ ] Automated tests cover active-state behavior for overlapping route prefixes.
+- [x] Visiting `/admin/settings` highlights `Admin Settings` only.
+- [x] `Admin` remains highlighted only on `/admin`.
+- [x] Existing navigation filtering behavior is unchanged.
+- [x] Automated tests cover active-state behavior for overlapping route prefixes.
+
+### Implementation Notes
+- Navigation link active-state behavior is configured in `apps/web/src/components/layout/AppLayout.tsx`.
+- `NavLink` for `/admin` is set with `end` matching to prevent overlap with `/admin/settings`.
+- Role-filtered navigation remains unchanged via `getFilteredNavigationItems` in `apps/web/src/components/layout/navigationItems.ts`.
+- Added automated verification in `apps/web/src/test/AppLayout.test.tsx` for overlapping admin route prefixes.
 
 ### Dependencies
 - Global layout navigation

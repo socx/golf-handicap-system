@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminUsersApi, type AdminUser } from '../api/adminUsers';
+import { authApi } from '../api/auth';
 import { handleApiError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
@@ -10,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { Icon } from '../components/ui/Icon';
 import { UserCog } from '../components/ui/icons';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
+import { setStoredUser, setTokens } from '../lib/authStorage';
 
 const PAGE_SIZE = 20;
 
@@ -78,6 +80,25 @@ const AdminUsersPage: React.FC = () => {
       }
     } catch (err) {
       showErrorToast('Status update failed', handleApiError(err));
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const handleImpersonate = async (target: AdminUser) => {
+    if (target.id === user?.id) {
+      showErrorToast('Invalid target', 'Cannot impersonate your own account.');
+      return;
+    }
+
+    setBusyUserId(target.id);
+    try {
+      const response = await authApi.startImpersonation(target.id);
+      setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      setStoredUser(response.data.user);
+      window.location.assign('/dashboard');
+    } catch (err) {
+      showErrorToast('Impersonation failed', handleApiError(err));
     } finally {
       setBusyUserId(null);
     }
@@ -198,6 +219,14 @@ const AdminUsersPage: React.FC = () => {
                           : row.is_active
                             ? 'Deactivate'
                             : 'Activate'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void handleImpersonate(row)}
+                        disabled={busyUserId === row.id || !row.is_active}
+                      >
+                        Impersonate
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -71,12 +71,15 @@ export async function ensureRefreshTokenUsable(
   return true;
 }
 
-export function buildAuthTokens(user: User): AuthTokens {
+export function buildAuthTokens(
+  user: User,
+  extraClaims?: Record<string, unknown>,
+): AuthTokens {
   const accessTokenOptions: SignOptions = {
     expiresIn: env.jwtAccessExpiresIn as SignOptions['expiresIn'],
   };
   const accessToken = jwt.sign(
-    { sub: user.id, role: user.role, tokenType: 'access' },
+    { sub: user.id, role: user.role, tokenType: 'access', ...(extraClaims || {}) },
     env.jwtSecret,
     accessTokenOptions,
   );

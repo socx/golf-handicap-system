@@ -55,7 +55,13 @@ So that users can choose a theme that suits their environment.
 - [x] **[Dark mode theme](ca://s?q=Explain_dark_mode_theme)** implemented.  
 - [x] Auto‑detect system preference.  
 - [x] Toggle in settings.  
-- [ ] Stored in user preferences.
+- [x] Stored in user preferences.
+
+### Implementation Notes
+- Added `theme_mode` persistence to user notification preferences and API responses in `apps/api/src/routes/auth/settings.ts`.
+- Added DB migration `packages/db/migrations/021_user_preferences_feedback.sql` to store `theme_mode` with validation (`light|dark|system`).
+- Updated theme provider in `apps/web/src/context/ThemeContext.tsx` to load and persist theme preference through the API.
+- Updated settings page to use shared theme context toggle in `apps/web/src/pages/SettingsPage.tsx`.
 
 ### Dependencies
 - **[Theme system](ca://s?q=Explain_theme_support)**
@@ -74,12 +80,19 @@ So that users can quickly find players, rounds, and courses.
 **Target Date:** **08 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[Global search API](ca://s?q=Explain_global_search_API)** supports:
+- [x] **[Global search API](ca://s?q=Explain_global_search_API)** supports:
   - players  
   - rounds  
   - courses  
-- [ ] Autocomplete suggestions.  
-- [ ] Tenant‑scoped.
+- [x] Autocomplete suggestions.  
+- [x] Tenant‑scoped.
+
+### Implementation Notes
+- Implemented global search endpoint in `apps/api/src/routes/search.ts`.
+- Added API routing for `GET /api/search` in `apps/api/src/app.ts`.
+- Search covers players, rounds, and courses with scoped behavior for player users.
+- Added autocomplete UI component `apps/web/src/components/layout/GlobalSearch.tsx`.
+- Added frontend API client in `apps/web/src/api/search.ts` and integrated into app header layout.
 
 ### Dependencies
 - **[Search indexes](ca://s?q=Explain_search_indexing_strategy)**
@@ -219,12 +232,20 @@ So that users can submit suggestions and issues.
 **Target Date:** **22 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[Feedback form](ca://s?q=Explain_feedback_form_design)** supports:
+- [x] **[Feedback form](ca://s?q=Explain_feedback_form_design)** supports:
   - category  
   - message  
   - screenshot upload  
-- [ ] Stored in feedback table.  
-- [ ] Admin UI for viewing.
+- [x] Stored in feedback table.  
+- [x] Admin UI for viewing.
+
+### Implementation Notes
+- Added feedback storage migration and table in `packages/db/migrations/021_user_preferences_feedback.sql`.
+- Implemented submit/list APIs in `apps/api/src/routes/feedback.ts`.
+- Added routes in `apps/api/src/app.ts` for `POST /api/feedback` and `GET /api/admin/feedback`.
+- Implemented user feedback form page in `apps/web/src/pages/FeedbackPage.tsx`.
+- Implemented admin feedback inbox page in `apps/web/src/pages/AdminFeedbackPage.tsx`.
+- Added frontend feedback API client in `apps/web/src/api/feedback.ts`.
 
 ### Dependencies
 - **[Object storage](ca://s?q=Explain_object_storage_bucket)**
@@ -317,9 +338,18 @@ So that admins can troubleshoot user issues.
 **Target Date:** **10 July 2028**
 
 ### Acceptance Criteria
-- [ ] **[Impersonation mode](ca://s?q=Explain_admin_impersonation_feature)** for tenant admins + super‑admins.  
-- [ ] Audit logged.  
-- [ ] Clear exit button.
+- [x] **[Impersonation mode](ca://s?q=Explain_admin_impersonation_feature)** for tenant admins + super‑admins.  
+- [x] Audit logged.  
+- [x] Clear exit button.
+
+### Implementation Notes
+- Implemented impersonation start/stop endpoints in `apps/api/src/routes/admin/impersonation.ts`.
+- Wired admin impersonation routes in `apps/api/src/app.ts`.
+- Extended token creation with optional claims in `apps/api/src/lib/tokens.ts` for impersonation metadata.
+- Exposed impersonation context in auth-me response via `apps/api/src/routes/auth/me.ts`.
+- Added impersonate action in admin users UI (`apps/web/src/pages/AdminUsersPage.tsx`).
+- Added clear exit button in app header (`apps/web/src/components/layout/AppLayout.tsx`).
+- Added auth API methods for impersonation (`apps/web/src/api/auth.ts`).
 
 ### Dependencies
 - **[RBAC](ca://s?q=Explain_RBAC)**  

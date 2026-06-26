@@ -9,15 +9,18 @@ const NOTIFICATION_FIELDS = [
   'round_submitted_enabled',
   'round_approved_enabled',
   'marketing_enabled',
+  'theme_mode',
 ] as const;
 
 type NotificationField = (typeof NOTIFICATION_FIELDS)[number];
+type NotificationPreferenceValue = boolean | 'light' | 'dark' | 'system';
 
 export interface NotificationPreferences {
   handicap_updates_enabled: boolean;
   round_submitted_enabled: boolean;
   round_approved_enabled: boolean;
   marketing_enabled: boolean;
+  theme_mode: 'light' | 'dark' | 'system';
 }
 
 export async function handleGetNotificationPreferences(
@@ -35,6 +38,7 @@ export async function handleGetNotificationPreferences(
   try {
     const result = await dbPool.query<NotificationPreferences>(
       `SELECT handicap_updates_enabled, round_submitted_enabled, round_approved_enabled, marketing_enabled
+              , theme_mode
        FROM notification_preferences WHERE user_id = $1`,
       [authResult.auth.userId],
     );
@@ -44,6 +48,7 @@ export async function handleGetNotificationPreferences(
       round_submitted_enabled: true,
       round_approved_enabled: true,
       marketing_enabled: false,
+      theme_mode: 'system',
     };
 
     sendJson(res, 200, { preferences });
@@ -66,8 +71,15 @@ export async function handleUpdateNotificationPreferences(
   }
 
   const body = await readJsonBody(req);
-  const updates: Partial<Record<NotificationField, boolean>> = {};
+  const updates: Partial<Record<NotificationField, NotificationPreferenceValue>> = {};
   for (const field of NOTIFICATION_FIELDS) {
+    if (field === 'theme_mode') {
+      if (typeof body[field] === 'string' && ['light', 'dark', 'system'].includes(body[field] as string)) {
+        updates[field] = body[field] as 'light' | 'dark' | 'system';
+      }
+      continue;
+    }
+
     if (typeof body[field] === 'boolean') {
       updates[field] = body[field] as boolean;
     }
@@ -81,7 +93,13 @@ export async function handleUpdateNotificationPreferences(
   try {
     const fieldNames = Object.keys(updates) as NotificationField[];
     const insertValues = NOTIFICATION_FIELDS.map((field) =>
-      field in updates ? updates[field] : field === 'marketing_enabled' ? false : true,
+      field in updates
+        ? updates[field]
+        : field === 'marketing_enabled'
+          ? false
+          : field === 'theme_mode'
+            ? 'system'
+            : true,
     );
     const setClauses = fieldNames
       .map((field) => `${field} = EXCLUDED.${field}`)
@@ -94,12 +112,13 @@ export async function handleUpdateNotificationPreferences(
          handicap_updates_enabled,
          round_submitted_enabled,
          round_approved_enabled,
-         marketing_enabled
+         marketing_enabled,
+         theme_mode
        )
-       VALUES ($1, $2, $3, $4, $5)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id) DO UPDATE
        SET ${setClauses}
-       RETURNING handicap_updates_enabled, round_submitted_enabled, round_approved_enabled, marketing_enabled`,
+       RETURNING handicap_updates_enabled, round_submitted_enabled, round_approved_enabled, marketing_enabled, theme_mode`,
       [authResult.auth.userId, ...insertValues],
     );
 

@@ -4,10 +4,12 @@ import { Button, Card, CardBody, CardHeader, Input } from '../components/ui';
 import { Icon } from '../components/ui/Icon';
 import { Save, Sun, Moon } from '../components/ui/icons';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
 const SettingsPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   // Profile
   const [email, setEmail] = useState(user?.email ?? '');
@@ -25,12 +27,10 @@ const SettingsPage: React.FC = () => {
     round_submitted_enabled: false,
     round_approved_enabled: false,
     marketing_enabled: false,
+    theme_mode: 'system',
   });
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [prefsSaving, setPrefsSaving] = useState(false);
-
-  // Theme
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
     void (async () => {
@@ -106,10 +106,7 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleThemeToggle = () => {
-    const nowDark = !isDark;
-    setIsDark(nowDark);
-    document.documentElement.classList.toggle('dark', nowDark);
-    localStorage.setItem('ghs-theme', nowDark ? 'dark' : 'light');
+    toggleTheme();
   };
 
   return (
@@ -205,7 +202,7 @@ const SettingsPage: React.FC = () => {
                   <input
                     type="checkbox"
                     aria-label={label}
-                    checked={prefs[key]}
+                    checked={Boolean(prefs[key])}
                     onChange={() => handlePrefChange(key)}
                     className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                   />

@@ -7,6 +7,9 @@ import { Menu, X, Sun, Moon, LogOut } from '../ui/icons';
 import { getFilteredNavigationItems } from './navigationItems';
 import { maintenanceApi } from '../../api/maintenance';
 import MaintenanceBanner from '../MaintenanceBanner';
+import GlobalSearch from './GlobalSearch';
+import { authApi } from '../../api/auth';
+import { setStoredUser, setTokens } from '../../lib/authStorage';
 
 const MAINTENANCE_DISMISSED_KEY = 'ghs-maintenance-dismissed-signature';
 
@@ -87,6 +90,17 @@ export const AppLayout: React.FC = () => {
 
   const shouldShowMaintenanceBanner = maintenance.maintenanceMode && !isMaintenanceDismissed;
 
+  const handleExitImpersonation = async () => {
+    try {
+      const response = await authApi.stopImpersonation();
+      setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      setStoredUser(response.data.user);
+      window.location.assign('/admin/users');
+    } catch {
+      // no-op: standard API error toast handles feedback.
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       {shouldShowMaintenanceBanner ? (
@@ -111,6 +125,7 @@ export const AppLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <GlobalSearch />
             <button
               type="button"
               aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
@@ -132,6 +147,15 @@ export const AppLayout: React.FC = () => {
               <Icon icon={LogOut} size="sm" />
               Sign out
             </button>
+            {user?.impersonated_by ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                onClick={() => void handleExitImpersonation()}
+              >
+                Exit Impersonation
+              </button>
+            ) : null}
           </div>
         </div>
       </header>

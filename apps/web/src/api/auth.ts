@@ -12,6 +12,7 @@ export interface NotificationPreferences {
   round_submitted_enabled: boolean;
   round_approved_enabled: boolean;
   marketing_enabled: boolean;
+  theme_mode: 'light' | 'dark' | 'system';
 }
 
 export const authApi = {
@@ -35,4 +36,8 @@ export const authApi = {
     api.patch<{ email: string }>('/auth/profile', { email }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.patch<{ message: string }>('/auth/password', { currentPassword, newPassword }),
+  startImpersonation: (userId: string) =>
+    api.post<{ user: User; tokens: AuthTokens; message: string }>('/admin/impersonation/start', { userId }),
+  stopImpersonation: () =>
+    api.post<{ user: User; tokens: AuthTokens; message: string }>('/admin/impersonation/stop', {}),
 };
