@@ -31,7 +31,7 @@ Start date for this epic (after Internationalisation epic ends): **03 June 2028*
 | 7. What's New page | Implemented | Public What's New page plus admin markdown editor backed by API are implemented. |
 | 8. In-app feedback form | Not implemented | No feedback API/table/admin viewer yet. |
 | 9. Maintenance banner | Implemented | Public maintenance endpoint + configurable message + dismissible banner implemented. |
-| 10. CSV import (players) | Not implemented | Player export exists; player import API is not implemented. |
+| 10. CSV import (players) | Implemented | Admin CSV import UI plus admin-only dry-run/import API are implemented for player bulk upload. |
 | 11. CSV import (rounds) | Not implemented | Round CSV import is not implemented. |
 | 12. Admin impersonation | Not implemented | No impersonation flow/API/audit events yet. |
 | 13. Feature flags | Not implemented | No per-tenant/per-user/global feature-flag system yet. |
@@ -264,13 +264,13 @@ So that admins can bulk‑upload player data.
 **Target Date:** **28 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[CSV import API](ca://s?q=Explain_player_CSV_import)** supports:
+- [x] **[CSV import API](ca://s?q=Explain_player_CSV_import)** supports:
   - name  
   - DOB  
   - gender  
   - club  
-- [ ] Validation errors returned.  
-- [ ] Dry‑run mode supported.
+- [x] Validation errors returned.  
+- [x] Dry‑run mode supported.
 
 ### Dependencies
 - **[Players table](ca://s?q=Explain_players_table)**  

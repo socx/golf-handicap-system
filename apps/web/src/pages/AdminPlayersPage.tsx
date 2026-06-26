@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { playersApi, type Player } from '../api/players';
+import { playersApi, type Player, type PlayerImportResponse } from '../api/players';
 import { authApi } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -53,6 +53,9 @@ export const AdminPlayersPage: React.FC = () => {
   const [isLinking, setIsLinking] = useState(false);
   const [provisionForm, setProvisionForm] = useState<ProvisionFormState>(defaultProvisionForm);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [importCsvText, setImportCsvText] = useState('name,dob,gender,club,email,country\n');
+  const [importResult, setImportResult] = useState<PlayerImportResponse | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const fetchPlayers = async (opts?: { resetPage?: boolean }) => {
     const currentPage = opts?.resetPage ? 1 : page;
@@ -192,6 +195,48 @@ export const AdminPlayersPage: React.FC = () => {
     }
   };
 
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setImportCsvText(text);
+    } catch (error) {
+      showErrorToast('Unable to read CSV', error instanceof Error ? error.message : 'Failed to read selected file.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleImportPlayers = async (dryRun: boolean) => {
+    const csvText = importCsvText.trim();
+    if (!csvText) {
+      showErrorToast('Missing CSV', 'Paste CSV content or choose a CSV file first.');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await playersApi.importCsv(csvText, dryRun);
+      setImportResult(result);
+
+      if (dryRun) {
+        showSuccessToast('Validation complete', `${result.summary.validRows ?? 0} valid rows, ${result.summary.invalidRows ?? 0} invalid rows.`);
+      } else {
+        showSuccessToast('Players imported', `Imported ${result.summary.importedRows ?? 0} player records.`);
+        await fetchPlayers({ resetPage: true });
+      }
+    } catch (error) {
+      setImportResult(null);
+      showErrorToast('Import failed', error instanceof Error ? error.message : 'Unable to import player CSV.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const loading = players === null && !error;
 
   return (
@@ -264,6 +309,74 @@ export const AdminPlayersPage: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Import players from CSV</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Supports name, DOB, gender, club, email, and country columns. Run a dry run first to review validation errors before importing.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="player-import-csv">
+            Player CSV
+          </label>
+          <textarea
+            id="player-import-csv"
+            className="min-h-48 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            value={importCsvText}
+            onChange={(event) => setImportCsvText(event.target.value)}
+            spellCheck={false}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <input type="file" accept=".csv,text/csv" aria-label="Upload player CSV" onChange={(event) => void handleImportFile(event)} />
+            <Button variant="secondary" onClick={() => void handleImportPlayers(true)} disabled={isImporting}>
+              {isImporting ? 'Running…' : 'Dry run validation'}
+            </Button>
+            <Button onClick={() => void handleImportPlayers(false)} disabled={isImporting}>
+              {isImporting ? 'Running…' : 'Import players'}
+            </Button>
+          </div>
+        </div>
+
+        {importResult && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900/50">
+            <p className="font-medium text-slate-900 dark:text-slate-100">
+              {importResult.dryRun ? 'Dry run summary' : 'Import summary'}: {importResult.summary.rowCount} rows processed
+            </p>
+            {'validRows' in importResult.summary && (
+              <p className="mt-1 text-slate-600 dark:text-slate-300">
+                {importResult.summary.validRows ?? 0} valid, {importResult.summary.invalidRows ?? 0} invalid, {importResult.summary.totalIssues ?? 0} issues found.
+              </p>
+            )}
+            {'importedRows' in importResult.summary && (
+              <p className="mt-1 text-slate-600 dark:text-slate-300">Imported {importResult.summary.importedRows ?? 0} players.</p>
+            )}
+
+            {importResult.rows && importResult.rows.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {importResult.rows.map((row) => (
+                  <div key={row.rowNumber} className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      Row {row.rowNumber}: {row.values.first_name} {row.values.last_name}
+                    </p>
+                    {row.issues.length === 0 ? (
+                      <p className="mt-1 text-emerald-700 dark:text-emerald-400">No validation issues.</p>
+                    ) : (
+                      <ul className="mt-1 list-disc space-y-1 pl-5 text-red-700 dark:text-red-400">
+                        {row.issues.map((issue, index) => (
+                          <li key={`${row.rowNumber}-${issue.field}-${index}`}>
+                            {issue.field}: {issue.message}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

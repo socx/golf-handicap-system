@@ -35,6 +35,20 @@ interface ValidationIssue {
   message: string;
 }
 
+interface PlayerImportRowResult {
+  rowNumber: number;
+  values: {
+    first_name: string;
+    last_name: string;
+    dob: string | null;
+    gender: Gender | null;
+    club: string | null;
+    country: string;
+    email: string | null;
+  };
+  issues: ValidationIssue[];
+}
+
 interface PlayerFilters {
   search: string;
   club: string;
@@ -351,6 +365,146 @@ function escapeCsvCell(value: unknown): string {
     return `"${raw.replace(/"/g, '""')}"`;
   }
   return raw;
+}
+
+function parseCsvText(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentCell = '';
+  let currentRow: string[] = [];
+  let inQuotes = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const nextChar = csvText[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentCell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        index += 1;
+      }
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+function parseImportedName(name: string): { firstName: string; lastName: string } {
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  const parts = normalized.split(' ').filter(Boolean);
+  if (parts.length === 0) {
+    return { firstName: '', lastName: '' };
+  }
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1],
+  };
+}
+
+function normalizeImportHeader(header: string): string {
+  return header.trim().toLowerCase();
+}
+
+function parsePlayerImportRows(csvText: string): { headers: string[]; rows: PlayerImportRowResult[] } {
+  const parsedRows = parseCsvText(csvText);
+  if (parsedRows.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  const headers = parsedRows[0].map(normalizeImportHeader);
+  const results: PlayerImportRowResult[] = [];
+
+  for (let rowIndex = 1; rowIndex < parsedRows.length; rowIndex += 1) {
+    const row = parsedRows[rowIndex];
+    const record = Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ''])) as Record<string, string>;
+    const issues: ValidationIssue[] = [];
+
+    const fullName = record.name?.trim() || '';
+    const parsedName = fullName ? parseImportedName(fullName) : { firstName: '', lastName: '' };
+    const firstName = normalizeRequiredString(record.first_name || parsedName.firstName);
+    const lastName = normalizeRequiredString(record.last_name || parsedName.lastName);
+    const dob = parseDob(record.dob);
+    const gender = parseGender(record.gender);
+    const club = normalizeOptionalString(record.club);
+    const country = normalizeCountry(record.country || 'GB');
+    const email = normalizeOptionalString(record.email)?.toLowerCase() || null;
+
+    if (!firstName) {
+      issues.push({ field: 'first_name', message: 'First name is required' });
+    }
+
+    if (!lastName) {
+      issues.push({ field: 'last_name', message: 'Last name is required' });
+    }
+
+    if (dob) {
+      const parsed = new Date(dob);
+      if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dob) {
+        issues.push({ field: 'dob', message: 'DOB must be YYYY-MM-DD' });
+      }
+    }
+
+    if (record.gender && !gender) {
+      issues.push({ field: 'gender', message: `Gender must be one of: ${VALID_GENDERS.join(', ')}` });
+    }
+
+    if (!country || !/^[A-Z]{2}$/.test(country)) {
+      issues.push({ field: 'country', message: 'Country must be a 2-letter ISO code' });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      issues.push({ field: 'email', message: 'Email must be a valid address' });
+    }
+
+    results.push({
+      rowNumber: rowIndex + 1,
+      values: {
+        first_name: firstName,
+        last_name: lastName,
+        dob,
+        gender,
+        club,
+        country,
+        email,
+      },
+      issues,
+    });
+  }
+
+  return { headers, rows: results };
 }
 
 function buildPlayersCsv(rows: Player[]): string {
@@ -740,6 +894,117 @@ export async function handleExportPlayers(
   } catch (error) {
     console.error('[players.export] unexpected error:', error);
     sendError(res, 500, 'player_export_failed', 'Unable to export players at this time');
+  }
+}
+
+export async function handleImportPlayers(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  if (!authResult.success || !authResult.auth) {
+    sendError(res, authResult.statusCode || 401, authResult.errorCode || 'unauthorized', authResult.errorMessage || 'Unauthorized');
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(req);
+  } catch (error) {
+    sendError(res, 400, 'invalid_json', (error as Error).message);
+    return;
+  }
+
+  const csvText = typeof payload.csvText === 'string' ? payload.csvText.trim() : '';
+  const dryRun = payload.dryRun !== false;
+
+  if (!csvText) {
+    sendError(res, 400, 'validation_error', 'csvText is required');
+    return;
+  }
+
+  const { headers, rows } = parsePlayerImportRows(csvText);
+  if (headers.length === 0 || rows.length === 0) {
+    sendError(res, 400, 'validation_error', 'CSV must include a header row and at least one data row');
+    return;
+  }
+
+  const totalIssues = rows.reduce((sum, row) => sum + row.issues.length, 0);
+  if (dryRun) {
+    sendJson(res, 200, {
+      dryRun: true,
+      summary: {
+        rowCount: rows.length,
+        validRows: rows.filter((row) => row.issues.length === 0).length,
+        invalidRows: rows.filter((row) => row.issues.length > 0).length,
+        totalIssues,
+      },
+      rows,
+    });
+    return;
+  }
+
+  if (totalIssues > 0) {
+    sendJson(res, 400, {
+      error: {
+        code: 'validation_error',
+        message: 'Import contains validation errors',
+      },
+      dryRun: false,
+      summary: {
+        rowCount: rows.length,
+        validRows: rows.filter((row) => row.issues.length === 0).length,
+        invalidRows: rows.filter((row) => row.issues.length > 0).length,
+        totalIssues,
+      },
+      rows,
+    });
+    return;
+  }
+
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const insertedPlayers: Player[] = [];
+    for (const row of rows) {
+      const insertResult = await client.query(
+        `INSERT INTO players (first_name, last_name, dob, gender, club, email, country)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, first_name, last_name, middle_name, dob, gender, club, email, country, handicap_index, user_id, created_at, updated_at, deleted_at`,
+        [
+          row.values.first_name,
+          row.values.last_name,
+          row.values.dob,
+          row.values.gender,
+          row.values.club,
+          row.values.email,
+          row.values.country,
+        ],
+      );
+      insertedPlayers.push(insertResult.rows[0] as Player);
+    }
+
+    await client.query('COMMIT');
+    sendJson(res, 201, {
+      dryRun: false,
+      summary: {
+        rowCount: rows.length,
+        importedRows: insertedPlayers.length,
+      },
+      players: insertedPlayers,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    const err = error as Record<string, unknown>;
+    if (err.code === '23505') {
+      sendError(res, 409, 'duplicate_record', 'One or more players conflict with existing active records');
+      return;
+    }
+    console.error('[players.import] unexpected error:', error);
+    sendError(res, 500, 'player_import_failed', 'Unable to import players at this time');
+  } finally {
+    client.release();
   }
 }
 

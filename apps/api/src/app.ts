@@ -26,7 +26,7 @@ import { handleGetAdminSettings, handleUpdateAdminSettings } from './routes/admi
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleGetAdminDashboard } from './routes/admin/dashboard';
-import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
+import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleImportPlayers, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
@@ -321,6 +321,11 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
 
     if (method === 'GET' && (pathname === '/api/players/export' || pathname === '/players/export')) {
       await handleExportPlayers(req, res, requestUrl);
+      return;
+    }
+
+    if (method === 'POST' && (pathname === '/api/players/import' || pathname === '/players/import')) {
+      await handleImportPlayers(req, res);
       return;
     }
 

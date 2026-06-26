@@ -71,6 +71,38 @@ export interface PlayersListQuery {
   country?: string;
 }
 
+export interface PlayerImportIssue {
+  field: string;
+  message: string;
+}
+
+export interface PlayerImportRow {
+  rowNumber: number;
+  values: {
+    first_name: string;
+    last_name: string;
+    dob: string | null;
+    gender: string | null;
+    club: string | null;
+    country: string;
+    email: string | null;
+  };
+  issues: PlayerImportIssue[];
+}
+
+export interface PlayerImportResponse {
+  dryRun: boolean;
+  summary: {
+    rowCount: number;
+    validRows?: number;
+    invalidRows?: number;
+    totalIssues?: number;
+    importedRows?: number;
+  };
+  rows?: PlayerImportRow[];
+  players?: Player[];
+}
+
 interface RawPlayersListResponse {
   players?: Player[];
   data?: Player[];
@@ -156,5 +188,9 @@ export const playersApi = {
   linkUser: async (playerId: string, userId: string | null): Promise<Player> => {
     const response = await api.patch<{ player: Player }>(`/players/${playerId}/link-user`, { user_id: userId });
     return response.data.player;
+  },
+  importCsv: async (csvText: string, dryRun: boolean): Promise<PlayerImportResponse> => {
+    const response = await api.post<PlayerImportResponse>('/players/import', { csvText, dryRun });
+    return response.data;
   },
 };
