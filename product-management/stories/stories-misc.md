@@ -32,7 +32,7 @@ Start date for this epic (after Internationalisation epic ends): **03 June 2028*
 | 8. In-app feedback form | Not implemented | No feedback API/table/admin viewer yet. |
 | 9. Maintenance banner | Implemented | Public maintenance endpoint + configurable message + dismissible banner implemented. |
 | 10. CSV import (players) | Implemented | Admin CSV import UI plus admin-only dry-run/import API are implemented for player bulk upload. |
-| 11. CSV import (rounds) | Not implemented | Round CSV import is not implemented. |
+| 11. CSV import (rounds) | Implemented | Admin rounds CSV import API with dry-run validation, row-level error reporting, and transactional bulk insert is implemented. |
 | 12. Admin impersonation | Not implemented | No impersonation flow/API/audit events yet. |
 | 13. Feature flags | Not implemented | No per-tenant/per-user/global feature-flag system yet. |
 | 14. Bug reporting with logs | Not implemented | No bug report workflow/table/admin viewer yet. |
@@ -311,14 +311,22 @@ So that admins can migrate historical data.
 **Target Date:** **08 July 2028**
 
 ### Acceptance Criteria
-- [ ] **[Round CSV import](ca://s?q=Explain_round_CSV_import)** supports:
+- [x] **[Round CSV import](ca://s?q=Explain_round_CSV_import)** supports:
   - date  
   - course  
   - tee  
   - hole scores  
   - player  
-- [ ] Validation + error reporting.  
-- [ ] Bulk insert optimised.
+- [x] Validation + error reporting.  
+- [x] Bulk insert optimised.
+
+### Implementation Notes
+- Implemented rounds import endpoint in `apps/api/src/routes/rounds.ts` via `handleImportRounds`.
+- Endpoint supports admin-only `POST /api/rounds/import` with CSV payload and `dryRun` mode.
+- Validation covers required columns, player/course/tee resolution, played date, and hole-score integrity.
+- Dry-run response returns row-level validation issues and lookup warnings.
+- Non-dry-run import performs transactional bulk insert and returns imported round IDs.
+- Added detailed API reference in `docs/rounds-import.md`.
 
 ### Dependencies
 - **[Rounds table](ca://s?q=Explain_rounds_table)**  
