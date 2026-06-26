@@ -26,6 +26,7 @@ import { handleGetAdminSettings, handleUpdateAdminSettings } from './routes/admi
 import { handleListUsers, handleAdminStatus, handleUserActivation, handleUserDelete, handleUpdateUserRole } from './routes/admin/users';
 import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleGetAdminDashboard } from './routes/admin/dashboard';
+import { handleRecalculateAllHandicaps, handleGetBatchJobStatus, handleListBatchJobs } from './routes/admin/batch';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleImportPlayers, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound, handleImportRounds } from './routes/rounds';
@@ -305,6 +306,24 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
     const userRoleRoute = parseUserRoleRoute(pathname);
     if (method === 'PATCH' && userRoleRoute) {
       await handleUpdateUserRole(req, res, requestId, userRoleRoute.userId);
+      return;
+    }
+
+    // ── Batch Jobs ─────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/api/admin/batch/recalculate-all' || pathname === '/admin/batch/recalculate-all')) {
+      await handleRecalculateAllHandicaps(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/batch/jobs' || pathname === '/admin/batch/jobs')) {
+      await handleListBatchJobs(req, res);
+      return;
+    }
+
+    const batchJobRoute = pathname.match(/^\/(?:api\/)?admin\/batch\/jobs\/([a-z0-9_]+)$/);
+    if (batchJobRoute && method === 'GET') {
+      const jobId = String(batchJobRoute[1] || '');
+      await handleGetBatchJobStatus(req, res, jobId);
       return;
     }
 

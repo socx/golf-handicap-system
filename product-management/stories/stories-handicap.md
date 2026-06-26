@@ -355,14 +355,24 @@ So that exceptional scoring adjustments can be applied.
 **Target Date:** **30 October 2026**
 
 ### Acceptance Criteria
-- [ ] POST `/handicap/override/:playerId` sets manual index.  
-- [ ] Reason required.  
-- [ ] Override logged in handicap history.  
-- [ ] Admin‑only access enforced.
+- [x] POST `/handicap/override/:playerId` sets manual index.  
+- [x] Reason required.  
+- [x] Override logged in handicap history.  
+- [x] Admin‑only access enforced.
 
 ### Dependencies
 - RBAC  
 - Handicap history table
+
+### Implementation Notes
+- Added `handleCreateHandicapOverride` in `apps/api/src/routes/handicap.ts` that accepts POST with `newIndex` and `reason` fields.
+- Endpoint requires admin role authorization via `verifyAndAuthorize` middleware.
+- Creates entry in `handicap_overrides` table with: playerId, adminUserId, previousIndex, newIndex, reason, createdAt.
+- Updates `players.handicap_index` to the new override value.
+- Also added `handleListHandicapOverrides` to retrieve override history for a player.
+- Route parsing and wiring in `apps/api/src/app.ts` for POST/GET `/handicap/override/:playerId`.
+- All overrides are immutable audit records (no deletions, only view/list operations).
+- Added comprehensive error handling for invalid player IDs, authorization failures, and DB constraints.
 
 ---
 
@@ -378,15 +388,29 @@ So that all players’ handicaps can be updated after rule changes or data impor
 **Target Date:** **10 November 2026**
 
 ### Acceptance Criteria
-- [ ] Background job recalculates all players.  
-- [ ] Progress logged.  
-- [ ] Errors captured and reported.  
-- [ ] Admin endpoint triggers job.
+- [x] Background job recalculates all players.  
+- [x] Progress logged.  
+- [x] Errors captured and reported.  
+- [x] Admin endpoint triggers job.
 
 ### Dependencies
 - Handicap calculation  
 - Job scheduler  
 - Logging
+
+### Implementation Notes
+- Created `apps/api/src/routes/admin/batch.ts` with batch recalculation handlers.
+- Implemented `handleRecalculateAllHandicaps` admin-only endpoint: POST `/api/admin/batch/recalculate-all`.
+- Endpoint returns immediately (202 Accepted) with a job ID and processes in background without blocking.
+- In-memory job tracking via `batchJobs` Map stores: jobId, status, totalPlayers, processedPlayers, successfulRecalculations, failedRecalculations, errors, timestamps, and estimatedTimeRemaining.
+- Implemented `handleGetBatchJobStatus` to retrieve job progress: GET `/api/admin/batch/jobs/{jobId}`.
+- Implemented `handleListBatchJobs` to view all batch jobs: GET `/api/admin/batch/jobs`.
+- Progress logged every 10 players and at completion; errors are captured with playerId and error message.
+- Recalculation runs with `sendNotifications: false` to avoid spamming players during bulk operations.
+- Estimated time remaining calculated based on current processing speed.
+- Errors do not stop the batch; they are collected and reported at job completion.
+- Route parsing and wiring in `apps/api/src/app.ts` for POST/GET batch endpoints.
+- All batch operations require admin role authorization.
 
 ---
 
@@ -402,16 +426,25 @@ So that my handicap widgets and history stay up to date without manual recalcula
 **Target Date:** **12 November 2026**
 
 ### Acceptance Criteria
-- [ ] Round submission flow triggers handicap recalculation attempt automatically.
-- [ ] If eligibility is not met, submission still succeeds and response indicates recalculation was skipped.
-- [ ] If eligible, new handicap record is stored and player handicap index is updated.
-- [ ] Recalculation result is included in round submission response metadata.
-- [ ] Errors in recalculation do not roll back successful round creation.
+- [x] Round submission flow triggers handicap recalculation attempt automatically.
+- [x] If eligibility is not met, submission still succeeds and response indicates recalculation was skipped.
+- [x] If eligible, new handicap record is stored and player handicap index is updated.
+- [x] Recalculation result is included in round submission response metadata.
+- [x] Errors in recalculation do not roll back successful round creation.
 
 ### Dependencies
 - Round entry API
 - Handicap calculation service
 - Handicap history table
+
+### Implementation Notes
+- Added `maybeRecalculateHandicapForPlayer` helper in `apps/api/src/routes/rounds.ts` that wraps the recalculation logic with error handling.
+- Called automatically in `handleCreateRound`, `handleUpdateRound`, `handleApproveRound`, and `handleRejectRound` after successful round operations.
+- Response includes `handicapRecalculation` metadata object containing: `attempted`, `status`, `handicapIndex` (if eligible), and `recordId` (if new record created).
+- Recalculation uses `sendNotifications: true` to notify players of index changes via email.
+- If recalculation fails due to database error, the failure is logged but does not roll back the successful round creation.
+- Response `status` can be: `'eligible'` (successful recalc), `'insufficient_holes'` (not enough holes yet), or `'not_approved'` (round not approved/pending).
+- All round endpoints that affect handicap (approve, reject, update, create) trigger recalculation automatically, keeping player's index always current.
 
 ---
 
