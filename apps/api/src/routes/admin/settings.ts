@@ -14,8 +14,11 @@ interface SystemSettingsRow {
   pcc_override: number | null;
   notification_settings: NotificationSettings;
   maintenance_mode: boolean;
+  maintenance_message: string;
   updated_at: string;
 }
+
+const DEFAULT_MAINTENANCE_MESSAGE = 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.';
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   round_submitted: true,
@@ -54,7 +57,7 @@ export async function handleGetAdminSettings(req: http.IncomingMessage, res: htt
     await ensureSettingsRow();
 
     const result = await dbPool.query<SystemSettingsRow>(
-      `SELECT pcc_override, notification_settings, maintenance_mode, updated_at
+      `SELECT pcc_override, notification_settings, maintenance_mode, maintenance_message, updated_at
        FROM system_settings
        WHERE id = 1`,
     );
@@ -65,6 +68,7 @@ export async function handleGetAdminSettings(req: http.IncomingMessage, res: htt
         pccOverride: row.pcc_override,
         notificationSettings: row.notification_settings,
         maintenanceMode: row.maintenance_mode,
+        maintenanceMessage: row.maintenance_message,
         updatedAt: row.updated_at,
       },
     });
@@ -96,8 +100,9 @@ export async function handleUpdateAdminSettings(
   const hasPccOverride = Object.prototype.hasOwnProperty.call(payload, 'pccOverride');
   const hasNotificationSettings = Object.prototype.hasOwnProperty.call(payload, 'notificationSettings');
   const hasMaintenanceMode = Object.prototype.hasOwnProperty.call(payload, 'maintenanceMode');
+  const hasMaintenanceMessage = Object.prototype.hasOwnProperty.call(payload, 'maintenanceMessage');
 
-  if (!hasPccOverride && !hasNotificationSettings && !hasMaintenanceMode) {
+  if (!hasPccOverride && !hasNotificationSettings && !hasMaintenanceMode && !hasMaintenanceMessage) {
     sendError(res, 400, 'validation_error', 'At least one setting field must be provided');
     return;
   }
@@ -134,13 +139,34 @@ export async function handleUpdateAdminSettings(
     nextMaintenanceMode = payload.maintenanceMode;
   }
 
+  let nextMaintenanceMessage: string | undefined;
+  if (hasMaintenanceMessage) {
+    if (typeof payload.maintenanceMessage !== 'string') {
+      sendError(res, 400, 'validation_error', 'maintenanceMessage must be a string');
+      return;
+    }
+
+    const trimmed = payload.maintenanceMessage.trim();
+    if (trimmed.length === 0) {
+      sendError(res, 400, 'validation_error', 'maintenanceMessage cannot be empty');
+      return;
+    }
+
+    if (trimmed.length > 280) {
+      sendError(res, 400, 'validation_error', 'maintenanceMessage cannot exceed 280 characters');
+      return;
+    }
+
+    nextMaintenanceMessage = trimmed;
+  }
+
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
     await client.query('INSERT INTO system_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING');
 
     const currentResult = await client.query<SystemSettingsRow>(
-      `SELECT pcc_override, notification_settings, maintenance_mode, updated_at
+      `SELECT pcc_override, notification_settings, maintenance_mode, maintenance_message, updated_at
        FROM system_settings
        WHERE id = 1
        FOR UPDATE`,
@@ -150,17 +176,21 @@ export async function handleUpdateAdminSettings(
     const mergedNotificationSettings = nextNotificationSettings ?? current.notification_settings;
     const mergedPccOverride = hasPccOverride ? (nextPccOverride ?? null) : current.pcc_override;
     const mergedMaintenanceMode = hasMaintenanceMode ? Boolean(nextMaintenanceMode) : current.maintenance_mode;
+    const mergedMaintenanceMessage = hasMaintenanceMessage
+      ? (nextMaintenanceMessage ?? DEFAULT_MAINTENANCE_MESSAGE)
+      : current.maintenance_message;
 
     const updateResult = await client.query<SystemSettingsRow>(
       `UPDATE system_settings
        SET pcc_override = $1,
            notification_settings = $2::jsonb,
            maintenance_mode = $3,
-           updated_by = $4,
+           maintenance_message = $4,
+           updated_by = $5,
            updated_at = NOW()
        WHERE id = 1
-       RETURNING pcc_override, notification_settings, maintenance_mode, updated_at`,
-      [mergedPccOverride, JSON.stringify(mergedNotificationSettings), mergedMaintenanceMode, authResult.auth.userId],
+       RETURNING pcc_override, notification_settings, maintenance_mode, maintenance_message, updated_at`,
+      [mergedPccOverride, JSON.stringify(mergedNotificationSettings), mergedMaintenanceMode, mergedMaintenanceMessage, authResult.auth.userId],
     );
 
     await client.query('COMMIT');
@@ -177,11 +207,13 @@ export async function handleUpdateAdminSettings(
           pccOverride: current.pcc_override,
           notificationSettings: current.notification_settings,
           maintenanceMode: current.maintenance_mode,
+          maintenanceMessage: current.maintenance_message,
         },
         current: {
           pccOverride: updated.pcc_override,
           notificationSettings: updated.notification_settings,
           maintenanceMode: updated.maintenance_mode,
+          maintenanceMessage: updated.maintenance_message,
         },
       },
     });
@@ -191,6 +223,7 @@ export async function handleUpdateAdminSettings(
         pccOverride: updated.pcc_override,
         notificationSettings: updated.notification_settings,
         maintenanceMode: updated.maintenance_mode,
+        maintenanceMessage: updated.maintenance_message,
         updatedAt: updated.updated_at,
       },
       message: 'System settings updated successfully',

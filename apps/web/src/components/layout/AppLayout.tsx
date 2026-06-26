@@ -1,10 +1,30 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { Icon } from '../ui/Icon';
 import { Menu, X, Sun, Moon, LogOut } from '../ui/icons';
 import { getFilteredNavigationItems } from './navigationItems';
+import { maintenanceApi } from '../../api/maintenance';
+import MaintenanceBanner from '../MaintenanceBanner';
+
+const MAINTENANCE_DISMISSED_KEY = 'ghs-maintenance-dismissed-signature';
+
+interface MaintenanceState {
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  updatedAt: string | null;
+}
+
+const defaultMaintenanceState: MaintenanceState = {
+  maintenanceMode: false,
+  maintenanceMessage: '',
+  updatedAt: null,
+};
+
+function getMaintenanceSignature(value: MaintenanceState): string {
+  return [value.updatedAt || 'none', value.maintenanceMessage.trim()].join('|');
+}
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -15,18 +35,64 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [maintenance, setMaintenance] = useState<MaintenanceState>(defaultMaintenanceState);
+  const [isMaintenanceDismissed, setIsMaintenanceDismissed] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const displayRole = useMemo(() => user?.role?.toUpperCase() ?? 'UNKNOWN', [user?.role]);
-  
+
   const navigationItems = useMemo(() => getFilteredNavigationItems(user?.role ?? null), [user?.role]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMaintenance = async () => {
+      try {
+        const response = await maintenanceApi.getStatus();
+        if (cancelled) return;
+
+        const status = response.data;
+        const nextState: MaintenanceState = {
+          maintenanceMode: status.maintenanceMode,
+          maintenanceMessage: status.maintenanceMessage,
+          updatedAt: status.updatedAt,
+        };
+
+        setMaintenance(nextState);
+
+        const dismissedSignature = window.localStorage.getItem(MAINTENANCE_DISMISSED_KEY);
+        setIsMaintenanceDismissed(dismissedSignature === getMaintenanceSignature(nextState));
+      } catch {
+        if (cancelled) return;
+        setMaintenance(defaultMaintenanceState);
+      }
+    };
+
+    void loadMaintenance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     setMobileOpen(false);
   };
 
+  const handleDismissMaintenance = () => {
+    const signature = getMaintenanceSignature(maintenance);
+    window.localStorage.setItem(MAINTENANCE_DISMISSED_KEY, signature);
+    setIsMaintenanceDismissed(true);
+  };
+
+  const shouldShowMaintenanceBanner = maintenance.maintenanceMode && !isMaintenanceDismissed;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+      {shouldShowMaintenanceBanner ? (
+        <MaintenanceBanner message={maintenance.maintenanceMessage} onDismiss={handleDismissMaintenance} />
+      ) : null}
+
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">

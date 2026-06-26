@@ -56,6 +56,7 @@ before(async () => {
       pcc_override SMALLINT NULL,
       notification_settings JSONB NOT NULL DEFAULT '{"round_submitted": true, "round_approved": true, "maintenance_alerts": true}'::jsonb,
       maintenance_mode BOOLEAN NOT NULL DEFAULT FALSE,
+      maintenance_message TEXT NOT NULL DEFAULT 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.',
       updated_by UUID NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -63,6 +64,11 @@ before(async () => {
       CONSTRAINT system_settings_pcc_override_chk CHECK (pcc_override IS NULL OR (pcc_override BETWEEN -1 AND 3)),
       CONSTRAINT system_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
     )`,
+  );
+
+  await dbPool.query(
+    `ALTER TABLE system_settings
+     ADD COLUMN IF NOT EXISTS maintenance_message TEXT NOT NULL DEFAULT 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.'`,
   );
 
   await dbPool.query(
@@ -78,12 +84,13 @@ before(async () => {
   );
 
   await dbPool.query(
-    `INSERT INTO system_settings (id, pcc_override, notification_settings, maintenance_mode, updated_by)
-     VALUES (1, NULL, '{"round_submitted": true, "round_approved": true, "maintenance_alerts": true}'::jsonb, FALSE, NULL)
+    `INSERT INTO system_settings (id, pcc_override, notification_settings, maintenance_mode, maintenance_message, updated_by)
+     VALUES (1, NULL, '{"round_submitted": true, "round_approved": true, "maintenance_alerts": true}'::jsonb, FALSE, 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.', NULL)
      ON CONFLICT (id) DO UPDATE SET
        pcc_override = EXCLUDED.pcc_override,
        notification_settings = EXCLUDED.notification_settings,
        maintenance_mode = EXCLUDED.maintenance_mode,
+       maintenance_message = EXCLUDED.maintenance_message,
        updated_by = EXCLUDED.updated_by,
        updated_at = NOW()`,
   );
@@ -120,6 +127,7 @@ test('GET /api/admin/settings returns settings for admin users', async () => {
   assert.equal(response.status, 200, JSON.stringify(response.json));
   assert.equal(response.json.settings.pccOverride, null);
   assert.equal(response.json.settings.maintenanceMode, false);
+  assert.equal(response.json.settings.maintenanceMessage, 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.');
   assert.equal(response.json.settings.notificationSettings.round_submitted, true);
 });
 
@@ -131,6 +139,7 @@ test('PATCH /api/admin/settings updates values and writes audit log', async () =
     body: {
       pccOverride: 2,
       maintenanceMode: true,
+      maintenanceMessage: 'Planned maintenance in progress. Round approvals may be delayed.',
       notificationSettings: {
         round_submitted: false,
         round_approved: true,
@@ -142,16 +151,18 @@ test('PATCH /api/admin/settings updates values and writes audit log', async () =
   assert.equal(response.status, 200, JSON.stringify(response.json));
   assert.equal(response.json.settings.pccOverride, 2);
   assert.equal(response.json.settings.maintenanceMode, true);
+  assert.equal(response.json.settings.maintenanceMessage, 'Planned maintenance in progress. Round approvals may be delayed.');
   assert.equal(response.json.settings.notificationSettings.round_submitted, false);
   assert.equal(response.json.settings.notificationSettings.maintenance_alerts, false);
 
   const settingsRow = await dbPool.query(
-    `SELECT pcc_override, maintenance_mode, notification_settings
+    `SELECT pcc_override, maintenance_mode, maintenance_message, notification_settings
      FROM system_settings
      WHERE id = 1`,
   );
   assert.equal(Number(settingsRow.rows[0].pcc_override), 2);
   assert.equal(Boolean(settingsRow.rows[0].maintenance_mode), true);
+  assert.equal(settingsRow.rows[0].maintenance_message, 'Planned maintenance in progress. Round approvals may be delayed.');
   assert.equal(settingsRow.rows[0].notification_settings.round_submitted, false);
 
   const auditRow = await dbPool.query(
@@ -176,4 +187,19 @@ test('PATCH /api/admin/settings validates pccOverride range', async () => {
 
   assert.equal(response.status, 400, JSON.stringify(response.json));
   assert.equal(response.json.error.code, 'validation_error');
+});
+
+test('GET /api/maintenance returns public maintenance state without auth', async () => {
+  await dbPool.query(
+    `UPDATE system_settings
+     SET maintenance_mode = TRUE,
+         maintenance_message = 'Maintenance banner message from admin settings.',
+         updated_at = NOW()
+     WHERE id = 1`,
+  );
+
+  const response = await requestJson('/api/maintenance');
+  assert.equal(response.status, 200, JSON.stringify(response.json));
+  assert.equal(response.json.maintenanceMode, true);
+  assert.equal(response.json.maintenanceMessage, 'Maintenance banner message from admin settings.');
 });

@@ -13,6 +13,7 @@ const defaultSettings: AdminSystemSettings = {
     maintenance_alerts: true,
   },
   maintenanceMode: false,
+  maintenanceMessage: 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.',
   updatedAt: '',
 };
 
@@ -81,6 +82,7 @@ const AdminSettingsPage: React.FC = () => {
         pccOverride,
         notificationSettings: settings.notificationSettings,
         maintenanceMode: settings.maintenanceMode,
+        maintenanceMessage: settings.maintenanceMessage.trim(),
       });
 
       const updated = response.data.settings;
@@ -165,6 +167,19 @@ const AdminSettingsPage: React.FC = () => {
                   />
                   Enable maintenance mode
                 </label>
+
+                <Input
+                  label="Maintenance message"
+                  aria-label="Maintenance message"
+                  placeholder="Message shown to users while maintenance mode is enabled"
+                  value={settings.maintenanceMessage}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      maintenanceMessage: e.target.value,
+                    }))
+                  }
+                />
               </div>
 
               <div className="flex items-center justify-between gap-3">

@@ -31,6 +31,7 @@ import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCou
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound } from './routes/rounds';
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
 import { handleGetDashboardSummary } from './routes/dashboard';
+import { handleGetMaintenanceStatus } from './routes/maintenance';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -175,6 +176,11 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
     if (method === 'GET' && pathname === '/api/settings') {
       const result = await getOrSetCache({ resource: 'settings', requestUrl, computeValue: async () => buildSettingsSummary() });
       sendJson(res, 200, { ...result.value, cache: { hit: result.cacheHit, key: result.key, ttlSeconds: result.ttl } });
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/maintenance' || pathname === '/maintenance')) {
+      await handleGetMaintenanceStatus(req, res);
       return;
     }
 

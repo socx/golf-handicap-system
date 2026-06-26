@@ -15,6 +15,7 @@ const settingsFixture = {
     maintenance_alerts: true,
   },
   maintenanceMode: false,
+  maintenanceMessage: 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.',
   updatedAt: '2026-06-05T15:20:00.000Z',
 };
 
@@ -48,6 +49,9 @@ describe('AdminSettingsPage', () => {
     expect(screen.getByLabelText('Round approved notifications')).not.toBeChecked();
     expect(screen.getByLabelText('Maintenance alerts')).toBeChecked();
     expect(screen.getByLabelText('Maintenance mode')).not.toBeChecked();
+    expect((screen.getByLabelText('Maintenance message') as HTMLInputElement).value).toBe(
+      'Scheduled maintenance is in progress. Some features may be temporarily unavailable.',
+    );
   });
 
   it('submits updated settings payload', async () => {
@@ -60,6 +64,7 @@ describe('AdminSettingsPage', () => {
           ...settingsFixture,
           pccOverride: 2,
           maintenanceMode: true,
+          maintenanceMessage: 'Planned maintenance in progress',
           notificationSettings: {
             round_submitted: false,
             round_approved: false,
@@ -74,6 +79,7 @@ describe('AdminSettingsPage', () => {
 
     const pccInput = await waitFor(() => screen.getByLabelText('PCC override'));
     fireEvent.change(pccInput, { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Maintenance message'), { target: { value: 'Planned maintenance in progress' } });
 
     fireEvent.click(screen.getByLabelText('Round submitted notifications'));
     fireEvent.click(screen.getByLabelText('Maintenance mode'));
@@ -88,6 +94,7 @@ describe('AdminSettingsPage', () => {
           maintenance_alerts: true,
         },
         maintenanceMode: true,
+        maintenanceMessage: 'Planned maintenance in progress',
       }),
     );
   });

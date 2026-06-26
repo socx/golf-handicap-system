@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { getFilteredNavigationItems } from '../components/layout/navigationItems';
+import { maintenanceApi } from '../api/maintenance';
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
@@ -16,6 +17,18 @@ vi.mock('../context/ThemeContext', () => ({
     isDark: false,
     toggleTheme: vi.fn(),
   }),
+}));
+
+vi.mock('../api/maintenance', () => ({
+  maintenanceApi: {
+    getStatus: vi.fn(async () => ({
+      data: {
+        maintenanceMode: false,
+        maintenanceMessage: 'Scheduled maintenance is in progress. Some features may be temporarily unavailable.',
+        updatedAt: '2026-06-26T10:00:00.000Z',
+      },
+    })),
+  },
 }));
 
 describe('AppLayout mobile navigation', () => {
@@ -57,6 +70,34 @@ describe('AppLayout mobile navigation', () => {
 
     expect(adminSettingsLink).toHaveClass('bg-teal-600');
     expect(adminLink).not.toHaveClass('bg-teal-600');
+  });
+});
+
+describe('AppLayout maintenance banner', () => {
+  it('shows and dismisses maintenance banner when maintenance mode is enabled', async () => {
+    localStorage.clear();
+
+    vi.mocked(maintenanceApi.getStatus).mockResolvedValueOnce({
+      data: {
+        maintenanceMode: true,
+        maintenanceMessage: 'Maintenance window in progress.',
+        updatedAt: '2026-06-26T10:00:00.000Z',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="dashboard" element={<div>Dashboard content</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Maintenance mode: Maintenance window in progress.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss maintenance banner' }));
+    expect(screen.queryByText('Maintenance mode: Maintenance window in progress.')).not.toBeInTheDocument();
   });
 });
 

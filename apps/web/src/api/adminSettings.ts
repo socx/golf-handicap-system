@@ -10,6 +10,7 @@ export interface AdminSystemSettings {
   pccOverride: number | null;
   notificationSettings: AdminNotificationSettings;
   maintenanceMode: boolean;
+  maintenanceMessage: string;
   updatedAt: string;
 }
 
@@ -21,6 +22,7 @@ export interface UpdateAdminSystemSettingsPayload {
   pccOverride?: number | null;
   notificationSettings?: AdminNotificationSettings;
   maintenanceMode?: boolean;
+  maintenanceMessage?: string;
 }
 
 export const adminSettingsApi = {
