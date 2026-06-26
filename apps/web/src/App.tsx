@@ -45,12 +45,14 @@ const AdminRoundsPage = lazy(async () => import('./pages/AdminRoundsPage'));
 const AdminHandicapOverridePage = lazy(async () => import('./pages/AdminHandicapOverridePage'));
 const AdminAuditLogsPage = lazy(async () => import('./pages/AdminAuditLogsPage'));
 const AdminSettingsPage = lazy(async () => import('./pages/AdminSettingsPage'));
+const AdminReleaseNotesPage = lazy(async () => import('./pages/AdminReleaseNotesPage'));
 const AdminHomePage = lazy(async () => import('./pages/AdminHomePage'));
 const HandicapPage = lazy(async () => import('./pages/HandicapPage'));
 const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
 const RoundEntryPage = lazy(async () => import('./pages/RoundEntryPage'));
 const RoundScorecardPage = lazy(async () => import('./pages/RoundScorecardPage'));
 const SettingsPage = lazy(async () => import('./pages/SettingsPage'));
+const ReleaseNotesPage = lazy(async () => import('./pages/ReleaseNotesPage'));
 
 function AppRoutes() {
   return (
@@ -98,6 +100,8 @@ function AppRoutes() {
         <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/whats-new" element={<ReleaseNotesPage />} />
+        <Route path="/admin/release-notes" element={<AdminReleaseNotesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -18,6 +18,26 @@ This file contains all user stories for the Miscellaneous epic, including:
 
 Start date for this epic (after Internationalisation epic ends): **03 June 2028**
 
+## Implementation Status Snapshot (26 June 2026)
+
+| Story | Status | Notes |
+|---|---|---|
+| 1. Dark mode | Partial | Theme context + system preference detection exist, but settings-page persistence path needs consolidation. |
+| 2. Global search | Partial | Players/courses search exists separately; unified global search + autocomplete not implemented. |
+| 3. Favourites | Not implemented | No favourites data model, API, or dashboard UI yet. |
+| 4. Activity feed | Not implemented | No tenant activity feed endpoint/UI yet. |
+| 5. User profile page | Partial | Settings page exists, but profile fields/avatar/language coverage is incomplete. |
+| 6. Avatar upload + cropping | Not implemented | No upload/crop pipeline yet. |
+| 7. What's New page | Implemented | Public What's New page plus admin markdown editor backed by API are implemented. |
+| 8. In-app feedback form | Not implemented | No feedback API/table/admin viewer yet. |
+| 9. Maintenance banner | Implemented | Public maintenance endpoint + configurable message + dismissible banner implemented. |
+| 10. CSV import (players) | Not implemented | Player export exists; player import API is not implemented. |
+| 11. CSV import (rounds) | Not implemented | Round CSV import is not implemented. |
+| 12. Admin impersonation | Not implemented | No impersonation flow/API/audit events yet. |
+| 13. Feature flags | Not implemented | No per-tenant/per-user/global feature-flag system yet. |
+| 14. Bug reporting with logs | Not implemented | No bug report workflow/table/admin viewer yet. |
+| 15. System health page | Partial | Health/status endpoints exist; admin UI page not implemented. |
+
 ---
 
 ## 1. Implement dark mode (frontend)
@@ -32,9 +52,9 @@ So that users can choose a theme that suits their environment.
 **Target Date:** **03 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[Dark mode theme](ca://s?q=Explain_dark_mode_theme)** implemented.  
-- [ ] Auto‑detect system preference.  
-- [ ] Toggle in settings.  
+- [x] **[Dark mode theme](ca://s?q=Explain_dark_mode_theme)** implemented.  
+- [x] Auto‑detect system preference.  
+- [x] Toggle in settings.  
 - [ ] Stored in user preferences.
 
 ### Dependencies
@@ -175,12 +195,12 @@ So that users can see recent updates.
 **Target Date:** **20 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[Release notes page](ca://s?q=Explain_release_notes_page)** shows:
+- [x] **[Release notes page](ca://s?q=Explain_release_notes_page)** shows:
   - new features  
   - improvements  
   - bug fixes  
-- [ ] Markdown‑based.  
-- [ ] Admin‑editable.
+- [x] Markdown‑based.  
+- [x] Admin‑editable.
 
 ### Dependencies
 - None
@@ -223,9 +243,9 @@ So that users are notified of upcoming downtime.
 **Target Date:** **23 June 2028**
 
 ### Acceptance Criteria
-- [ ] **[Maintenance banner](ca://s?q=Explain_maintenance_banner_UI)** appears when maintenance mode is enabled.  
-- [ ] Message configurable.  
-- [ ] Dismissible.
+- [x] **[Maintenance banner](ca://s?q=Explain_maintenance_banner_UI)** appears when maintenance mode is enabled.  
+- [x] Message configurable.  
+- [x] Dismissible.
 
 ### Dependencies
 - **[Maintenance mode](ca://s?q=Explain_maintenance_mode)**

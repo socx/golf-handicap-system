@@ -34,6 +34,12 @@ const adminCards = [
     description: 'Configure system-level options for notifications, PCC, and maintenance mode.',
     icon: SlidersHorizontal,
   },
+  {
+    to: '/admin/release-notes',
+    title: 'Release Notes',
+    description: 'Edit markdown content for the public What\'s New page.',
+    icon: Logs,
+  },
 ] as const;
 
 const AdminHomePage: React.FC = () => {

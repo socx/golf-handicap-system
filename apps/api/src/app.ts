@@ -32,6 +32,7 @@ import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds,
 import { handleCalculateHandicap, handleGetHandicapEligibility, handleGetHandicapHistory, handleCreateHandicapOverride, handleListHandicapOverrides } from './routes/handicap';
 import { handleGetDashboardSummary } from './routes/dashboard';
 import { handleGetMaintenanceStatus } from './routes/maintenance';
+import { handleGetReleaseNotes, handleUpdateReleaseNotes } from './routes/releaseNotes';
 
 function parseUserActivationRoute(path: string): { userId: string; action: 'activate' | 'deactivate' } | null {
   const match = path.match(/^\/(?:api\/)?users\/([0-9a-fA-F-]+)\/(activate|deactivate)$/);
@@ -181,6 +182,16 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
 
     if (method === 'GET' && (pathname === '/api/maintenance' || pathname === '/maintenance')) {
       await handleGetMaintenanceStatus(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/release-notes' || pathname === '/release-notes')) {
+      await handleGetReleaseNotes(req, res);
+      return;
+    }
+
+    if (method === 'PATCH' && (pathname === '/api/admin/release-notes' || pathname === '/admin/release-notes')) {
+      await handleUpdateReleaseNotes(req, res);
       return;
     }
 
