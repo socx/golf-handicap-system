@@ -4,7 +4,6 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-  TooltipProps,
   Tooltip,
   XAxis,
   YAxis,
@@ -25,6 +24,19 @@ interface DashboardState {
 interface TrendDateRange {
   from: string;
   to: string;
+}
+
+interface TrendTooltipPoint {
+  date: string;
+  handicapIndex: number;
+  roundsUsed: number;
+}
+
+interface TrendTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload?: TrendTooltipPoint;
+  }>;
 }
 
 const widgetBaseClass =
@@ -48,14 +60,12 @@ function parseIsoDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function TrendTooltip({ active, payload }: TooltipProps<number, string>) {
+function TrendTooltip({ active, payload }: TrendTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const point = payload[0]?.payload as
-    | { date: string; handicapIndex: number; roundsUsed: number }
-    | undefined;
+  const point = payload[0]?.payload;
   if (!point) return null;
 
   return (
