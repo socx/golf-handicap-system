@@ -46,6 +46,7 @@ const AdminHandicapOverridePage = lazy(async () => import('./pages/AdminHandicap
 const AdminAuditLogsPage = lazy(async () => import('./pages/AdminAuditLogsPage'));
 const AdminSettingsPage = lazy(async () => import('./pages/AdminSettingsPage'));
 const AdminReleaseNotesPage = lazy(async () => import('./pages/AdminReleaseNotesPage'));
+const AdminSystemHealthPage = lazy(async () => import('./pages/AdminSystemHealthPage'));
 const AdminHomePage = lazy(async () => import('./pages/AdminHomePage'));
 const HandicapPage = lazy(async () => import('./pages/HandicapPage'));
 const HandicapHistoryPage = lazy(async () => import('./pages/HandicapHistoryPage'));
@@ -101,6 +102,7 @@ function AppRoutes() {
         <Route path="/admin/handicap-override/:playerId" element={<AdminHandicapOverridePage />} />
         <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
+        <Route path="/admin/system-health" element={<AdminSystemHealthPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/whats-new" element={<ReleaseNotesPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />

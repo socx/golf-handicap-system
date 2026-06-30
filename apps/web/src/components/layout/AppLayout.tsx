@@ -43,7 +43,7 @@ export const AppLayout: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const displayRole = useMemo(() => user?.role?.toUpperCase() ?? 'UNKNOWN', [user?.role]);
 
-  const navigationItems = useMemo(() => getFilteredNavigationItems(user?.role ?? null), [user?.role]);
+  const navigationItems = useMemo(() => getFilteredNavigationItems(user ?? null), [user]);
 
   useEffect(() => {
     let cancelled = false;

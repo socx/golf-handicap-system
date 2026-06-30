@@ -24,6 +24,7 @@ export interface RawEnv {
   MAILPIT_SMTP_PORT?: string;
   SENDGRID_API_KEY?: string;
   SES_REGION?: string;
+  SUPER_ADMIN_EMAILS?: string;
 }
 
 function toPositiveNumber(value: string | undefined, fallback: number, label: string): number {
@@ -37,6 +38,18 @@ function toPositiveNumber(value: string | undefined, fallback: number, label: st
 function toBoolean(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   return value.toLowerCase() === 'true';
+}
+
+function toCsvList(value: string | undefined): string[] {
+  if (!value) return [];
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
 }
 
 export function validateAndNormalizeEnv(raw: RawEnv) {
@@ -76,5 +89,6 @@ export function validateAndNormalizeEnv(raw: RawEnv) {
     mailpitSmtpPort: toPositiveNumber(raw.MAILPIT_SMTP_PORT, 1025, 'MAILPIT_SMTP_PORT'),
     sendgridApiKey: raw.SENDGRID_API_KEY || '',
     sesRegion: raw.SES_REGION || 'eu-west-2',
+    superAdminEmails: toCsvList(raw.SUPER_ADMIN_EMAILS || 'admin@ghs.local'),
   };
 }

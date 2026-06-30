@@ -7,7 +7,7 @@ import { maintenanceApi } from '../api/maintenance';
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
-    user: { email: 'admin@club.local', role: 'admin' },
+    user: { email: 'admin@club.local', role: 'admin', is_super_admin: true },
     logout: vi.fn(async () => {}),
   }),
 }));
@@ -103,13 +103,18 @@ describe('AppLayout maintenance banner', () => {
 
 describe('Navigation Filtering', () => {
   describe('getFilteredNavigationItems', () => {
+    const adminUser = { id: '1', email: 'admin@test.local', role: 'admin' as const, is_active: true, is_super_admin: true };
+    const adminNonSuperUser = { id: '2', email: 'admin2@test.local', role: 'admin' as const, is_active: true, is_super_admin: false };
+    const playerUser = { id: '3', email: 'player@test.local', role: 'player' as const, is_active: true };
+    const viewerUser = { id: '4', email: 'viewer@test.local', role: 'viewer' as const, is_active: true };
+
     it('returns empty array for null role', () => {
       const items = getFilteredNavigationItems(null);
       expect(items).toEqual([]);
     });
 
     it('returns only admin items for admin role', () => {
-      const items = getFilteredNavigationItems('admin');
+      const items = getFilteredNavigationItems(adminUser);
       expect(items.length).toBeGreaterThan(0);
       const labels = items.map(i => i.label);
       expect(labels).toContain('Admin');
@@ -117,14 +122,14 @@ describe('Navigation Filtering', () => {
     });
 
     it('does not include admin items for player role', () => {
-      const items = getFilteredNavigationItems('player');
+      const items = getFilteredNavigationItems(playerUser);
       const labels = items.map(i => i.label);
       expect(labels).not.toContain('Admin');
       expect(labels).not.toContain('Admin Settings');
     });
 
     it('returns correct items for player role', () => {
-      const items = getFilteredNavigationItems('player');
+      const items = getFilteredNavigationItems(playerUser);
       const labels = items.map(i => i.label);
       expect(labels).toContain('Dashboard');
       expect(labels).toContain('Players');
@@ -134,7 +139,7 @@ describe('Navigation Filtering', () => {
     });
 
     it('does not include admin items for viewer role', () => {
-      const items = getFilteredNavigationItems('viewer');
+      const items = getFilteredNavigationItems(viewerUser);
       const labels = items.map(i => i.label);
       expect(labels).not.toContain('Admin');
       expect(labels).not.toContain('Admin Settings');
@@ -144,7 +149,7 @@ describe('Navigation Filtering', () => {
     });
 
     it('returns only viewer-accessible items for viewer role', () => {
-      const items = getFilteredNavigationItems('viewer');
+      const items = getFilteredNavigationItems(viewerUser);
       const labels = items.map(i => i.label);
       expect(labels).toContain('Dashboard');
       expect(labels).toContain('Courses');
@@ -152,14 +157,14 @@ describe('Navigation Filtering', () => {
     });
 
     it('all items for admin have admin in their roles', () => {
-      const items = getFilteredNavigationItems('admin');
+      const items = getFilteredNavigationItems(adminUser);
       items.forEach(item => {
         expect(item.roles).toContain('admin');
       });
     });
 
     it('all items for player do not include admin-only items', () => {
-      const items = getFilteredNavigationItems('player');
+      const items = getFilteredNavigationItems(playerUser);
       const adminOnlyItems = ['Admin', 'Admin Settings'];
       items.forEach(item => {
         expect(adminOnlyItems).not.toContain(item.label);
@@ -167,18 +172,30 @@ describe('Navigation Filtering', () => {
     });
 
     it('admin should have more items than player', () => {
-      const adminItems = getFilteredNavigationItems('admin');
-      const playerItems = getFilteredNavigationItems('player');
+      const adminItems = getFilteredNavigationItems(adminUser);
+      const playerItems = getFilteredNavigationItems(playerUser);
       expect(adminItems.length).toBeGreaterThan(playerItems.length);
     });
 
     it('all player items should also be in admin items', () => {
-      const adminItems = getFilteredNavigationItems('admin');
-      const playerItems = getFilteredNavigationItems('player');
+      const adminItems = getFilteredNavigationItems(adminUser);
+      const playerItems = getFilteredNavigationItems(playerUser);
       const adminLabels = adminItems.map(i => i.label);
       playerItems.forEach(item => {
         expect(adminLabels).toContain(item.label);
       });
+    });
+
+    it('hides super-admin-only items for non-super admin users', () => {
+      const items = getFilteredNavigationItems(adminNonSuperUser);
+      const labels = items.map((item) => item.label);
+      expect(labels).not.toContain('System Health');
+    });
+
+    it('shows super-admin-only items for super admins', () => {
+      const items = getFilteredNavigationItems(adminUser);
+      const labels = items.map((item) => item.label);
+      expect(labels).toContain('System Health');
     });
   });
 });

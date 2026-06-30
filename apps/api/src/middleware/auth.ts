@@ -3,6 +3,8 @@ import type { JWTClaims } from '@ghs/types';
 import { getBearerToken, getClientIp } from '../lib/http';
 import { verifyJwt } from '../lib/tokens';
 import { logAuthAuditEvent } from '../lib/audit';
+import { dbPool } from '../lib/db';
+import { env } from '../config/env';
 
 type UserRole = 'admin' | 'player' | 'viewer';
 
@@ -144,6 +146,86 @@ export async function verifyAdminAndLog(
       },
     });
   }
+
+  return authResult;
+}
+
+export async function verifySuperAdminAndLog(
+  req: http.IncomingMessage,
+): Promise<RBACMiddlewareResult> {
+  const requestId = getRequestId(req);
+  const clientIp = getClientIp(req);
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+
+  if (!authResult.success || !authResult.auth) {
+    await logAuthAuditEvent({
+      requestId,
+      event: 'admin_access_denied',
+      ipAddress: clientIp,
+      metadata: {
+        method: req.method || 'GET',
+        path: req.url || '/',
+        errorCode: authResult.errorCode,
+        reason: authResult.errorMessage,
+        scope: 'super_admin',
+      },
+    });
+
+    return authResult;
+  }
+
+  const userResult = await dbPool.query<{ email: string; is_active: boolean }>(
+    `SELECT email::text AS email, is_active
+     FROM users
+     WHERE id = $1 AND deleted_at IS NULL
+     LIMIT 1`,
+    [authResult.auth.userId],
+  );
+
+  const userRecord = userResult.rows[0] || null;
+  const email = String(userRecord?.email || '').trim().toLowerCase();
+  const isAllowed = Boolean(userRecord?.is_active) && env.superAdminEmails.includes(email);
+
+  if (!isAllowed) {
+    await logAuthAuditEvent({
+      requestId,
+      event: 'admin_access_denied',
+      userId: authResult.auth.userId,
+      actorUserId: authResult.auth.userId,
+      ipAddress: clientIp,
+      metadata: {
+        method: req.method || 'GET',
+        path: req.url || '/',
+        attemptedRole: authResult.auth.role,
+        attemptedEmail: email || null,
+        errorCode: 'forbidden_super_admin',
+        reason: 'Endpoint requires super-admin access',
+        scope: 'super_admin',
+      },
+    });
+
+    return {
+      success: false,
+      statusCode: 403,
+      errorCode: 'forbidden_super_admin',
+      errorMessage: 'Endpoint requires super-admin access',
+    };
+  }
+
+  await logAuthAuditEvent({
+    requestId,
+    event: 'admin_access_allowed',
+    userId: authResult.auth.userId,
+    actorUserId: authResult.auth.userId,
+    ipAddress: clientIp,
+    metadata: {
+      method: req.method || 'GET',
+      path: req.url || '/',
+      role: authResult.auth.role,
+      email,
+      scope: 'super_admin',
+    },
+  });
 
   return authResult;
 }

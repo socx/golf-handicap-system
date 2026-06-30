@@ -1,9 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import { Icon } from '../components/ui/Icon';
-import { ShieldCheck, UserCog, ClipboardCheck, SlidersHorizontal, Plus, Logs } from '../components/ui/icons';
+import { ShieldCheck, UserCog, ClipboardCheck, SlidersHorizontal, Plus, Logs, Activity } from '../components/ui/icons';
+import { useAuth } from '../hooks/useAuth';
 
-const adminCards = [
+interface AdminCard {
+  to: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  superAdminOnly?: boolean;
+}
+
+const adminCards: ReadonlyArray<AdminCard> = [
   {
     to: '/admin/users',
     title: 'Users',
@@ -40,9 +50,19 @@ const adminCards = [
     description: 'Edit markdown content for the public What\'s New page.',
     icon: Logs,
   },
+  {
+    to: '/admin/system-health',
+    title: 'System Health',
+    description: 'View service health for database, cache, object storage, queue, and API uptime.',
+    icon: Activity,
+    superAdminOnly: true,
+  },
 ] as const;
 
 const AdminHomePage: React.FC = () => {
+  const { user } = useAuth();
+  const visibleCards = adminCards.filter((card) => !card.superAdminOnly || user?.is_super_admin === true);
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -73,7 +93,7 @@ const AdminHomePage: React.FC = () => {
       </div>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {adminCards.map((card) => (
+        {visibleCards.map((card) => (
           <Link
             key={card.to}
             to={card.to}

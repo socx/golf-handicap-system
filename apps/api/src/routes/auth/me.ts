@@ -2,6 +2,7 @@ import http from 'node:http';
 import { sendJson, sendError, getBearerToken } from '../../lib/http';
 import { verifyJwt } from '../../lib/tokens';
 import { dbPool } from '../../lib/db';
+import { env } from '../../config/env';
 
 interface AuthSessionUser {
   id: string;
@@ -9,6 +10,7 @@ interface AuthSessionUser {
   role: 'admin' | 'player' | 'viewer';
   is_active: boolean;
   player_id: string | null;
+  is_super_admin?: boolean;
   impersonated_by?: string | null;
   original_user_id?: string | null;
 }
@@ -56,10 +58,13 @@ export async function handleMe(
     const impersonatedBy = typeof claimsMap.impersonatedBy === 'string'
       ? String(claimsMap.impersonatedBy)
       : null;
+    const normalizedEmail = String(user.email || '').trim().toLowerCase();
+    const isSuperAdmin = env.superAdminEmails.includes(normalizedEmail);
 
     sendJson(res, 200, {
       user: {
         ...user,
+        is_super_admin: isSuperAdmin,
         impersonated_by: impersonatedBy,
         original_user_id: impersonatedBy,
       },

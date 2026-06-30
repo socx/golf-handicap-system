@@ -28,6 +28,7 @@ import { handleUpsertDailyPcc } from './routes/admin/pcc';
 import { handleGetAdminDashboard } from './routes/admin/dashboard';
 import { handleRecalculateAllHandicaps, handleGetBatchJobStatus, handleListBatchJobs } from './routes/admin/batch';
 import { handleStartImpersonation, handleStopImpersonation } from './routes/admin/impersonation';
+import { handleGetSystemHealth } from './routes/admin/systemHealth';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleImportPlayers, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound, handleImportRounds } from './routes/rounds';
@@ -288,6 +289,11 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
     // ── Admin ─────────────────────────────────────────────────────────────
     if (method === 'GET' && (pathname === '/api/admin/status' || pathname === '/admin/status')) {
       await handleAdminStatus(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/system-health' || pathname === '/admin/system-health')) {
+      await handleGetSystemHealth(req, res);
       return;
     }
 

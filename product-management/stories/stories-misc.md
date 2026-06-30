@@ -36,7 +36,7 @@ Start date for this epic (after Internationalisation epic ends): **03 June 2028*
 | 12. Admin impersonation | Not implemented | No impersonation flow/API/audit events yet. |
 | 13. Feature flags | Not implemented | No per-tenant/per-user/global feature-flag system yet. |
 | 14. Bug reporting with logs | Not implemented | No bug report workflow/table/admin viewer yet. |
-| 15. System health page | Partial | Health/status endpoints exist; admin UI page not implemented. |
+| 15. System health page | Implemented | Added super-admin-only API and admin page showing DB/cache/object storage/queue/API uptime status. |
 
 ---
 
@@ -424,13 +424,20 @@ So that admins can see the status of core platform modules.
 **Target Date:** **16 July 2028**
 
 ### Acceptance Criteria
-- [ ] **[Health page](ca://s?q=Explain_system_health_page)** shows:
+- [x] **[Health page](ca://s?q=Explain_system_health_page)** shows:
   - DB status  
   - cache status  
   - object storage  
   - queue  
   - API uptime  
-- [ ] Super‑admin only.
+- [x] Super‑admin only.
+
+### Implementation Notes
+- Added super-admin allowlist support via `SUPER_ADMIN_EMAILS` in `apps/api/src/config/validate-env.ts`.
+- Added `verifySuperAdminAndLog` middleware in `apps/api/src/middleware/auth.ts` and exposed `is_super_admin` in `GET /api/auth/me`.
+- Implemented `GET /api/admin/system-health` in `apps/api/src/routes/admin/systemHealth.ts` and wired route in `apps/api/src/app.ts`.
+- Added admin UI page `apps/web/src/pages/AdminSystemHealthPage.tsx` plus API client `apps/web/src/api/adminSystemHealth.ts`.
+- Added super-admin-only navigation filtering in `apps/web/src/components/layout/navigationItems.ts` and admin home card visibility guard.
 
 ### Dependencies
 - **[Monitoring system](ca://s?q=Explain_monitoring_dashboards)**

@@ -4,6 +4,7 @@ export interface User {
   name?: string;
   role: 'admin' | 'player' | 'viewer';
   is_active: boolean;
+  is_super_admin?: boolean;
   player_id?: string | null;
   impersonated_by?: string | null;
   original_user_id?: string | null;

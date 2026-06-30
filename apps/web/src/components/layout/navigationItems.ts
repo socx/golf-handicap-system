@@ -19,6 +19,7 @@ interface NavigationItem {
   label: string;
   icon: LucideIcon;
   roles: ReadonlyArray<User['role']>;
+  superAdminOnly?: boolean;
 }
 
 export const ALL_NAVIGATION_ITEMS = [
@@ -35,11 +36,18 @@ export const ALL_NAVIGATION_ITEMS = [
   { to: '/admin/settings', label: 'Admin Settings', icon: SlidersHorizontal, roles: ['admin'] },
   { to: '/admin/release-notes', label: 'Admin Release Notes', icon: Logs, roles: ['admin'] },
   { to: '/admin/feedback', label: 'Admin Feedback', icon: Activity, roles: ['admin'] },
+  { to: '/admin/system-health', label: 'System Health', icon: Activity, roles: ['admin'], superAdminOnly: true },
 ] satisfies ReadonlyArray<NavigationItem>;
 
-export const getFilteredNavigationItems = (role: User['role'] | null) => {
-  if (!role) {
+export const getFilteredNavigationItems = (user: User | null) => {
+  if (!user?.role) {
     return [];
   }
-  return ALL_NAVIGATION_ITEMS.filter((item) => item.roles.some((itemRole) => itemRole === role));
+
+  return ALL_NAVIGATION_ITEMS.filter((item) => {
+    const roleAllowed = item.roles.some((itemRole) => itemRole === user.role);
+    if (!roleAllowed) return false;
+    if (!item.superAdminOnly) return true;
+    return user.is_super_admin === true;
+  });
 };
