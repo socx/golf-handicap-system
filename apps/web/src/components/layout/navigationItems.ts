@@ -44,8 +44,10 @@ export const getFilteredNavigationItems = (user: User | null) => {
     return [];
   }
 
+  const effectiveRole = user.role === 'super_admin' ? 'admin' : user.role;
+
   return ALL_NAVIGATION_ITEMS.filter((item) => {
-    const roleAllowed = item.roles.some((itemRole) => itemRole === user.role);
+    const roleAllowed = item.roles.some((itemRole) => itemRole === effectiveRole);
     if (!roleAllowed) return false;
     if (!item.superAdminOnly) return true;
     return user.is_super_admin === true;

@@ -3,7 +3,7 @@ import { api } from './client';
 export interface AdminUser {
   id: string;
   email: string;
-  role: 'admin' | 'player' | 'viewer';
+  role: 'super_admin' | 'admin' | 'player' | 'viewer';
   is_active: boolean;
   created_at: string;
   updated_at: string;

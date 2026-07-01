@@ -7,7 +7,7 @@ import { env } from '../../config/env';
 interface AuthSessionUser {
   id: string;
   email: string;
-  role: 'admin' | 'player' | 'viewer';
+  role: 'super_admin' | 'admin' | 'player' | 'viewer';
   is_active: boolean;
   player_id: string | null;
   is_super_admin?: boolean;

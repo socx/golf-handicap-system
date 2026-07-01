@@ -8,7 +8,7 @@ import { verifyAndAuthorize } from '../../middleware/auth';
 interface SessionUser {
   id: string;
   email: string;
-  role: 'admin' | 'player' | 'viewer';
+  role: 'super_admin' | 'admin' | 'player' | 'viewer';
   is_active: boolean;
   player_id: string | null;
 }
@@ -124,7 +124,7 @@ export async function handleStopImpersonation(
   }
 
   const originalUser = await getSessionUserById(originalUserId);
-  if (!originalUser || !originalUser.is_active || originalUser.role !== 'admin') {
+  if (!originalUser || !originalUser.is_active || (originalUser.role !== 'admin' && originalUser.role !== 'super_admin')) {
     sendError(res, 403, 'forbidden', 'Original admin account is unavailable');
     return;
   }

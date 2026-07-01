@@ -6,7 +6,7 @@ import { logAuthAuditEvent } from '../lib/audit';
 import { dbPool } from '../lib/db';
 import { env } from '../config/env';
 
-type UserRole = 'admin' | 'player' | 'viewer';
+type UserRole = 'super_admin' | 'admin' | 'player' | 'viewer';
 
 interface AuthenticatedRequest {
   userId: string;
@@ -22,7 +22,14 @@ interface RBACMiddlewareResult {
   errorMessage?: string;
 }
 
-const VALID_ROLES: UserRole[] = ['admin', 'player', 'viewer'];
+const VALID_ROLES: UserRole[] = ['super_admin', 'admin', 'player', 'viewer'];
+
+function roleSatisfies(userRole: UserRole, requiredRole: UserRole): boolean {
+  if (userRole === 'super_admin') {
+    return true;
+  }
+  return userRole === requiredRole;
+}
 
 function getRequestId(req: http.IncomingMessage): string {
   const headerValue = req.headers['x-request-id'];
@@ -74,7 +81,8 @@ export function verifyAndAuthorize(
     };
   }
 
-  if (!options.requiredRoles.includes(userRole)) {
+  const isAuthorized = options.requiredRoles.some((requiredRole) => roleSatisfies(userRole, requiredRole));
+  if (!isAuthorized) {
     return {
       success: false,
       statusCode: 403,
@@ -155,7 +163,7 @@ export async function verifySuperAdminAndLog(
 ): Promise<RBACMiddlewareResult> {
   const requestId = getRequestId(req);
   const clientIp = getClientIp(req);
-  const authResult = verifyAndAuthorize(req, { requiredRoles: ['admin'] });
+  const authResult = verifyAndAuthorize(req, { requiredRoles: ['super_admin'] });
 
   if (!authResult.success || !authResult.auth) {
     await logAuthAuditEvent({
@@ -174,8 +182,8 @@ export async function verifySuperAdminAndLog(
     return authResult;
   }
 
-  const userResult = await dbPool.query<{ email: string; is_active: boolean }>(
-    `SELECT email::text AS email, is_active
+  const userResult = await dbPool.query<{ email: string; role: UserRole; is_active: boolean }>(
+    `SELECT email::text AS email, role, is_active
      FROM users
      WHERE id = $1 AND deleted_at IS NULL
      LIMIT 1`,
@@ -183,8 +191,10 @@ export async function verifySuperAdminAndLog(
   );
 
   const userRecord = userResult.rows[0] || null;
+  const role = userRecord?.role || 'player';
   const email = String(userRecord?.email || '').trim().toLowerCase();
-  const isAllowed = Boolean(userRecord?.is_active) && env.superAdminEmails.includes(email);
+  const isAllowed = Boolean(userRecord?.is_active)
+    && (role === 'super_admin' || env.superAdminEmails.includes(email));
 
   if (!isAllowed) {
     await logAuthAuditEvent({

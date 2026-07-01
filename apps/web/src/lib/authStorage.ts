@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name?: string;
-  role: 'admin' | 'player' | 'viewer';
+  role: 'super_admin' | 'admin' | 'player' | 'viewer';
   is_active: boolean;
   is_super_admin?: boolean;
   player_id?: string | null;

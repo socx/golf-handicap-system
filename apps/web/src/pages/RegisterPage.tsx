@@ -56,7 +56,7 @@ export const RegisterPage: React.FC = () => {
     void checkAccess();
   }, [isAuthenticated, refreshUser]);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   const onSubmit = async (data: RegisterForm) => {
     setSubmitting(true);

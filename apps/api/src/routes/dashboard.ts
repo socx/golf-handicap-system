@@ -27,7 +27,7 @@ async function getLinkedPlayerIdForUser(userId: string): Promise<string | null> 
 }
 
 async function resolveRequestedPlayerId(
-  userRole: 'admin' | 'player' | 'viewer',
+  userRole: 'super_admin' | 'admin' | 'player' | 'viewer',
   userId: string,
   requestUrl: URL,
 ): Promise<string | null> {
@@ -37,7 +37,7 @@ async function resolveRequestedPlayerId(
     return null;
   }
 
-  if (userRole === 'admin') {
+  if (userRole === 'admin' || userRole === 'super_admin') {
     return requestedPlayerId || null;
   }
 
