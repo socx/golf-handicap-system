@@ -103,6 +103,14 @@ export interface PlayerImportResponse {
   players?: Player[];
 }
 
+export interface BackgroundImportResponse {
+  queued: true;
+  jobId: string;
+  rowCount: number;
+  adminEmail: string;
+  message: string;
+}
+
 interface RawPlayersListResponse {
   players?: Player[];
   data?: Player[];
@@ -189,8 +197,8 @@ export const playersApi = {
     const response = await api.patch<{ player: Player }>(`/players/${playerId}/link-user`, { user_id: userId });
     return response.data.player;
   },
-  importCsv: async (csvText: string, dryRun: boolean): Promise<PlayerImportResponse> => {
-    const response = await api.post<PlayerImportResponse>('/players/import', { csvText, dryRun });
+  importCsv: async (csvText: string, dryRun: boolean): Promise<PlayerImportResponse | BackgroundImportResponse> => {
+    const response = await api.post<PlayerImportResponse | BackgroundImportResponse>('/players/import', { csvText, dryRun });
     return response.data;
   },
 };

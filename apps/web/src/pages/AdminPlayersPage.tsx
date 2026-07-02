@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { playersApi, type Player, type PlayerImportResponse } from '../api/players';
+import { playersApi, type BackgroundImportResponse, type Player, type PlayerImportResponse } from '../api/players';
 import { authApi } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -13,6 +13,7 @@ import { showErrorToast, showSuccessToast } from '../lib/toast';
 import { Users, Pencil, Link2, Trash2, Plus } from '../components/ui/icons';
 
 const PAGE_SIZE = 20;
+const SMALL_IMPORT_THRESHOLD = 100;
 
 interface ProvisionFormState {
   email: string;
@@ -56,6 +57,20 @@ export const AdminPlayersPage: React.FC = () => {
   const [importCsvText, setImportCsvText] = useState('name,dob,gender,club,email,country\n');
   const [importResult, setImportResult] = useState<PlayerImportResponse | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPhase, setImportPhase] = useState<'idle' | 'in_progress' | 'queued' | 'complete'>('idle');
+  const [importProgress, setImportProgress] = useState(0);
+  const [importProgressText, setImportProgressText] = useState('');
+  const [importQueueInfo, setImportQueueInfo] = useState<BackgroundImportResponse | null>(null);
+  const importProgressRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+      }
+    },
+    [],
+  );
 
   const fetchPlayers = async (opts?: { resetPage?: boolean }) => {
     const currentPage = opts?.resetPage ? 1 : page;
@@ -218,18 +233,82 @@ export const AdminPlayersPage: React.FC = () => {
       return;
     }
 
+    const nonEmptyLines = csvText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const rowCount = Math.max(0, nonEmptyLines.length - 1);
+
     setIsImporting(true);
+    setImportResult(null);
+    setImportQueueInfo(null);
+    setImportPhase('idle');
+    setImportProgress(0);
+    setImportProgressText('');
+
+    if (!dryRun && rowCount > 0 && rowCount <= SMALL_IMPORT_THRESHOLD) {
+      const animationDurationMs = Math.max(500, Math.min(3000, rowCount * 20));
+      const startedAt = Date.now();
+      setImportPhase('in_progress');
+      setImportProgress(1);
+      setImportProgressText(`Importing row 1 of ${rowCount}...`);
+
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+      }
+
+      importProgressRef.current = window.setInterval(() => {
+        const elapsed = Date.now() - startedAt;
+        const ratio = Math.min(1, elapsed / animationDurationMs);
+        const targetPercent = Math.min(88, Math.max(1, Math.round(ratio * 88)));
+        const currentRow = Math.max(1, Math.min(rowCount, Math.round((targetPercent / 88) * rowCount)));
+
+        setImportProgress(targetPercent);
+        setImportProgressText(`Importing row ${currentRow} of ${rowCount}...`);
+
+        if (ratio >= 1 && importProgressRef.current !== null) {
+          window.clearInterval(importProgressRef.current);
+          importProgressRef.current = null;
+          setImportProgress(88);
+          setImportProgressText('Finalizing import...');
+        }
+      }, 50);
+    }
+
     try {
       const result = await playersApi.importCsv(csvText, dryRun);
-      setImportResult(result);
+
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+        importProgressRef.current = null;
+      }
+
+      if ('queued' in result && result.queued) {
+        setImportPhase('queued');
+        setImportQueueInfo(result);
+        setImportProgress(0);
+        setImportProgressText('');
+        showSuccessToast('Import queued', result.message);
+        return;
+      }
+
+      const syncResult = result as PlayerImportResponse;
+      setImportResult(syncResult);
+      setImportPhase('complete');
 
       if (dryRun) {
-        showSuccessToast('Validation complete', `${result.summary.validRows ?? 0} valid rows, ${result.summary.invalidRows ?? 0} invalid rows.`);
+        showSuccessToast('Validation complete', `${syncResult.summary.validRows ?? 0} valid rows, ${syncResult.summary.invalidRows ?? 0} invalid rows.`);
       } else {
-        showSuccessToast('Players imported', `Imported ${result.summary.importedRows ?? 0} player records.`);
+        setImportProgress(100);
+        setImportProgressText(`Import complete: ${syncResult.summary.importedRows ?? 0} of ${syncResult.summary.rowCount} rows imported.`);
+        showSuccessToast('Players imported', `Imported ${syncResult.summary.importedRows ?? 0} player records.`);
         await fetchPlayers({ resetPage: true });
       }
     } catch (error) {
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+        importProgressRef.current = null;
+      }
+      setImportPhase('idle');
+      setImportProgress(0);
+      setImportProgressText('');
       setImportResult(null);
       showErrorToast('Import failed', error instanceof Error ? error.message : 'Unable to import player CSV.');
     } finally {
@@ -337,6 +416,31 @@ export const AdminPlayersPage: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {importPhase === 'in_progress' && (
+          <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm dark:border-teal-900/60 dark:bg-teal-950/20">
+            <p className="font-medium text-teal-800 dark:text-teal-200">Import in progress</p>
+            <p className="mt-1 text-teal-700 dark:text-teal-300">{importProgressText}</p>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-teal-100 dark:bg-teal-900/40">
+              <div
+                className="h-full rounded-full bg-teal-600 transition-all duration-200 dark:bg-teal-400"
+                style={{ width: `${importProgress}%` }}
+                aria-label="Import progress"
+              />
+            </div>
+            <p className="mt-2 text-xs text-teal-700 dark:text-teal-300">{importProgress}% complete</p>
+          </div>
+        )}
+
+        {importPhase === 'queued' && importQueueInfo && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/60 dark:bg-amber-950/20">
+            <p className="font-medium text-amber-800 dark:text-amber-200">Large import queued</p>
+            <p className="mt-1 text-amber-700 dark:text-amber-300">{importQueueInfo.message}</p>
+            <p className="mt-1 text-amber-700 dark:text-amber-300">
+              Job ID: <span className="font-mono">{importQueueInfo.jobId}</span>
+            </p>
+          </div>
+        )}
 
         {importResult && (
           <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900/50">
