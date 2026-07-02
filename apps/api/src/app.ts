@@ -29,6 +29,7 @@ import { handleGetAdminDashboard } from './routes/admin/dashboard';
 import { handleRecalculateAllHandicaps, handleGetBatchJobStatus, handleListBatchJobs } from './routes/admin/batch';
 import { handleStartImpersonation, handleStopImpersonation } from './routes/admin/impersonation';
 import { handleGetSystemHealth } from './routes/admin/systemHealth';
+import { handleGetImportJob, handleListImportJobs } from './routes/admin/importJobs';
 import { handleCreatePlayer, handleDeletePlayer, handleExportPlayers, handleGetPlayer, handleImportPlayers, handleLinkPlayerUser, handleListPlayers, handleUpdatePlayer } from './routes/players';
 import { handleCreateCourse, handleListCourses, handleGetCourse, handleUpdateCourse, handleDeleteCourse, handleCreateTeeConfiguration, handleUpdateTeeConfiguration, handleDeleteTeeConfiguration } from './routes/courses';
 import { handleCreateRound, handleDeleteRound, handleGetRound, handleListRounds, handleApproveRound, handleRejectRound, handleUpdateRound, handleImportRounds } from './routes/rounds';
@@ -294,6 +295,17 @@ export async function dispatchRequest(req: http.IncomingMessage, res: http.Serve
 
     if (method === 'GET' && (pathname === '/api/admin/system-health' || pathname === '/admin/system-health')) {
       await handleGetSystemHealth(req, res);
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/api/admin/import-jobs' || pathname === '/admin/import-jobs')) {
+      await handleListImportJobs(req, res);
+      return;
+    }
+
+    const importJobMatch = pathname.match(/^\/(?:api\/)?admin\/import-jobs\/([a-z0-9_]+)$/);
+    if (importJobMatch && method === 'GET') {
+      await handleGetImportJob(req, res, String(importJobMatch[1] || ''));
       return;
     }
 

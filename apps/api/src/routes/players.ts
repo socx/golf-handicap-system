@@ -3,6 +3,8 @@ import { sendJson, sendError, readJsonBody, getClientIp } from '../lib/http';
 import { dbPool } from '../lib/db';
 import { verifyAndAuthorize } from '../middleware/auth';
 import { logAuthAuditEvent } from '../lib/audit';
+import { createImportJob } from '../lib/importJobs';
+import { sendEmail } from '../lib/email';
 
 type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
@@ -958,6 +960,90 @@ export async function handleImportPlayers(
         totalIssues,
       },
       rows,
+    });
+    return;
+  }
+
+  const LARGE_IMPORT_THRESHOLD = 100;
+  if (rows.length > LARGE_IMPORT_THRESHOLD) {
+    const userResult = await dbPool.query<{ email: string }>(
+      `SELECT email::text AS email FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+      [authResult.auth.userId],
+    );
+    const adminEmail = String((userResult.rows[0] as { email: string } | undefined)?.email ?? '');
+    const job = createImportJob({
+      type: 'players',
+      totalRows: rows.length,
+      adminUserId: authResult.auth.userId,
+      adminEmail,
+    });
+
+    sendJson(res, 202, {
+      queued: true,
+      jobId: job.jobId,
+      rowCount: rows.length,
+      adminEmail,
+      message: `Large import queued (${rows.length} rows). An email will be sent to ${adminEmail} when complete.`,
+    });
+
+    setImmediate(async () => {
+      job.status = 'in_progress';
+      const bgClient = await dbPool.connect();
+      try {
+        await bgClient.query('BEGIN');
+        for (const row of rows) {
+          try {
+            await bgClient.query(
+              `INSERT INTO players (first_name, last_name, dob, gender, club, email, country)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                row.values.first_name,
+                row.values.last_name,
+                row.values.dob,
+                row.values.gender,
+                row.values.club,
+                row.values.email,
+                row.values.country,
+              ],
+            );
+            job.processedRows += 1;
+            job.importedRows += 1;
+          } catch (rowErr) {
+            job.processedRows += 1;
+            job.failedRows += 1;
+            job.errors.push(`Row ${job.processedRows}: ${(rowErr as Error).message}`);
+          }
+        }
+        await bgClient.query('COMMIT');
+        job.status = 'completed';
+        job.completedAt = new Date().toISOString();
+        await sendEmail(
+          adminEmail,
+          `Player import complete – ${job.importedRows} of ${job.totalRows} rows imported`,
+          {
+            text: `Your player CSV import has completed.\n\nImported: ${job.importedRows} of ${job.totalRows} rows\nFailed: ${job.failedRows} rows${job.errors.length > 0 ? '\n\nErrors (first 10):\n' + job.errors.slice(0, 10).join('\n') : ''}`,
+            html: `<p>Your player CSV import has completed.</p><ul><li><strong>Imported:</strong> ${job.importedRows} of ${job.totalRows} rows</li><li><strong>Failed:</strong> ${job.failedRows} rows</li></ul>${job.errors.length > 0 ? '<p><strong>Errors (first 10):</strong></p><ul>' + job.errors.slice(0, 10).map((e) => `<li>${e}</li>`).join('') + '</ul>' : ''}`,
+          },
+        ).catch((emailErr: Error) => {
+          console.error('[players.import.bg] completion email failed:', emailErr.message);
+        });
+      } catch (bgErr) {
+        await bgClient.query('ROLLBACK').catch(() => {});
+        job.status = 'failed';
+        job.completedAt = new Date().toISOString();
+        job.errors.push((bgErr as Error).message);
+        await sendEmail(
+          adminEmail,
+          'Player import failed',
+          {
+            text: `Your player CSV import failed.\n\nError: ${(bgErr as Error).message}`,
+            html: `<p>Your player CSV import failed.</p><p><strong>Error:</strong> ${(bgErr as Error).message}</p>`,
+          },
+        ).catch(() => {});
+        console.error('[players.import.bg] background job failed:', bgErr);
+      } finally {
+        bgClient.release();
+      }
     });
     return;
   }
