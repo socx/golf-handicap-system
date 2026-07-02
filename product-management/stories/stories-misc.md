@@ -31,8 +31,8 @@ Start date for this epic (after Internationalisation epic ends): **03 June 2028*
 | 7. What's New page | Implemented | Public What's New page plus admin markdown editor backed by API are implemented. |
 | 8. In-app feedback form | Not implemented | No feedback API/table/admin viewer yet. |
 | 9. Maintenance banner | Implemented | Public maintenance endpoint + configurable message + dismissible banner implemented. |
-| 10. CSV import (players) | Implemented | Admin CSV import UI plus admin-only dry-run/import API are implemented for player bulk upload. |
-| 11. CSV import (rounds) | Implemented | Admin rounds CSV import API with dry-run validation, row-level error reporting, and transactional bulk insert is implemented. |
+| 10. CSV import (players) | Implemented | Admin CSV import UI plus admin-only dry-run/import API are implemented for player bulk upload. Smart import: progress bar for ≤100 rows; background job + email for >100 rows. |
+| 11. CSV import (rounds) | Implemented | Admin rounds CSV import UI added to AdminRoundsPage. Smart import: progress bar for ≤100 rows; background job + email notification for >100 rows. |
 | 12. Admin impersonation | Not implemented | No impersonation flow/API/audit events yet. |
 | 13. Feature flags | Not implemented | No per-tenant/per-user/global feature-flag system yet. |
 | 14. Bug reporting with logs | Not implemented | No bug report workflow/table/admin viewer yet. |
@@ -292,6 +292,18 @@ So that admins can bulk‑upload player data.
   - club  
 - [x] Validation errors returned.  
 - [x] Dry‑run mode supported.
+- [x] **Admin UI** import form available in Admin → Players page.  
+- [x] File upload or paste CSV text supported in UI.  
+- [x] Imports with ≤ 100 rows show an animated progress bar with continuously updated row description ("Importing row X of Y…").  
+- [x] Imports with > 100 rows are queued as a background job; admin is informed and receives an email notification when the job completes.  
+- [x] Background import job status retrievable via `GET /api/admin/import-jobs/:jobId`.
+
+### Implementation Notes
+- Added `apps/api/src/lib/importJobs.ts` in-memory job store (same pattern as batch recalculation).
+- Modified `handleImportPlayers` to detect row count; queues background job via `setImmediate` for >100 rows, sends completion email.
+- Added `GET /api/admin/import-jobs` and `GET /api/admin/import-jobs/:jobId` endpoints.
+- Updated `AdminPlayersPage` with smart import panel: animated progress bar for small imports, queued-state panel for large imports.
+- Added `BackgroundImportResponse` type to frontend API client.
 
 ### Dependencies
 - **[Players table](ca://s?q=Explain_players_table)**  
@@ -319,6 +331,10 @@ So that admins can migrate historical data.
   - player  
 - [x] Validation + error reporting.  
 - [x] Bulk insert optimised.
+- [x] **Admin UI** import form available in Admin → Rounds page.  
+- [x] File upload or paste CSV text supported in UI.  
+- [x] Imports with ≤ 100 rows show an animated progress bar with continuously updated row description.  
+- [x] Imports with > 100 rows are queued as a background job; admin is informed and receives an email notification when the job completes.
 
 ### Implementation Notes
 - Implemented rounds import endpoint in `apps/api/src/routes/rounds.ts` via `handleImportRounds`.
@@ -326,6 +342,9 @@ So that admins can migrate historical data.
 - Validation covers required columns, player/course/tee resolution, played date, and hole-score integrity.
 - Dry-run response returns row-level validation issues and lookup warnings.
 - Non-dry-run import performs transactional bulk insert and returns imported round IDs.
+- Modified `handleImportRounds` to detect row count; queues background job via `setImmediate` for >100 rows, sends completion email.
+- Added `AdminRoundsPage` import section with smart progress panel (animated for ≤100 rows, queued state for >100 rows).
+- Added `importCsv` method to frontend `roundsApi` client.
 - Added detailed API reference in `docs/rounds-import.md`.
 
 ### Dependencies
