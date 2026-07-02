@@ -134,6 +134,34 @@ export interface RoundModerationResponse {
   };
 }
 
+export interface RoundImportRowIssue {
+  field: string;
+  message: string;
+}
+
+export interface RoundImportSyncResponse {
+  dryRun: boolean;
+  summary: {
+    rowCount: number;
+    validRows?: number;
+    invalidRows?: number;
+    totalIssues?: number;
+    importedRows?: number;
+  };
+  rows?: Array<{ rowNumber: number; issues: RoundImportRowIssue[] }>;
+  importedRoundIds?: string[];
+}
+
+export interface RoundImportQueuedResponse {
+  queued: true;
+  jobId: string;
+  rowCount: number;
+  adminEmail: string;
+  message: string;
+}
+
+export type RoundImportApiResponse = RoundImportSyncResponse | RoundImportQueuedResponse;
+
 export const roundsApi = {
   create: (payload: CreateRoundPayload) =>
     api.post<CreateRoundResponse>('/rounds', payload),
@@ -154,4 +182,8 @@ export const roundsApi = {
   approve: (roundId: string) => api.post<RoundModerationResponse>(`/admin/rounds/${roundId}/approve`),
   reject: (roundId: string, rejectionReason: string) =>
     api.post<RoundModerationResponse>(`/admin/rounds/${roundId}/reject`, { rejectionReason }),
+  importCsv: async (csvText: string, dryRun: boolean): Promise<RoundImportApiResponse> => {
+    const response = await api.post<RoundImportApiResponse>('/rounds/import', { csvText, dryRun });
+    return response.data;
+  },
 };

@@ -1,8 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleApiError } from '../api/client';
 import { coursesApi, type Course, type TeeConfiguration } from '../api/courses';
-import { roundsApi, type RoundListItem } from '../api/rounds';
+import {
+  roundsApi,
+  type RoundImportQueuedResponse,
+  type RoundImportSyncResponse,
+  type RoundListItem,
+} from '../api/rounds';
 import {
   Button,
   Card,
@@ -25,6 +30,7 @@ import { ClipboardList, CheckCircle, XCircle } from '../components/ui/icons';
 import { showErrorToast, showSuccessToast } from '../lib/toast';
 
 const PAGE_SIZE = 10;
+const SMALL_IMPORT_THRESHOLD = 100;
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -67,6 +73,43 @@ const AdminRoundsPage: React.FC = () => {
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [rejectingRound, setRejectingRound] = useState<RoundListItem | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [importCsvText, setImportCsvText] = useState('date,course,tee,player,hole1,hole2,hole3,hole4,hole5,hole6,hole7,hole8,hole9,hole10,hole11,hole12,hole13,hole14,hole15,hole16,hole17,hole18\n');
+  const [importResult, setImportResult] = useState<RoundImportSyncResponse | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importPhase, setImportPhase] = useState<'idle' | 'in_progress' | 'queued' | 'complete'>('idle');
+  const [importProgress, setImportProgress] = useState(0);
+  const [importProgressText, setImportProgressText] = useState('');
+  const [importQueueInfo, setImportQueueInfo] = useState<RoundImportQueuedResponse | null>(null);
+  const importProgressRef = useRef<number | null>(null);
+
+  const fetchRounds = async (targetPage = page) => {
+    try {
+      const response = await roundsApi.list({
+        page: targetPage,
+        limit: PAGE_SIZE,
+        courseId: selectedCourseId || undefined,
+        teeConfigurationId: selectedTeeConfigurationId || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      });
+
+      setRounds(response.data.rounds);
+      setPagination(response.data.pagination);
+      setError(null);
+    } catch (err) {
+      setRounds([]);
+      setError(handleApiError(err));
+    }
+  };
+
+  useEffect(
+    () => () => {
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -119,7 +162,7 @@ const AdminRoundsPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchRounds = async () => {
+    const loadRounds = async () => {
       try {
         const response = await roundsApi.list({
           page,
@@ -141,7 +184,7 @@ const AdminRoundsPage: React.FC = () => {
       }
     };
 
-    void fetchRounds();
+    void loadRounds();
 
     return () => {
       cancelled = true;
@@ -217,6 +260,114 @@ const AdminRoundsPage: React.FC = () => {
     setRounds(null);
   };
 
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setImportCsvText(text);
+    } catch (error) {
+      showErrorToast('Unable to read CSV', error instanceof Error ? error.message : 'Failed to read selected file.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleImportRounds = async (dryRun: boolean) => {
+    const csvText = importCsvText.trim();
+    if (!csvText) {
+      showErrorToast('Missing CSV', 'Paste CSV content or choose a CSV file first.');
+      return;
+    }
+
+    const nonEmptyLines = csvText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const rowCount = Math.max(0, nonEmptyLines.length - 1);
+
+    setIsImporting(true);
+    setImportResult(null);
+    setImportQueueInfo(null);
+    setImportPhase('idle');
+    setImportProgress(0);
+    setImportProgressText('');
+
+    if (!dryRun && rowCount > 0 && rowCount <= SMALL_IMPORT_THRESHOLD) {
+      const animationDurationMs = Math.max(500, Math.min(3000, rowCount * 20));
+      const startedAt = Date.now();
+      setImportPhase('in_progress');
+      setImportProgress(1);
+      setImportProgressText(`Importing row 1 of ${rowCount}...`);
+
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+      }
+
+      importProgressRef.current = window.setInterval(() => {
+        const elapsed = Date.now() - startedAt;
+        const ratio = Math.min(1, elapsed / animationDurationMs);
+        const targetPercent = Math.min(88, Math.max(1, Math.round(ratio * 88)));
+        const currentRow = Math.max(1, Math.min(rowCount, Math.round((targetPercent / 88) * rowCount)));
+
+        setImportProgress(targetPercent);
+        setImportProgressText(`Importing row ${currentRow} of ${rowCount}...`);
+
+        if (ratio >= 1 && importProgressRef.current !== null) {
+          window.clearInterval(importProgressRef.current);
+          importProgressRef.current = null;
+          setImportProgress(88);
+          setImportProgressText('Finalizing import...');
+        }
+      }, 50);
+    }
+
+    try {
+      const result = await roundsApi.importCsv(csvText, dryRun);
+
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+        importProgressRef.current = null;
+      }
+
+      if ('queued' in result && result.queued) {
+        setImportPhase('queued');
+        setImportQueueInfo(result);
+        setImportProgress(0);
+        setImportProgressText('');
+        showSuccessToast('Import queued', result.message);
+        return;
+      }
+
+      const syncResult = result as RoundImportSyncResponse;
+      setImportResult(syncResult);
+      setImportPhase('complete');
+
+      if (dryRun) {
+        showSuccessToast('Validation complete', `${syncResult.summary.validRows ?? 0} valid rows, ${syncResult.summary.invalidRows ?? 0} invalid rows.`);
+      } else {
+        setImportProgress(100);
+        setImportProgressText(`Import complete: ${syncResult.summary.importedRows ?? 0} of ${syncResult.summary.rowCount} rows imported.`);
+        showSuccessToast('Rounds imported', `Imported ${syncResult.summary.importedRows ?? 0} round records.`);
+        setPage(1);
+        setRounds(null);
+        await fetchRounds(1);
+      }
+    } catch (error) {
+      if (importProgressRef.current !== null) {
+        window.clearInterval(importProgressRef.current);
+        importProgressRef.current = null;
+      }
+      setImportPhase('idle');
+      setImportProgress(0);
+      setImportProgressText('');
+      setImportResult(null);
+      showErrorToast('Import failed', error instanceof Error ? error.message : 'Unable to import rounds CSV.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const loading = rounds === null && !error;
 
   return (
@@ -231,6 +382,80 @@ const AdminRoundsPage: React.FC = () => {
           Review round submissions, open scorecards, and moderate approvals from one queue.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Import rounds from CSV</h3>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Supports date, course, tee, player, and hole-score columns. Use dry run first to review validation issues before importing.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="round-import-csv">
+              Round CSV
+            </label>
+            <textarea
+              id="round-import-csv"
+              className="min-h-48 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              value={importCsvText}
+              onChange={(event) => setImportCsvText(event.target.value)}
+              spellCheck={false}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <input type="file" accept=".csv,text/csv" aria-label="Upload rounds CSV" onChange={(event) => void handleImportFile(event)} />
+              <Button variant="secondary" onClick={() => void handleImportRounds(true)} disabled={isImporting}>
+                {isImporting ? 'Running...' : 'Dry run validation'}
+              </Button>
+              <Button onClick={() => void handleImportRounds(false)} disabled={isImporting}>
+                {isImporting ? 'Running...' : 'Import rounds'}
+              </Button>
+            </div>
+          </div>
+
+          {importPhase === 'in_progress' && (
+            <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm dark:border-teal-900/60 dark:bg-teal-950/20">
+              <p className="font-medium text-teal-800 dark:text-teal-200">Import in progress</p>
+              <p className="mt-1 text-teal-700 dark:text-teal-300">{importProgressText}</p>
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-teal-100 dark:bg-teal-900/40">
+                <div
+                  className="h-full rounded-full bg-teal-600 transition-all duration-200 dark:bg-teal-400"
+                  style={{ width: `${importProgress}%` }}
+                  aria-label="Import progress"
+                />
+              </div>
+              <p className="mt-2 text-xs text-teal-700 dark:text-teal-300">{importProgress}% complete</p>
+            </div>
+          )}
+
+          {importPhase === 'queued' && importQueueInfo && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/60 dark:bg-amber-950/20">
+              <p className="font-medium text-amber-800 dark:text-amber-200">Large import queued</p>
+              <p className="mt-1 text-amber-700 dark:text-amber-300">{importQueueInfo.message}</p>
+              <p className="mt-1 text-amber-700 dark:text-amber-300">
+                Job ID: <span className="font-mono">{importQueueInfo.jobId}</span>
+              </p>
+            </div>
+          )}
+
+          {importResult && (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900/50">
+              <p className="font-medium text-slate-900 dark:text-slate-100">
+                {importResult.dryRun ? 'Dry run summary' : 'Import summary'}: {importResult.summary.rowCount} rows processed
+              </p>
+              {'validRows' in importResult.summary && (
+                <p className="mt-1 text-slate-600 dark:text-slate-300">
+                  {importResult.summary.validRows ?? 0} valid, {importResult.summary.invalidRows ?? 0} invalid, {importResult.summary.totalIssues ?? 0} issues found.
+                </p>
+              )}
+              {'importedRows' in importResult.summary && (
+                <p className="mt-1 text-slate-600 dark:text-slate-300">Imported {importResult.summary.importedRows ?? 0} rounds.</p>
+              )}
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>
